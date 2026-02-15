@@ -159,4 +159,48 @@ input:focus{
 .whatsapp-btn:hover{ 
   box-shadow:0 6px 16px rgba(37,211,102,0.4);
 }
+.top-actions{
+  display:flex;
+  justify-content:flex-end;
+  gap:12px;
+  margin:14px;
+}
+
+.icon-btn{
+  width:42px;
+  height:42px;
+  border-radius:50%;
+  background:#2563eb;
+  color:#fff;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:18px;
+  cursor:pointer;
+  box-shadow:0 4px 10px rgba(0,0,0,0.1);
+  transition:0.2s;
+}
+
+.icon-btn:hover{
+  transform:scale(1.05);
+}
+
+.action-panel{
+  background:white;
+  margin:0 14px 14px 14px;
+  padding:14px;
+  border-radius:12px;
+  box-shadow:0 4px 15px rgba(0,0,0,0.06);
+  animation:slideDown .2s ease;
+}
+
+.hidden{
+  display:none;
+}
+
+@keyframes slideDown{
+  from{opacity:0;transform:translateY(-6px);}
+  to{opacity:1;transform:translateY(0);}
+}
+
 
