@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <title>Agent Dashboard</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="stylesheet" href="css/styles.css">
+<link rel="stylesheet" href="css/styles.css?v=10">
 </head>
 <body>
 
@@ -18,7 +18,7 @@
   <div onclick="logoutUser()">Logout</div>
 </div>
 
-<div id="content"></div>
+<div class="container" id="content"></div>
 
 <script type="module">
 
@@ -38,7 +38,7 @@ import {
 
 let uid = null;
 
-/* ===== NAVIGATION ===== */
+/* ================= NAVIGATION ================= */
 
 window.goBorrowers = () => {
   location.href = "borrowers.html";
@@ -49,7 +49,7 @@ window.logoutUser = async () => {
   location.href = "index.html";
 };
 
-/* ===== AUTH CHECK ===== */
+/* ================= AUTH ================= */
 
 onAuthStateChanged(auth, user => {
   if (!user) {
@@ -61,7 +61,7 @@ onAuthStateChanged(auth, user => {
   loadDashboard();
 });
 
-/* ===== DASHBOARD LOADER ===== */
+/* ================= DASHBOARD ================= */
 
 async function loadDashboard(){
 
@@ -77,7 +77,8 @@ async function loadDashboard(){
   let overdueCount=0;
   let todayCollection=0;
 
-  /* ===== Borrower Map ===== */
+  /* ===== Borrowers ===== */
+
   const borrowerSnap = await getDocs(query(
     collection(db,"borrowers"),
     where("agentId","==",uid)
@@ -90,6 +91,7 @@ async function loadDashboard(){
   });
 
   /* ===== Installments ===== */
+
   const instSnap = await getDocs(query(
     collection(db,"installments"),
     where("status","==","pending")
@@ -100,55 +102,75 @@ async function loadDashboard(){
     const data = d.data();
     if(!borrowerMap[data.borrowerId]) return;
 
-    const dueDate = new Date(data.dueDate);
     const borrower = borrowerMap[data.borrowerId];
+    const dueDate = new Date(data.dueDate);
     const phone = borrower.phone;
 
-    const whatsappMsg =
-      `Hello ${borrower.name}, your installment of ₹${data.amount} is due. Please pay on time.`;
+    const msg =
+      `Hello ${borrower.name}, your installment of ₹${data.amount} is pending. Please pay at the earliest.`;
 
     const waLink =
-      `https://wa.me/${phone}?text=${encodeURIComponent(whatsappMsg)}`;
+      `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
 
+    /* ===== Due Today ===== */
     if(dueDate>=today && dueDate<tomorrow){
 
       dueCount++;
 
-      dueTodayHTML+=`
-      <div class="card">
-        <b>${borrower.name}</b><br>
-        ₹${data.amount}<br>
-        📅 Today<br>
-        <button class="whatsapp-btn"
-          onclick="window.open('${waLink}','_blank')">
-          WhatsApp Reminder
-        </button>
+      dueTodayHTML += `
+      <div class="card due">
+        <div class="card-row">
+          <div class="card-details">
+            <div class="card-title">
+              ${borrower.name}
+            </div>
+            <div class="card-sub">
+              ₹${data.amount} • Due Today
+            </div>
+          </div>
+          <div class="card-actions">
+            <button class="btn btn-whatsapp"
+              onclick="window.open('${waLink}','_blank')">
+              💬
+            </button>
+          </div>
+        </div>
       </div>`;
     }
 
+    /* ===== Overdue ===== */
     if(dueDate < today){
 
       overdueCount++;
 
-      const daysLate = Math.floor(
-        (today - dueDate)/86400000
-      );
+      const daysLate =
+        Math.floor((today - dueDate)/86400000);
 
-      overdueHTML+=`
+      overdueHTML += `
       <div class="card overdue">
-        <b>${borrower.name}</b><br>
-        ₹${data.amount}<br>
-        🔴 ${daysLate} days overdue<br>
-<button class="btn btn-warning"
-  onclick="window.open('${waLink}','_blank')">
-  📩 Send Reminder
-</button>
+        <div class="card-row">
+          <div class="card-details">
+            <div class="card-title">
+              ${borrower.name}
+            </div>
+            <div class="card-sub">
+              ₹${data.amount} • ${daysLate} days overdue
+            </div>
+          </div>
+          <div class="card-actions">
+            <button class="btn btn-whatsapp"
+              onclick="window.open('${waLink}','_blank')">
+              💬
+            </button>
+          </div>
+        </div>
       </div>`;
     }
 
   });
 
-  /* ===== Collection ===== */
+  /* ===== Today Collection ===== */
+
   const colSnap = await getDocs(query(
     collection(db,"collections"),
     where("agentId","==",uid)
@@ -161,13 +183,33 @@ async function loadDashboard(){
     }
   });
 
-  content.innerHTML=`
+  /* ===== Render Dashboard ===== */
+
+  content.innerHTML = `
 
     <div class="card">
       <h3>📊 Stats</h3>
-      Due Today: <b>${dueCount}</b><br>
-      Overdue: <b>${overdueCount}</b><br>
-      Today Collection: <b>₹${todayCollection}</b>
+      <div class="card-row">
+        <div class="card-details">
+          Due Today
+        </div>
+        <div><b>${dueCount}</b></div>
+      </div>
+
+      <div class="card-row">
+        <div class="card-details">
+          Overdue
+        </div>
+        <div><b>${overdueCount}</b></div>
+      </div>
+
+      <div class="card-row">
+        <div class="card-details">
+          Today's Collection
+        </div>
+        <div><b>₹${todayCollection}</b></div>
+      </div>
+
     </div>
 
     <div class="card">
@@ -177,8 +219,9 @@ async function loadDashboard(){
 
     <div class="card">
       <h3>🔴 Overdue</h3>
-      ${overdueHTML || "No overdue"}
+      ${overdueHTML || "No overdue payments"}
     </div>
+
   `;
 }
 
