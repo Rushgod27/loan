@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Borrower Profile</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<div class="header">Borrower Profile</div>
+
+<div class="nav">
+  <div onclick="goBorrowers()">Borrowers</div>
+  <div onclick="goDashboard()">Dashboard</div>
+  <div onclick="logout()">Logout</div>
+</div>
+
+<div class="container">
+
+  <div id="profileCard" class="card"></div>
+
+  <div id="loanSection"></div>
+
+</div>
+
+<script type="module">
+
+import { auth, db } from "./js/firebase.js";
+
+import {
+  onAuthStateChanged,
+  signOut
+} from
+"https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+import {
+  doc,
+  getDoc,
+  getDocs,
+  collection,
+  query,
+  where,
+  updateDoc
+} from
+"https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+let borrowerId = null;
+let currentUserId = null;
+
+/* GET URL PARAM */
+const params = new URLSearchParams(window.location.search);
+borrowerId = params.get("id");
+
+/* AUTH PROTECT */
+onAuthStateChanged(auth, async(user)=>{
+
+  if(!user){
+    window.location.href="index.html";
+    return;
+  }
+
+  currentUserId=user.uid;
+
+  if(!borrowerId){
+    alert("Borrower not found");
+    window.location.href="borrowers.html";
+    return;
+  }
+
+  loadBorrower();
+  loadLoans();
+});
+
+/* NAVIGATION */
+window.goBorrowers = () =>
+  window.location.href="borrowers.html";
+
+window.goDashboard = () =>
+  window.location.href="agent-dashboard.html";
+
+window.logout = async ()=>{
+  await signOut(auth);
+  window.location.href="index.html";
+};
+
+/* LOAD PROFILE */
+async function loadBorrower(){
+
+  const snap = await getDoc(
+    doc(db,"borrowers",borrowerId)
+  );
+
+  if(!snap.exists()){
+    profileCard.innerHTML =
+      "Borrower not found";
+    return;
+  }
+
+  const b = snap.data();
+
+  profileCard.innerHTML = `
+    <h3>${b.name}</h3>
+    📞 <a href="tel:${b.phone}">
+      ${b.phone}
+    </a><br><br>
+
+    <a href="https://wa.me/${b.phone}"
+       target="_blank">
+       💬 WhatsApp
+    </a>
+  `;
+}
+
+/* LOAD LOANS */
+async function loadLoans(){
+
+  const q = query(
+    collection(db,"loans"),
+    where("borrowerId","==",borrowerId)
+  );
+
+  const snap = await getDocs(q);
+
+  if(snap.empty){
+    loanSection.innerHTML=
+      `<div class="card">
+      No loans found
+      </div>`;
+    return;
+  }
+
+  loanSection.innerHTML="";
+
+  snap.forEach(d=>{
+
+    const loan=d.data();
+
+    loanSection.innerHTML+=`
+      <div class="card">
+        <b>Loan ₹${loan.principal}</b><br>
+        Status: ${loan.status}<br>
+        <button onclick="
+          toggleInstallments('${d.id}')">
+          View Installments
+        </button>
+        <div id="inst-${d.id}"
+          class="hidden"></div>
+      </div>
+    `;
+  });
+}
+
+/* TOGGLE INSTALLMENTS */
+window.toggleInstallments =
+async (loanId)=>{
+
+  const box =
+    document.getElementById(
+      `inst-${loanId}`);
+
+  if(!box.classList.contains("hidden")){
+    box.classList.add("hidden");
+    box.innerHTML="";
+    return;
+  }
+
+  box.classList.remove("hidden");
+
+  const snap=await getDocs(query(
+    collection(db,"installments"),
+    where("loanId","==",loanId)
+  ));
+
+  const list=[];
+  snap.forEach(d=>{
+    list.push({id:d.id,...d.data()});
+  });
+
+  list.sort((a,b)=>a.number-b.number);
+
+  box.innerHTML="";
+
+  list.forEach(i=>{
+    box.innerHTML+=`
+      <div class="card ${
+        i.status==="completed"
+        ? "completed":""
+      }">
+
+        EMI ${i.number}<br>
+        ₹${i.amount}<br>
+        ${new Date(
+          i.dueDate
+        ).toLocaleDateString()}<br>
+
+        ${
+          i.status==="pending"
+          ? `<button onclick="
+             pay('${i.id}',
+             '${loanId}',
+             ${i.amount})">
+             Mark Paid</button>`
+          : "Paid"
+        }
+      </div>`;
+  });
+};
+
+/* PAY INSTALLMENT */
+window.pay =
+async(id,loanId,amt)=>{
+
+  await updateDoc(
+    doc(db,"installments",id),
+    {status:"completed"}
+  );
+
+  toggleInstallments(loanId);
+};
+
+</script>
+</body>
+</html>
