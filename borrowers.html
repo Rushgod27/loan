@@ -4,154 +4,52 @@
 <meta charset="UTF-8">
 <title>Borrowers</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<style>
-body{
-  margin:0;
-  font-family:system-ui;
-  background:#f5f7fb;
-}
-
-.header{
-  background:#2563eb;
-  color:white;
-  padding:16px;
-  font-weight:600;
-  font-size:18px;
-}
-
-.nav{
-  display:flex;
-  background:white;
-  border-bottom:1px solid #eee;
-}
-.nav div{
-  flex:1;
-  text-align:center;
-  padding:14px;
-  cursor:pointer;
-}
-.nav .active{
-  border-bottom:3px solid #2563eb;
-  font-weight:600;
-}
-
-.container{
-  display:flex;
-  height:calc(100vh - 108px);
-}
-
-.sidebar{
-  width:300px;
-  background:white;
-  border-right:1px solid #eee;
-  overflow:auto;
-}
-
-.content{
-  flex:1;
-  padding:20px;
-  overflow:auto;
-}
-
-.card{
-  background:white;
-  padding:16px;
-  border-radius:10px;
-  margin-bottom:15px;
-  box-shadow:0 2px 8px rgba(0,0,0,.05);
-}
-
-input, select{
-  width:100%;
-  padding:10px;
-  margin-bottom:10px;
-  border-radius:6px;
-  border:1px solid #ddd;
-}
-
-button{
-  padding:8px 12px;
-  border:none;
-  border-radius:6px;
-  background:#2563eb;
-  color:white;
-  font-weight:600;
-  cursor:pointer;
-}
-
-.list-item{
-  padding:14px;
-  border-bottom:1px solid #eee;
-  cursor:pointer;
-}
-.list-item:hover{
-  background:#f3f4f6;
-}
-
-.progress{
-  height:8px;
-  background:#e5e7eb;
-  border-radius:10px;
-  overflow:hidden;
-  margin-top:8px;
-}
-.progress-bar{
-  height:100%;
-  background:#22c55e;
-}
-
-.gray{
-  opacity:.6;
-}
-
-</style>
+<link rel="stylesheet" href="css/borrowers.css">
 </head>
 
 <body>
 
-<div class="header">Borrowers</div>
-
-<div class="nav">
-  <div onclick="goDashboard()">Dashboard</div>
-  <div class="active">Borrowers</div>
-  <div onclick="logoutUser()">Logout</div>
+<div class="header">
+  <span id="backBtn" class="back hidden"
+        onclick="goBack()">⬅</span>
+  Borrowers
 </div>
 
-<div class="container">
+<!-- LIST SCREEN -->
+<div id="listScreen">
 
-  <div class="sidebar">
-    <div class="card">
-      <input id="searchBorrower" placeholder="Search..." onkeyup="searchBorrowers()">
-      <button onclick="addBorrower()">➕ Add Borrower</button>
-    </div>
-    <div id="borrowerList"></div>
+  <div class="top-bar">
+    <input id="searchInput"
+      placeholder="Search borrower..."
+      onkeyup="searchBorrowers()">
+    <button onclick="addBorrower()">➕</button>
   </div>
 
-  <div class="content" id="contentPanel">
-    <div style="color:#999;">Select borrower</div>
-  </div>
+  <div id="borrowerList"></div>
 
 </div>
+
+<!-- PROFILE SCREEN -->
+<div id="profileScreen" class="hidden"></div>
 
 <script type="module">
 
 import { auth, db } from "./js/firebase.js";
-import { onAuthStateChanged, signOut }
-from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 import {
-  collection, addDoc, query, where,
-  getDocs, doc, getDoc, updateDoc
+  onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+import {
+  collection, addDoc,
+  query, where, getDocs,
+  doc, getDoc, updateDoc
 } from
 "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 let currentUserId=null;
-let currentBorrowerId=null;
 let borrowerCache=[];
-
-const borrowerList = document.getElementById("borrowerList");
-const contentPanel = document.getElementById("contentPanel");
+let currentBorrowerId=null;
 
 /* AUTH */
 onAuthStateChanged(auth,user=>{
@@ -163,30 +61,16 @@ onAuthStateChanged(auth,user=>{
   loadBorrowers();
 });
 
-window.goDashboard=()=>{
-  location.href="agent-dashboard.html";
-};
-
-window.logoutUser=()=>{
-  signOut(auth);
-};
-
 /* LOAD BORROWERS */
 async function loadBorrowers(){
-
   borrowerCache=[];
-
-  const q = query(
+  const snap=await getDocs(query(
     collection(db,"borrowers"),
     where("agentId","==",currentUserId)
-  );
-
-  const snap = await getDocs(q);
-
+  ));
   snap.forEach(d=>{
     borrowerCache.push({id:d.id,...d.data()});
   });
-
   renderBorrowers(borrowerCache);
 }
 
@@ -195,134 +79,139 @@ function renderBorrowers(list){
   list.forEach(b=>{
     borrowerList.innerHTML+=`
       <div class="list-item"
-        onclick="viewBorrower('${b.id}')">
-        <b>${b.name}</b><br>
-        ${b.phone}
+      onclick="viewBorrower('${b.id}')">
+      <b>${b.name}</b><br>
+      ${b.phone}
       </div>`;
   });
 }
 
 /* SEARCH */
 window.searchBorrowers=()=>{
-  const val=
-    document.getElementById("searchBorrower")
-    .value.toLowerCase();
+  const value=searchInput.value
+    .toLowerCase().trim();
+
+  if(!value){
+    renderBorrowers(borrowerCache);
+    return;
+  }
 
   const filtered=
-    borrowerCache.filter(b =>
-      b.name.toLowerCase().includes(val)
-      || b.phone.includes(val)
-    );
+  borrowerCache.filter(b=>
+    b.name.toLowerCase().includes(value)||
+    b.phone.includes(value)
+  );
 
   renderBorrowers(filtered);
 };
 
-/* VIEW BORROWER */
-window.viewBorrower = async(id)=>{
+/* ADD BORROWER */
+window.addBorrower=async()=>{
+  const name=prompt("Borrower Name");
+  const phone=prompt("Phone");
+  if(!name||!phone)return;
 
+  await addDoc(collection(db,"borrowers"),{
+    name,
+    phone,
+    agentId:currentUserId,
+    createdAt:Date.now()
+  });
+
+  loadBorrowers();
+};
+
+/* VIEW PROFILE */
+window.viewBorrower=async(id)=>{
   currentBorrowerId=id;
 
   const snap=await getDoc(
     doc(db,"borrowers",id)
   );
 
-  if(!snap.exists()){
-    alert("Borrower not found");
-    return;
-  }
-
   const b=snap.data();
 
-  contentPanel.innerHTML=`
+  listScreen.classList.add("hidden");
+  profileScreen.classList.remove("hidden");
+  backBtn.classList.remove("hidden");
+
+  profileScreen.innerHTML=`
     <div class="card">
       <h2>${b.name}</h2>
-
       📞 <a href="tel:${b.phone}">
       ${b.phone}</a><br>
-
       💬 <a href="https://wa.me/${b.phone}"
-      target="_blank">WhatsApp</a>
-
-      <br><br>
+      target="_blank">
+      WhatsApp</a><br>
 
       <button onclick="toggleLoanForm()">
       ➕ Create Loan</button>
 
-      <div id="loanFormSection"></div>
-
+      <div id="loanForm"></div>
     </div>
 
-    <div id="loanSection"></div>
-    <div id="installmentSection"></div>
+    <div id="loansContainer"></div>
   `;
 
   loadLoans(id);
 };
 
-/* TOGGLE LOAN FORM */
-window.toggleLoanForm=()=>{
-  const form=document
-    .getElementById("loanFormSection");
+/* BACK */
+window.goBack=()=>{
+  profileScreen.classList.add("hidden");
+  listScreen.classList.remove("hidden");
+  backBtn.classList.add("hidden");
+};
 
-  if(form.innerHTML!==""){
-    form.innerHTML="";
+/* CREATE LOAN FORM */
+window.toggleLoanForm=()=>{
+  if(loanForm.innerHTML!==""){
+    loanForm.innerHTML="";
     return;
   }
 
-  form.innerHTML=`
+  loanForm.innerHTML=`
     <div class="card">
-      <input id="principalInput"
+    <input id="principal"
       placeholder="Principal">
-      <input id="interestInput"
+    <input id="interest"
       placeholder="Interest %">
-      <input id="countInput"
+    <input id="count"
       placeholder="Installments">
-      <select id="intervalInput">
-        <option value="7">7 Days</option>
-        <option value="15">15 Days</option>
-        <option value="30">30 Days</option>
-      </select>
-      <input type="date" id="startInput">
-      <button onclick="createLoan()">
-      Confirm Loan</button>
+    <button onclick="createLoan()">
+      Confirm
+    </button>
     </div>`;
 };
 
 /* CREATE LOAN */
 window.createLoan=async()=>{
+  const principal=parseFloat(principal.value);
+  const percent=parseFloat(interest.value);
+  const count=parseInt(count.value);
 
-  const principal=
-    parseFloat(principalInput.value);
-  const percent=
-    parseFloat(interestInput.value);
-  const count=
-    parseInt(countInput.value);
-  const interval=
-    parseInt(intervalInput.value);
-  const startValue=
-    startInput.value;
-
-  if(!principal||isNaN(percent)
-     ||!count||!startValue){
-    alert("Fill correctly");
+  if(!principal||isNaN(percent)||!count){
+    alert("Fill properly");
     return;
   }
 
-  const start=new Date(startValue).getTime();
+  const interestAmount=
+    (principal*percent)/100;
+
   const installmentAmount=
     principal/count;
 
   const loan=await addDoc(
     collection(db,"loans"),{
-    borrowerId:currentBorrowerId,
-    agentId:currentUserId,
-    principal,
-    interestPercent:percent,
-    count,
-    interval,
-    startDate:start,
-    status:"active"
-  });
+      borrowerId:currentBorrowerId,
+      agentId:currentUserId,
+      principal,
+      interestPercent:percent,
+      interestAmount,
+      count,
+      status:"active",
+      createdAt:Date.now()
+    });
 
   for(let i=0;i<count;i++){
     await addDoc(
@@ -331,121 +220,60 @@ window.createLoan=async()=>{
         borrowerId:currentBorrowerId,
         number:i+1,
         amount:installmentAmount,
-        dueDate:start+
-        ((i+1)*interval*86400000),
+        dueDate:Date.now()+((i+1)*7*86400000),
         status:"pending"
       });
   }
 
-  document.getElementById(
-    "loanFormSection").innerHTML="";
-
+  loanForm.innerHTML="";
   loadLoans(currentBorrowerId);
 };
 
 /* LOAD LOANS */
-async function loadLoans(id){
-
+async function loadLoans(borrowerId){
   const snap=await getDocs(query(
     collection(db,"loans"),
-    where("borrowerId","==",id)
+    where("borrowerId","==",borrowerId)
   ));
 
-  loanSection.innerHTML="";
+  loansContainer.innerHTML="";
 
-  for(const d of snap.docs){
+  for(const docSnap of snap.docs){
+    const loan=docSnap.data();
 
-    const loan=d.data();
+    const instSnap=await getDocs(query(
+      collection(db,"installments"),
+      where("loanId","==",docSnap.id)
+    ));
 
-    loanSection.innerHTML+=`
+    let total=0;
+    let paid=0;
+
+    instSnap.forEach(i=>{
+      total+=i.data().amount;
+      if(i.data().status==="completed"){
+        paid+=i.data().amount;
+      }
+    });
+
+    const percent=
+      total?Math.round((paid/total)*100):0;
+
+    loansContainer.innerHTML+=`
       <div class="card ${
-        loan.status!=="active"?"gray":""
-      }">
-      Loan ₹${loan.principal}<br>
-      <button onclick=
-      "viewInstallments('${d.id}')">
-      Installments</button>
+        loan.status!=="active"?
+        "gray-out":""}">
+        Loan ₹${loan.principal}
+        <div class="progress">
+        <div class="progress-bar"
+          style="width:${percent}%">
+        </div>
+        </div>
+        ${percent}% paid
       </div>`;
   }
 }
 
-/* INSTALLMENTS */
-window.viewInstallments=
-async(loanId)=>{
-
-  const snap=await getDocs(query(
-    collection(db,"installments"),
-    where("loanId","==",loanId)
-  ));
-
-  let list=[];
-  snap.forEach(d=>{
-    list.push({id:d.id,...d.data()});
-  });
-
-  list.sort((a,b)=>a.number-b.number);
-
-  let total=0,paid=0;
-
-  list.forEach(i=>{
-    total+=i.amount;
-    if(i.status==="completed")
-      paid+=i.amount;
-  });
-
-  const percent=
-    total?
-    Math.round((paid/total)*100):0;
-
-  installmentSection.innerHTML=`
-    <div class="card">
-    ${percent}% Paid
-    <div class="progress">
-      <div class="progress-bar"
-      style="width:${percent}%"></div>
-    </div>
-    </div>`;
-
-  list.forEach(i=>{
-    installmentSection.innerHTML+=`
-    <div class="card ${
-      i.status!=="pending"?"gray":""
-    }">
-      Installment ${i.number}<br>
-      ₹${i.amount}<br>
-      ${i.status}
-      ${
-        i.status==="pending"?
-        `<button onclick=
-        "markPaid('${i.id}',
-        '${loanId}',
-        ${i.amount})">
-        Mark Paid</button>`:""
-      }
-    </div>`;
-  });
-};
-
-/* MARK PAID */
-window.markPaid=
-async(instId,loanId,amount)=>{
-
-  await updateDoc(
-    doc(db,"installments",instId),
-    {status:"completed"});
-
-  await addDoc(
-    collection(db,"collections"),{
-      loanId,
-      agentId:currentUserId,
-      amount,
-      date:Date.now()
-    });
-
-  viewInstallments(loanId);
-};
-
 </script>
-
 </body>
 </html>
