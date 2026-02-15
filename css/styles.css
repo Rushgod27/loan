@@ -117,3 +117,34 @@ input:focus{
   transform:translateY(-3px);
   box-shadow:0 8px 20px rgba(0,0,0,.08);
 }
+
+/* ===== INSTALLMENT PROGRESS ===== */
+
+.progress{
+  height:8px;
+  background:#e5e7eb;
+  border-radius:10px;
+  overflow:hidden;
+  margin-top:8px;
+}
+
+.progress-bar{
+  height:100%;
+  background:#22c55e;
+  transition:0.5s ease;
+}
+
+/* Overdue highlight */
+.overdue{
+  border-left:4px solid #ef4444 !important;
+  background:#fef2f2 !important;
+}
+
+/* WhatsApp Button */
+.whatsapp-btn{
+  background:#25D366 !important;
+}
+
+.whatsapp-btn:hover{
+  box-shadow:0 6px 16px rgba(37,211,102,0.4);
+}
