@@ -1,1 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Owner Dashboard</title>
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<div class="header">Owner Panel</div>
+
+<div class="nav">
+<div class="active">Owner Dashboard</div>
+<div onclick="logoutUser()">Logout</div>
+</div>
+
+<div class="card">
+<h3>Welcome Owner 🏢</h3>
+<p>This is Owner level dashboard.</p>
+</div>
+
+<script type="module">
+
+import { auth } from "./js/firebase.js";
+import {
+  signOut,
+  onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+window.logoutUser=()=>signOut(auth);
+
+onAuthStateChanged(auth,user=>{
+  if(!user){
+    location.href="index.html";
+  }
+});
+
+</script>
+</body>
+</html>
 
