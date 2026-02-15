@@ -1,13 +1,24 @@
 body{
   margin:0;
-  font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif;
-  background:linear-gradient(135deg,#e0f2fe,#f1f5f9);
-  animation:fadeInPage .4s ease;
+  font-family:system-ui;
+  background:#f1f5f9;
 }
 
-/* Page animation */
-@keyframes fadeInPage{
-  from{opacity:0; transform:translateY(6px);}
+.page-container{
+  max-width:100%;
+  min-height:100vh;
+}
+
+.section-content{
+  padding:14px;
+}
+
+.section-content{
+  animation:fadePage .3s ease-in-out;
+}
+
+@keyframes fadePage{
+  from{opacity:0; transform:translateY(10px);}
   to{opacity:1; transform:translateY(0);}
 }
 
@@ -145,6 +156,7 @@ input:focus{
   background:#25D366 !important;
 }
 
-.whatsapp-btn:hover{
+.whatsapp-btn:hover{ 
   box-shadow:0 6px 16px rgba(37,211,102,0.4);
 }
+
