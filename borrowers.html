@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <title>Borrowers</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="stylesheet" href="css/styles.css?v=20">
+<link rel="stylesheet" href="css/styles.css?v=50">
 </head>
 <body>
 
@@ -20,17 +20,15 @@
 
   <!-- ADD BORROWER -->
   <div class="card">
-    <button type="button"
-            class="btn btn-primary"
-            onclick="toggleAdd()">
+    <button class="btn btn-primary"
+            onclick="toggleAddForm()">
       + Add Borrower
     </button>
 
-    <div id="addSection" class="hidden" style="margin-top:15px;">
+    <div id="addSection" class="collapsible">
       <input id="nameInput" placeholder="Borrower Name">
       <input id="phoneInput" placeholder="Phone Number">
-      <button type="button"
-              class="btn btn-success"
+      <button class="btn btn-success"
               onclick="createBorrower()">
         Save Borrower
       </button>
@@ -63,140 +61,85 @@ import {
   where,
   getDocs,
   addDoc,
-  doc,
-  getDoc
+  updateDoc,
+  doc
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-let currentUserId = null;
-let borrowerCache = [];
+let currentUserId=null;
+let borrowerCache=[];
 
-/* ================= AUTH ================= */
-
-onAuthStateChanged(auth, user => {
-
+/* AUTH */
+onAuthStateChanged(auth,user=>{
   if(!user){
-    location.href = "index.html";
+    location.href="index.html";
     return;
   }
-
-  currentUserId = user.uid;
+  currentUserId=user.uid;
   loadBorrowers();
 });
 
-/* ================= NAVIGATION ================= */
-
-window.goDashboard = () => {
-  location.href = "agent-dashboard.html";
-};
-
-window.logout = async () => {
+window.goDashboard=()=>location.href="agent-dashboard.html";
+window.logout=async()=>{
   await signOut(auth);
-  location.href = "index.html";
+  location.href="index.html";
 };
 
-/* ================= TOGGLE ADD ================= */
-
-window.toggleAdd = () => {
-  addSection.classList.toggle("hidden");
+/* ADD TOGGLE */
+window.toggleAddForm=()=>{
+  addSection.classList.toggle("show");
 };
 
-/* ================= CREATE BORROWER ================= */
+/* CREATE BORROWER */
+window.createBorrower=async()=>{
+  const name=nameInput.value.trim();
+  const phone=phoneInput.value.trim();
 
-window.createBorrower = async () => {
-
-  const name = nameInput.value.trim();
-  let phone = phoneInput.value.trim();
-
-  if(!name || !phone){
-    alert("Please enter name and phone");
+  if(!name||!phone){
+    alert("Fill all fields");
     return;
   }
 
-  phone = phone.replace(/\s+/g,"");
+  const q=query(
+    collection(db,"borrowers"),
+    where("agentId","==",currentUserId),
+    where("phone","==",phone)
+  );
 
-  try{
+  const snap=await getDocs(q);
 
-    /* ===== CHECK SAME AGENT ===== */
-    const sameQuery = query(
-      collection(db,"borrowers"),
-      where("agentId","==",currentUserId),
-      where("phone","==",phone)
-    );
-
-    const sameSnap = await getDocs(sameQuery);
-
-    if(!sameSnap.empty){
-      alert("Borrower already exists under you.");
-      return;
-    }
-
-    /* ===== CHECK OTHER AGENTS ===== */
-    const otherQuery = query(
-      collection(db,"borrowers"),
-      where("phone","==",phone)
-    );
-
-    const otherSnap = await getDocs(otherQuery);
-
-    let otherAgents = [];
-
-    for(const b of otherSnap.docs){
-
-      const data = b.data();
-
-      if(data.agentId === currentUserId) continue;
-
-      const agentSnap = await getDoc(doc(db,"users",data.agentId));
-      if(agentSnap.exists()){
-        otherAgents.push(agentSnap.data().name);
-      }
-    }
-
-    if(otherAgents.length > 0){
-      const confirmAdd = confirm(
-        "Borrower exists under:\n" +
-        otherAgents.join(", ") +
-        "\n\nAdd anyway?"
-      );
-
-      if(!confirmAdd) return;
-    }
-
-    /* ===== CREATE ===== */
-    await addDoc(collection(db,"borrowers"),{
-      name,
-      phone,
-      nameLower:name.toLowerCase(),
-      agentId: currentUserId,
-      createdAt: Date.now()
-    });
-
-    nameInput.value="";
-    phoneInput.value="";
-    addSection.classList.add("hidden");
-
-    loadBorrowers();
-
-  }catch(err){
-    alert("Error: "+err.message);
+  if(!snap.empty){
+    alert("Borrower already exists under you.");
+    return;
   }
+
+  await addDoc(collection(db,"borrowers"),{
+    name,
+    phone,
+    nameLower:name.toLowerCase(),
+    agentId:currentUserId,
+    createdAt:Date.now()
+  });
+
+  nameInput.value="";
+  phoneInput.value="";
+  addSection.classList.remove("show");
+
+  loadBorrowers();
 };
 
-/* ================= LOAD BORROWERS ================= */
-
+/* LOAD BORROWERS */
 async function loadBorrowers(){
+  borrowerCache=[];
 
-  borrowerCache = [];
-
-  const q = query(
+  const q=query(
     collection(db,"borrowers"),
     where("agentId","==",currentUserId)
   );
 
-  const snap = await getDocs(q);
+  const snap=await getDocs(q);
 
   snap.forEach(d=>{
-    borrowerCache.push({id:d.id, ...d.data()});
+    borrowerCache.push({id:d.id,...d.data()});
   });
 
   borrowerCache.sort((a,b)=>a.name.localeCompare(b.name));
@@ -204,53 +147,140 @@ async function loadBorrowers(){
   renderBorrowers(borrowerCache);
 }
 
-/* ================= RENDER ================= */
+/* SEARCH */
+searchInput.addEventListener("input",e=>{
+  const val=e.target.value.toLowerCase();
 
+  if(!val){
+    renderBorrowers(borrowerCache);
+    return;
+  }
+
+  const filtered=borrowerCache.filter(b=>
+    b.name.toLowerCase().includes(val) ||
+    b.phone.includes(val)
+  );
+
+  renderBorrowers(filtered);
+});
+
+/* RENDER */
 function renderBorrowers(list){
 
   borrowerList.innerHTML="";
 
   if(list.length===0){
-    borrowerList.innerHTML =
+    borrowerList.innerHTML=
       `<div class="card">No borrowers found</div>`;
     return;
   }
 
   list.forEach(b=>{
     borrowerList.innerHTML+=`
-      <div class="card borrower-card"
-           onclick="openProfile('${b.id}')">
-        <div>
-          <b>${b.name}</b><br>
-          <span>${b.phone}</span>
-        </div>
-      </div>`;
+      <div class="card card-expand">
+        <b>${b.name}</b><br>
+        ${b.phone}<br><br>
+
+        <button class="btn btn-primary"
+                onclick="toggleLoans('${b.id}')">
+          View Loans
+        </button>
+
+        <div id="loan-${b.id}" class="collapsible"></div>
+      </div>
+    `;
   });
 }
 
-/* ================= SEARCH ================= */
+/* TOGGLE LOANS */
+window.toggleLoans=async(borrowerId)=>{
 
-searchInput.addEventListener("input", e=>{
+  document.querySelectorAll(".loan-box")
+  .forEach(e=>e.classList.remove("show"));
 
-  const value = e.target.value.toLowerCase();
+  const box=document.getElementById(`loan-${borrowerId}`);
+  box.classList.add("loan-box");
+  box.classList.toggle("show");
 
-  if(!value){
-    renderBorrowers(borrowerCache);
+  if(box.innerHTML!=="") return;
+
+  const q=query(
+    collection(db,"loans"),
+    where("borrowerId","==",borrowerId)
+  );
+
+  const snap=await getDocs(q);
+
+  if(snap.empty){
+    box.innerHTML=`<div class="card">No Loans</div>`;
     return;
   }
 
-  const filtered = borrowerCache.filter(b =>
-    b.name.toLowerCase().includes(value) ||
-    b.phone.includes(value)
-  );
+  snap.forEach(d=>{
+    const loan=d.data();
 
-  renderBorrowers(filtered);
-});
+    box.innerHTML+=`
+      <div class="card card-expand">
+        Principal: ₹${loan.principal}<br>
+        Status: ${loan.status}<br><br>
 
-/* ================= OPEN PROFILE ================= */
+        <button class="btn btn-success"
+          onclick="toggleInstallments('${d.id}')">
+          View Installments
+        </button>
 
-window.openProfile = (id)=>{
-  location.href = "borrower-profile.html?id="+id;
+        <div id="inst-${d.id}" class="collapsible"></div>
+      </div>
+    `;
+  });
+};
+
+/* INSTALLMENTS */
+window.toggleInstallments=async(loanId)=>{
+
+  document.querySelectorAll(".inst-box")
+  .forEach(e=>e.classList.remove("show"));
+
+  const box=document.getElementById(`inst-${loanId}`);
+  box.classList.add("inst-box");
+  box.classList.toggle("show");
+
+  if(box.innerHTML!=="") return;
+
+  const snap=await getDocs(query(
+    collection(db,"installments"),
+    where("loanId","==",loanId)
+  ));
+
+  const list=[];
+  snap.forEach(d=>{
+    list.push({id:d.id,...d.data()});
+  });
+
+  list.sort((a,b)=>a.number-b.number);
+
+  list.forEach(i=>{
+    box.innerHTML+=`
+      <div class="card card-expand">
+        EMI ${i.number} - ₹${i.amount}<br>
+        ${new Date(i.dueDate).toLocaleDateString()}<br>
+        ${
+          i.status==="pending"?
+          `<button class="btn btn-success"
+             onclick="pay('${i.id}')">
+             Mark Paid</button>`:
+          "Paid"
+        }
+      </div>
+    `;
+  });
+};
+
+/* PAY */
+window.pay=async(id)=>{
+  await updateDoc(doc(db,"installments",id),
+  {status:"completed"});
+  location.reload();
 };
 
 </script>
