@@ -1,25 +1,3 @@
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<title>Agent Dashboard</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="stylesheet" href="css/styles.css?v=10">
-</head>
-<body>
-
-<div class="header">
-  Agent Panel
-</div>
-
-<div class="nav">
-  <div class="active">Dashboard</div>
-  <div onclick="goBorrowers()">Borrowers</div>
-  <div onclick="logoutUser()">Logout</div>
-</div>
-
-<div class="container" id="content"></div>
-
 <script type="module">
 
 import { auth, db } from "./js/firebase.js";
@@ -77,20 +55,43 @@ async function loadDashboard(){
   let overdueCount=0;
   let todayCollection=0;
 
-  /* ===== Borrowers ===== */
+  let totalBorrowers=0;
+  let activeBorrowers=0;
+  let activeLoans=0;
+
+  /* ================= BORROWERS ================= */
 
   const borrowerSnap = await getDocs(query(
     collection(db,"borrowers"),
     where("agentId","==",uid)
   ));
 
+  totalBorrowers = borrowerSnap.size;
+
   const borrowerMap={};
+  const borrowerSetWithActiveLoan = new Set();
 
   borrowerSnap.forEach(d=>{
     borrowerMap[d.id] = d.data();
   });
 
-  /* ===== Installments ===== */
+  /* ================= LOANS ================= */
+
+  const loanSnap = await getDocs(query(
+    collection(db,"loans"),
+    where("agentId","==",uid),
+    where("status","==","active")
+  ));
+
+  activeLoans = loanSnap.size;
+
+  loanSnap.forEach(d=>{
+    borrowerSetWithActiveLoan.add(d.data().borrowerId);
+  });
+
+  activeBorrowers = borrowerSetWithActiveLoan.size;
+
+  /* ================= INSTALLMENTS ================= */
 
   const instSnap = await getDocs(query(
     collection(db,"installments"),
@@ -121,15 +122,13 @@ async function loadDashboard(){
       <div class="card due">
         <div class="card-row">
           <div class="card-details">
-            <div class="card-title">
-              ${borrower.name}
-            </div>
+            <div class="card-title">${borrower.name}</div>
             <div class="card-sub">
               ₹${data.amount} • Due Today
             </div>
           </div>
           <div class="card-actions">
-            <button class="btn btn-whatsapp"
+            <button class="btn btn-warning"
               onclick="window.open('${waLink}','_blank')">
               💬
             </button>
@@ -150,15 +149,13 @@ async function loadDashboard(){
       <div class="card overdue">
         <div class="card-row">
           <div class="card-details">
-            <div class="card-title">
-              ${borrower.name}
-            </div>
+            <div class="card-title">${borrower.name}</div>
             <div class="card-sub">
               ₹${data.amount} • ${daysLate} days overdue
             </div>
           </div>
           <div class="card-actions">
-            <button class="btn btn-whatsapp"
+            <button class="btn btn-danger"
               onclick="window.open('${waLink}','_blank')">
               💬
             </button>
@@ -169,7 +166,7 @@ async function loadDashboard(){
 
   });
 
-  /* ===== Today Collection ===== */
+  /* ================= COLLECTION ================= */
 
   const colSnap = await getDocs(query(
     collection(db,"collections"),
@@ -183,31 +180,41 @@ async function loadDashboard(){
     }
   });
 
-  /* ===== Render Dashboard ===== */
+  /* ================= RENDER ================= */
 
   content.innerHTML = `
 
     <div class="card">
-      <h3>📊 Stats</h3>
+      <h3>📊 Overview</h3>
+
       <div class="card-row">
-        <div class="card-details">
-          Due Today
-        </div>
+        <div class="card-details">Total Borrowers</div>
+        <div><b>${totalBorrowers}</b></div>
+      </div>
+
+      <div class="card-row">
+        <div class="card-details">Active Borrowers</div>
+        <div><b>${activeBorrowers}</b></div>
+      </div>
+
+      <div class="card-row">
+        <div class="card-details">Active Loans</div>
+        <div><b>${activeLoans}</b></div>
+      </div>
+
+      <div class="card-row">
+        <div class="card-details">Today's Collection</div>
+        <div><b>₹${todayCollection}</b></div>
+      </div>
+
+      <div class="card-row">
+        <div class="card-details">Due Today</div>
         <div><b>${dueCount}</b></div>
       </div>
 
       <div class="card-row">
-        <div class="card-details">
-          Overdue
-        </div>
+        <div class="card-details">Overdue</div>
         <div><b>${overdueCount}</b></div>
-      </div>
-
-      <div class="card-row">
-        <div class="card-details">
-          Today's Collection
-        </div>
-        <div><b>₹${todayCollection}</b></div>
       </div>
 
     </div>
@@ -226,5 +233,3 @@ async function loadDashboard(){
 }
 
 </script>
-</body>
-</html>
