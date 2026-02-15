@@ -123,49 +123,59 @@ window.toggleCreateLoan = ()=>{
 };
 
 /* CREATE LOAN */
-window.createLoan = async ()=>{
+window.createLoan = async () => {
 
-  const principal=parseFloat(principal.value);
-  const percent=parseFloat(interest.value);
-  const count=parseInt(count.value);
-  const interval=parseInt(interval.value);
-  const start=startDate.value;
+  const principalValue =
+    parseFloat(document.getElementById("principal").value);
 
-  if(!principal || isNaN(percent)
-     || !count || !start){
+  const interestValue =
+    parseFloat(document.getElementById("interest").value);
+
+  const countValue =
+    parseInt(document.getElementById("count").value);
+
+  const intervalValue =
+    parseInt(document.getElementById("interval").value);
+
+  const startValue =
+    document.getElementById("startDate").value;
+
+  if(!principalValue || isNaN(interestValue)
+     || !countValue || !startValue){
     alert("Fill properly");
     return;
   }
 
-  const startTime=new Date(start).getTime();
-  const installment=principal/count;
-  const interestAmount=(principal*percent)/100;
+  const startTime = new Date(startValue).getTime();
+  const installment = principalValue / countValue;
+  const interestAmount = (principalValue * interestValue) / 100;
 
-  const loan=await addDoc(collection(db,"loans"),{
+  const loanRef = await addDoc(collection(db,"loans"),{
     borrowerId,
-    agentId:currentUserId,
-    principal,
-    interestPercent:percent,
+    agentId: currentUserId,
+    principal: principalValue,
+    interestPercent: interestValue,
     interestAmount,
-    count,
-    interval,
-    startDate:startTime,
-    status:"active",
-    createdAt:Date.now()
+    count: countValue,
+    interval: intervalValue,
+    startDate: startTime,
+    status: "active",
+    createdAt: Date.now()
   });
 
-  for(let i=0;i<count;i++){
+  for(let i=0;i<countValue;i++){
     await addDoc(collection(db,"installments"),{
-      loanId:loan.id,
+      loanId: loanRef.id,
       borrowerId,
-      number:i+1,
-      amount:installment,
-      dueDate:startTime+((i+1)*interval*86400000),
-      status:"pending"
+      number: i+1,
+      amount: installment,
+      dueDate: startTime + ((i+1)*intervalValue*86400000),
+      status: "pending"
     });
   }
 
-  alert("Loan Created");
+  alert("Loan Created Successfully");
+
   createLoanSection.innerHTML="";
   loadLoans();
 };
