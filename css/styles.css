@@ -399,3 +399,12 @@ body{
 .btn:active{
   transform:scale(.96);
 }
+
+/* Add Borrower Box */
+.add-box{
+  margin-top:15px;
+  padding:15px;
+  background:#f9fafb;
+  border-radius:14px;
+  border:1px solid #e5e7eb;
+}
