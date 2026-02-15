@@ -14,20 +14,18 @@
   Borrowers
 </div>
 
-<!-- LIST SCREEN -->
+<!-- LIST -->
 <div id="listScreen">
-
   <div class="top-bar">
     <input id="searchInput"
       placeholder="Search borrower..."
       onkeyup="searchBorrowers()">
     <button onclick="addBorrower()">➕</button>
   </div>
-
   <div id="borrowerList"></div>
 </div>
 
-<!-- PROFILE SCREEN -->
+<!-- PROFILE -->
 <div id="profileScreen" class="hidden">
   <div id="profileContent"></div>
   <div id="loansContainer"></div>
@@ -43,6 +41,7 @@ import {
 import {
   collection, addDoc,
   query, where, getDocs,
+  onSnapshot,
   doc, getDoc, updateDoc
 } from
 "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
@@ -50,8 +49,10 @@ import {
 let currentUserId=null;
 let currentBorrowerId=null;
 let borrowerCache=[];
+let unsubscribeLoans=null;
 
-/* AUTH */
+/* ============ AUTH ============ */
+
 onAuthStateChanged(auth,user=>{
   if(!user){
     location.href="index.html";
@@ -61,28 +62,22 @@ onAuthStateChanged(auth,user=>{
   loadBorrowers();
 });
 
-/* =========================
-   LOAD BORROWERS LIST
-========================= */
+/* ============ LOAD BORROWERS ============ */
 
 async function loadBorrowers(){
   borrowerCache=[];
-
   const snap=await getDocs(query(
     collection(db,"borrowers"),
     where("agentId","==",currentUserId)
   ));
-
   snap.forEach(d=>{
     borrowerCache.push({id:d.id,...d.data()});
   });
-
   renderBorrowers(borrowerCache);
 }
 
 function renderBorrowers(list){
   borrowerList.innerHTML="";
-
   if(list.length===0){
     borrowerList.innerHTML=
       `<div class="card">No Borrowers</div>`;
@@ -99,7 +94,6 @@ function renderBorrowers(list){
   });
 }
 
-/* SEARCH */
 window.searchBorrowers=()=>{
   const value=searchInput.value
     .toLowerCase().trim();
@@ -118,18 +112,13 @@ window.searchBorrowers=()=>{
   renderBorrowers(filtered);
 };
 
-/* =========================
-   ADD BORROWER
-========================= */
-
 window.addBorrower=async()=>{
   const name=prompt("Borrower Name");
   const phone=prompt("Phone");
   if(!name||!phone)return;
 
   await addDoc(collection(db,"borrowers"),{
-    name,
-    phone,
+    name, phone,
     agentId:currentUserId,
     createdAt:Date.now()
   });
@@ -137,17 +126,13 @@ window.addBorrower=async()=>{
   loadBorrowers();
 };
 
-/* =========================
-   VIEW BORROWER PROFILE
-========================= */
+/* ============ PROFILE VIEW ============ */
 
 window.viewBorrower=async(id)=>{
+
   currentBorrowerId=id;
 
-  const snap=await getDoc(
-    doc(db,"borrowers",id)
-  );
-
+  const snap=await getDoc(doc(db,"borrowers",id));
   const b=snap.data();
 
   listScreen.classList.add("hidden");
@@ -179,16 +164,14 @@ window.goBack=()=>{
   profileScreen.classList.add("hidden");
   listScreen.classList.remove("hidden");
   backBtn.classList.add("hidden");
+
+  if(unsubscribeLoans) unsubscribeLoans();
 };
 
-/* =========================
-   LOAN FORM
-========================= */
+/* ============ LOAN FORM ============ */
 
 window.toggleLoanForm=()=>{
-
   const container=document.getElementById("loanForm");
-
   if(container.innerHTML!==""){
     container.innerHTML="";
     return;
@@ -196,216 +179,283 @@ window.toggleLoanForm=()=>{
 
   container.innerHTML=`
     <div class="card">
+
       <input id="principal"
-       placeholder="Principal">
+        placeholder="Principal">
+
       <input id="interest"
-       placeholder="Interest %">
+        placeholder="Interest %">
+
       <input id="count"
-       placeholder="Installments">
-      <button onclick="createLoan()">
-       Confirm Loan</button>
+        placeholder="Installments">
+
+      <select id="emiType">
+        <option value="7">7 Days (Weekly)</option>
+        <option value="15">15 Days</option>
+        <option value="30">30 Days (Monthly)</option>
+      </select>
+
+      <label style="font-size:13px;">
+        Loan Start Date
+      </label>
+      <input type="date" id="loanStartDate">
+
+      <button onclick="previewLoan()">
+        Preview EMI
+      </button>
+
+      <div id="previewBox"></div>
+
     </div>`;
+};
+
+window.previewLoan=()=>{
+
+  const principal=
+    parseFloat(document.getElementById("principal").value);
+
+  const percent=
+    parseFloat(document.getElementById("interest").value);
+
+  const count=
+    parseInt(document.getElementById("count").value);
+
+  const emiDays=
+    parseInt(document.getElementById("emiType").value);
+
+  const startInput=
+    document.getElementById("loanStartDate").value;
+
+  if(!principal||isNaN(percent)||!count||!startInput){
+    alert("Fill correctly");
+    return;
+  }
+
+  const startDate=
+    new Date(startInput).getTime();
+
+  const interestAmount=
+    (principal*percent)/100;
+
+  const installmentAmount=
+    principal/count;
+
+  const endDate=
+    startDate + (count*emiDays*86400000);
+
+  document.getElementById("previewBox")
+  .innerHTML=`
+
+  <div class="card" style="
+    background:#f0f9ff;
+    border-left:4px solid #2563eb;">
+
+    Principal: ₹${principal}<br>
+    Interest: ₹${interestAmount}<br>
+    Installment: ₹${installmentAmount.toFixed(2)}<br>
+
+    First Due:
+    ${new Date(startDate+(emiDays*86400000))
+      .toLocaleDateString("en-IN")}<br>
+
+    Last Due:
+    ${new Date(endDate)
+      .toLocaleDateString("en-IN")}<br>
+
+    <button onclick="createLoan()">
+      Confirm Loan
+    </button>
+  </div>`;
 };
 
 window.createLoan=async()=>{
 
-  const principalVal=
+  const principal=
     parseFloat(document.getElementById("principal").value);
 
-  const percentVal=
+  const percent=
     parseFloat(document.getElementById("interest").value);
 
-  const countVal=
+  const count=
     parseInt(document.getElementById("count").value);
 
-  if(!principalVal||isNaN(percentVal)||!countVal){
-    alert("Fill all fields correctly");
+  const emiDays=
+    parseInt(document.getElementById("emiType").value);
+
+  const startInput=
+    document.getElementById("loanStartDate").value;
+
+  if(!principal||isNaN(percent)||!count||!startInput){
+    alert("Fill properly");
     return;
   }
 
+  const startDate=
+    new Date(startInput).getTime();
+
   const interestAmount=
-    (principalVal*percentVal)/100;
+    (principal*percent)/100;
 
   const installmentAmount=
-    principalVal/countVal;
+    principal/count;
+
+  const endDate=
+    startDate + (count*emiDays*86400000);
 
   const loan=await addDoc(
     collection(db,"loans"),{
       borrowerId:currentBorrowerId,
       agentId:currentUserId,
-      principal:principalVal,
-      interestPercent:percentVal,
+      principal,
+      interestPercent:percent,
       interestAmount,
-      count:countVal,
+      count,
+      emiType:emiDays,
+      startDate,
+      endDate,
       status:"active",
       createdAt:Date.now()
-    });
+  });
 
-  for(let i=0;i<countVal;i++){
+  for(let i=0;i<count;i++){
     await addDoc(collection(db,"installments"),{
       loanId:loan.id,
       borrowerId:currentBorrowerId,
       number:i+1,
       amount:installmentAmount,
-      dueDate:Date.now()+((i+1)*7*86400000),
+      dueDate:startDate+((i+1)*emiDays*86400000),
       status:"pending"
     });
   }
 
   document.getElementById("loanForm").innerHTML="";
-  loadLoans(currentBorrowerId);
 };
 
-/* =========================
-   LOAD LOANS + INSTALLMENTS
-========================= */
+/* ============ LOAD LOANS REALTIME ============ */
 
-async function loadLoans(borrowerId){
+function loadLoans(borrowerId){
 
-  const loanSnap=await getDocs(query(
+  if(unsubscribeLoans) unsubscribeLoans();
+
+  const q=query(
     collection(db,"loans"),
     where("borrowerId","==",borrowerId)
-  ));
-
-  loansContainer.innerHTML=`
-    <div class="section-title">
-    Active Loans</div>
-    <div id="activeLoans"></div>
-
-    <div class="section-title">
-    Completed Loans</div>
-    <div id="completedLoans"></div>
-  `;
-
-  const activeDiv=
-    document.getElementById("activeLoans");
-
-  const completedDiv=
-    document.getElementById("completedLoans");
-
-  for(const loanDoc of loanSnap.docs){
-
-    const loan=loanDoc.data();
-    const loanId=loanDoc.id;
-
-    const instSnap=await getDocs(query(
-      collection(db,"installments"),
-      where("loanId","==",loanId)
-    ));
-
-    let total=0;
-    let paid=0;
-
-    let pendingHTML="";
-    let completedHTML="";
-
-    const today=Date.now();
-
-    instSnap.forEach(d=>{
-      const i=d.data();
-      total+=i.amount;
-
-      const overdue=
-        i.status==="pending" &&
-        i.dueDate<today;
-
-      const card=`
-        <div class="card ${
-          overdue ? "overdue" :
-          i.status==="completed"
-          ? "gray-out" : ""
-        }">
-        Installment ${i.number}<br>
-        ₹${i.amount}<br>
-        📅 ${new Date(i.dueDate)
-          .toLocaleDateString("en-IN")}<br>
-        Status: ${i.status}
-        ${
-          i.status==="pending"
-          ? `<button onclick="
-            markPaid('${d.id}',
-            '${loanId}',
-            ${i.amount})">
-            Mark Paid</button>`
-          : ""
-        }
-        </div>
-      `;
-
-      if(i.status==="completed"){
-        paid+=i.amount;
-        completedHTML+=card;
-      }else{
-        pendingHTML+=card;
-      }
-    });
-
-    const percent=
-      total?Math.round((paid/total)*100):0;
-
-    const loanCard=`
-      <div class="card ${
-        loan.status!=="active"
-        ? "gray-out" : ""
-      }">
-        <b>Loan ₹${loan.principal}</b><br>
-        Interest: ${loan.interestPercent}%<br>
-        Status: ${loan.status}
-        <div class="progress">
-          <div class="progress-bar"
-            style="width:${percent}%">
-          </div>
-        </div>
-        ${percent}% Paid
-      </div>
-
-      ${
-        pendingHTML
-        ? `<div class="section-title">
-           Pending Installments
-           </div>${pendingHTML}`
-        : ""
-      }
-
-      ${
-        completedHTML
-        ? `<div class="section-title">
-           Completed Installments
-           </div>${completedHTML}`
-        : ""
-      }
-    `;
-
-    if(loan.status==="active"){
-      activeDiv.innerHTML+=loanCard;
-    }else{
-      completedDiv.innerHTML+=loanCard;
-    }
-  }
-}
-
-/* =========================
-   MARK PAID
-========================= */
-
-window.markPaid=async(instId,loanId,amount)=>{
-
-  await updateDoc(
-    doc(db,"installments",instId),
-    {status:"completed"}
   );
 
-  await addDoc(
-    collection(db,"collections"),{
-      loanId,
-      borrowerId:currentBorrowerId,
-      agentId:currentUserId,
-      amount,
-      type:"installment",
-      date:Date.now()
-  });
+  unsubscribeLoans=
+  onSnapshot(q,async(snapshot)=>{
 
-  loadLoans(currentBorrowerId);
+    loansContainer.innerHTML="";
+
+    for(const loanDoc of snapshot.docs){
+
+      const loan=loanDoc.data();
+      const loanId=loanDoc.id;
+
+      const instSnap=await getDocs(query(
+        collection(db,"installments"),
+        where("loanId","==",loanId)
+      ));
+
+      let total=0;
+      let paid=0;
+      let dueToday=0;
+
+      const today=new Date();
+      today.setHours(0,0,0,0);
+      const tomorrow=new Date(today);
+      tomorrow.setDate(today.getDate()+1);
+
+      instSnap.forEach(d=>{
+        const i=d.data();
+        total+=i.amount;
+        if(i.status==="completed") paid+=i.amount;
+
+        const dueDate=new Date(i.dueDate);
+        if(i.status==="pending" &&
+           dueDate>=today &&
+           dueDate<tomorrow){
+          dueToday++;
+        }
+      });
+
+      const percent=
+        total?Math.round((paid/total)*100):0;
+
+      const remaining=total-paid;
+
+      loansContainer.innerHTML+=`
+        <div class="card">
+
+          <b>Loan ₹${loan.principal}</b><br>
+          EMI: ${loan.emiType} days<br>
+          Start:
+          ${new Date(loan.startDate)
+            .toLocaleDateString("en-IN")}<br>
+          End:
+          ${new Date(loan.endDate)
+            .toLocaleDateString("en-IN")}<br>
+
+          ${
+            dueToday>0
+            ? `<div style="color:#ef4444;
+               font-weight:600;">
+               ⚠ ${dueToday}
+               Due Today</div>`
+            : ""
+          }
+
+          <div class="progress">
+            <div class="progress-bar"
+              style="width:${percent}%">
+            </div>
+          </div>
+
+          ${percent}% Paid<br>
+          Remaining ₹${remaining}
+
+          <button onclick=
+           "toggleInst('${loanId}')">
+           View Installments</button>
+
+          <div id="inst-${loanId}"
+           class="hidden"></div>
+
+        </div>`;
+    }
+  });
+}
+
+window.toggleInst=
+async(loanId)=>{
+
+  const container=
+    document.getElementById(`inst-${loanId}`);
+
+  if(!container.classList.contains("hidden")){
+    container.classList.add("hidden");
+    container.innerHTML="";
+    return;
+  }
+
+  container.classList.remove("hidden");
+
+  const snap=await getDocs(query(
+    collection(db,"installments"),
+    where("loanId","==",loanId)
+  ));
+
+  snap.forEach(d=>{
+    const i=d.data();
+
+    container.innerHTML+=`
+      <div class="card">
+        Installment ${i.number}<br>
+        ₹${i.amount}<br>
+        ${new Date(i.dueDate)
+          .toLocaleDateString("en-IN")}
+      </div>`;
+  });
 };
 
 </script>
