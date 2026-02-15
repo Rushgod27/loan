@@ -2,70 +2,156 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Dashboard</title>
+<title>Agent Dashboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
 
-<div class="header">Agent Panel</div>
-
-<div class="nav">
-<div onclick="goDashboard()" class="active">Dashboard</div>
-<div onclick="goBorrowers()">Borrowers</div>
-<div onclick="goReports()">Reports</div>
-<div onclick="logoutUser()">Logout</div>
+<div class="header">
+  Agent Panel
 </div>
 
-<div id="dashboardContent"></div>
+<div class="nav">
+  <div class="active">Dashboard</div>
+  <div onclick="goBorrowers()">Borrowers</div>
+  <div onclick="logoutUser()">Logout</div>
+</div>
+
+<div id="content"></div>
 
 <script type="module">
+
 import { auth, db } from "./js/firebase.js";
 
 import {
-  onAuthStateChanged,
-  signOut
+  signOut,
+  onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 import {
-  collection, query, where,
+  collection,
+  query,
+  where,
   getDocs
-} from
-"https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-let currentUserId=null;
+let uid = null;
 
-window.goBorrowers=()=>location.href="borrowers.html";
-window.goReports=()=>location.href="reports.html";
-window.goDashboard=()=>location.href="dashboard.html";
-window.logoutUser=()=>signOut(auth);
+/* ===== NAVIGATION ===== */
 
-onAuthStateChanged(auth,user=>{
-  if(!user){
-    location.href="index.html";
+window.goBorrowers = () => {
+  location.href = "borrowers.html";
+};
+
+window.logoutUser = async () => {
+  await signOut(auth);
+  location.href = "index.html";
+};
+
+/* ===== AUTH CHECK ===== */
+
+onAuthStateChanged(auth, user => {
+  if (!user) {
+    location.href = "index.html";
     return;
   }
-  currentUserId=user.uid;
+
+  uid = user.uid;
   loadDashboard();
 });
 
-async function loadDashboard(){
+/* ===== DASHBOARD LOADER ===== */
 
-  let loanSnap=await getDocs(query(
-    collection(db,"loans"),
-    where("agentId","==",currentUserId)
+async function loadDashboard() {
+
+  // Active Loans
+  const loanSnap = await getDocs(query(
+    collection(db, "loans"),
+    where("agentId", "==", uid)
   ));
 
-  let activeLoans=0;
-  loanSnap.forEach(d=>{
-    if(d.data().status==="active")
+  let activeLoans = 0;
+
+  loanSnap.forEach(doc => {
+    if (doc.data().status === "active") {
       activeLoans++;
+    }
   });
 
-  dashboardContent.innerHTML=`
-  <div class="card">
-  Active Loans<br>
-  <b>${activeLoans}</b>
-  </div>`;
+  // Borrowers Count
+  const borrowerSnap = await getDocs(query(
+    collection(db, "borrowers"),
+    where("agentId", "==", uid)
+  ));
+
+  const borrowerCount = borrowerSnap.size;
+
+  // Today's Collection
+  const today = new Date();
+  today.setHours(0,0,0,0);
+
+  const tomorrow = new Date(today);
+  tomorrow.setDate(today.getDate()+1);
+
+  const collectionSnap = await getDocs(query(
+    collection(db,"collections"),
+    where("agentId","==",uid)
+  ));
+
+  let todayCollection = 0;
+
+  collectionSnap.forEach(d=>{
+    const data = d.data();
+    if(data.date >= today.getTime() &&
+       data.date < tomorrow.getTime()){
+      todayCollection += data.amount;
+    }
+  });
+
+  /* ===== RENDER ===== */
+
+  content.innerHTML = `
+    <div class="card">
+      <h3>📊 Active Loans</h3>
+      <div style="
+        font-size:32px;
+        font-weight:700;
+        margin-top:10px;
+        color:#2563eb;">
+        ${activeLoans}
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>👥 Total Borrowers</h3>
+      <div style="
+        font-size:32px;
+        font-weight:700;
+        margin-top:10px;
+        color:#10b981;">
+        ${borrowerCount}
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>💰 Today Collection</h3>
+      <div style="
+        font-size:32px;
+        font-weight:700;
+        margin-top:10px;
+        color:#f59e0b;">
+        ₹ ${todayCollection}
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>🚀 Quick Access</h3>
+      <button onclick="goBorrowers()">
+        Manage Borrowers
+      </button>
+    </div>
+  `;
 }
 
 </script>
