@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <title>Borrowers</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="stylesheet" href="css/styles.css">
+<link rel="stylesheet" href="css/styles.css?v=4">
 </head>
 <body>
 
@@ -20,25 +20,23 @@
 
 <div class="container">
 
-  <!-- ACTION ICONS -->
-  <div class="action-bar">
-    <div class="icon-btn" onclick="toggleSearch()">🔍</div>
-    <div class="icon-btn" onclick="toggleAdd()">➕</div>
+  <!-- SEARCH & ADD BAR -->
+  <div class="card" style="margin-bottom:20px;">
+    <div style="display:flex; gap:10px;">
+      <input id="searchInput"
+             placeholder="Search by name or phone"
+             style="flex:1;">
+      <button onclick="toggleAddForm()">+ Add</button>
+    </div>
+
+    <div id="addSection" class="hidden" style="margin-top:15px;">
+      <input id="nameInput" placeholder="Borrower Name">
+      <input id="phoneInput" placeholder="Phone Number">
+      <button onclick="createBorrower()">Save Borrower</button>
+    </div>
   </div>
 
-  <!-- SEARCH -->
-  <div id="searchSection" class="hidden card">
-    <input id="searchInput" placeholder="Search by name or phone">
-  </div>
-
-  <!-- ADD -->
-  <div id="addSection" class="hidden card">
-    <input id="nameInput" placeholder="Borrower Name">
-    <input id="phoneInput" placeholder="Phone Number">
-    <button onclick="createBorrower()">Save Borrower</button>
-  </div>
-
-  <!-- LIST -->
+  <!-- BORROWER LIST -->
   <div id="borrowerList"></div>
 
 </div>
@@ -65,14 +63,12 @@ import {
 let currentUserId = null;
 let borrowerCache = [];
 
-/* ================= AUTH PROTECTION ================= */
+/* ================= AUTH ================= */
 onAuthStateChanged(auth, user => {
-
   if(!user){
     window.location.href = "index.html";
     return;
   }
-
   currentUserId = user.uid;
   loadBorrowers();
 });
@@ -87,15 +83,10 @@ window.logout = async () => {
   window.location.href = "index.html";
 };
 
-/* ================= TOGGLE SECTIONS ================= */
-window.toggleSearch = () => {
-  searchSection.classList.toggle("hidden");
-  addSection.classList.add("hidden");
-};
-
-window.toggleAdd = () => {
-  addSection.classList.toggle("hidden");
-  searchSection.classList.add("hidden");
+/* ================= TOGGLE ADD ================= */
+window.toggleAddForm = () => {
+  document.getElementById("addSection")
+    .classList.toggle("hidden");
 };
 
 /* ================= CREATE BORROWER ================= */
@@ -119,7 +110,8 @@ window.createBorrower = async () => {
 
   nameInput.value="";
   phoneInput.value="";
-  addSection.classList.add("hidden");
+  document.getElementById("addSection")
+    .classList.add("hidden");
 
   loadBorrowers();
 };
@@ -147,7 +139,7 @@ async function loadBorrowers(){
   renderBorrowers(borrowerCache);
 }
 
-/* ================= RENDER LIST ================= */
+/* ================= RENDER ================= */
 function renderBorrowers(list){
 
   borrowerList.innerHTML="";
@@ -160,17 +152,25 @@ function renderBorrowers(list){
 
   list.forEach(b=>{
     borrowerList.innerHTML += `
-      <div class="list-item"
-        onclick="openProfile('${b.id}')">
-        <b>${b.name}</b><br>
-        ${b.phone}
+      <div class="card borrower-card"
+        onclick="openProfile('${b.id}')"
+        style="cursor:pointer; margin-bottom:15px;">
+        
+        <div style="font-weight:600; font-size:16px;">
+          ${b.name}
+        </div>
+
+        <div style="color:#6b7280; margin-top:4px;">
+          ${b.phone}
+        </div>
+
       </div>
     `;
   });
 }
 
 /* ================= SEARCH ================= */
-searchInput?.addEventListener("input", e => {
+searchInput.addEventListener("input", e => {
 
   const value = e.target.value.toLowerCase();
 
