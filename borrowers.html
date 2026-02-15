@@ -4,13 +4,11 @@
 <meta charset="UTF-8">
 <title>Borrowers</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="stylesheet" href="css/styles.css?v=15">
+<link rel="stylesheet" href="css/styles.css?v=20">
 </head>
 <body>
 
-<div class="header">
-  Borrowers
-</div>
+<div class="header">Borrowers</div>
 
 <div class="nav">
   <div onclick="goDashboard()">Dashboard</div>
@@ -18,19 +16,21 @@
   <div onclick="logout()">Logout</div>
 </div>
 
-<div class="container">
+<div class="section-content">
 
-  <!-- ADD BUTTON -->
+  <!-- ADD BORROWER -->
   <div class="card">
-    <button class="btn btn-primary"
-            onclick="toggleAddForm()">
+    <button type="button"
+            class="btn btn-primary"
+            onclick="toggleAdd()">
       + Add Borrower
     </button>
 
     <div id="addSection" class="hidden" style="margin-top:15px;">
       <input id="nameInput" placeholder="Borrower Name">
       <input id="phoneInput" placeholder="Phone Number">
-      <button class="btn btn-success"
+      <button type="button"
+              class="btn btn-success"
               onclick="createBorrower()">
         Save Borrower
       </button>
@@ -40,40 +40,13 @@
   <!-- SEARCH -->
   <div class="card">
     <input id="searchInput"
-           placeholder="Search by name or phone">
+           placeholder="Search borrower by name or phone">
   </div>
 
   <!-- LIST -->
   <div id="borrowerList"></div>
 
 </div>
-
-
-<!-- ================= MODAL ================= -->
-<div id="warningModal" class="modal hidden">
-  <div class="modal-box">
-
-    <div class="modal-header">
-      ⚠ Borrower Exists
-    </div>
-
-    <div class="modal-body" id="modalMessage"></div>
-
-    <div class="modal-actions">
-      <button class="btn btn-danger"
-              onclick="closeModal()">
-        Cancel
-      </button>
-
-      <button class="btn btn-primary"
-              id="confirmAddBtn">
-        Add Anyway
-      </button>
-    </div>
-
-  </div>
-</div>
-
 
 <script type="module">
 
@@ -82,29 +55,27 @@ import { auth, db } from "./js/firebase.js";
 import {
   onAuthStateChanged,
   signOut
-} from
-"https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 import {
   collection,
   query,
   where,
-  addDoc,
   getDocs,
+  addDoc,
   doc,
   getDoc
-} from
-"https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 let currentUserId = null;
 let borrowerCache = [];
 
-
 /* ================= AUTH ================= */
+
 onAuthStateChanged(auth, user => {
 
   if(!user){
-    window.location.href = "index.html";
+    location.href = "index.html";
     return;
   }
 
@@ -123,9 +94,9 @@ window.logout = async () => {
   location.href = "index.html";
 };
 
-/* ================= ADD TOGGLE ================= */
+/* ================= TOGGLE ADD ================= */
 
-window.toggleAddForm = () => {
+window.toggleAdd = () => {
   addSection.classList.toggle("hidden");
 };
 
@@ -137,7 +108,7 @@ window.createBorrower = async () => {
   let phone = phoneInput.value.trim();
 
   if(!name || !phone){
-    alert("Fill all fields");
+    alert("Please enter name and phone");
     return;
   }
 
@@ -145,7 +116,7 @@ window.createBorrower = async () => {
 
   try{
 
-    /* 1️⃣ SAME AGENT CHECK */
+    /* ===== CHECK SAME AGENT ===== */
     const sameQuery = query(
       collection(db,"borrowers"),
       where("agentId","==",currentUserId),
@@ -155,14 +126,11 @@ window.createBorrower = async () => {
     const sameSnap = await getDocs(sameQuery);
 
     if(!sameSnap.empty){
-      showModal(
-        "This borrower already exists under you.",
-        null
-      );
+      alert("Borrower already exists under you.");
       return;
     }
 
-    /* 2️⃣ OTHER AGENTS CHECK */
+    /* ===== CHECK OTHER AGENTS ===== */
     const otherQuery = query(
       collection(db,"borrowers"),
       where("phone","==",phone)
@@ -170,70 +138,31 @@ window.createBorrower = async () => {
 
     const otherSnap = await getDocs(otherQuery);
 
-    let agentsList = [];
-    let activeLoanAgents = [];
+    let otherAgents = [];
 
-    for(const docSnap of otherSnap.docs){
+    for(const b of otherSnap.docs){
 
-      const data = docSnap.data();
+      const data = b.data();
 
       if(data.agentId === currentUserId) continue;
 
-      const agentSnap = await getDoc(
-        doc(db,"users",data.agentId)
-      );
-
-      let agentName = "Unknown Agent";
-
+      const agentSnap = await getDoc(doc(db,"users",data.agentId));
       if(agentSnap.exists()){
-        agentName = agentSnap.data().name;
+        otherAgents.push(agentSnap.data().name);
       }
+    }
 
-      agentsList.push(agentName);
-
-      const loanQuery = query(
-        collection(db,"loans"),
-        where("borrowerId","==",docSnap.id),
-        where("status","==","active")
+    if(otherAgents.length > 0){
+      const confirmAdd = confirm(
+        "Borrower exists under:\n" +
+        otherAgents.join(", ") +
+        "\n\nAdd anyway?"
       );
 
-      const loanSnap = await getDocs(loanQuery);
-
-      if(!loanSnap.empty){
-        activeLoanAgents.push(agentName);
-      }
+      if(!confirmAdd) return;
     }
 
-    if(agentsList.length > 0){
-
-      let message =
-        "<b>Borrower exists under:</b><br>" +
-        agentsList.join("<br>");
-
-      if(activeLoanAgents.length > 0){
-        message += "<br><br><b>Active loan under:</b><br>" +
-                   activeLoanAgents.join("<br>");
-      }
-
-      message += "<br><br>Do you want to add anyway?";
-
-      showModal(message, async () => {
-
-        await addDoc(collection(db,"borrowers"),{
-          name,
-          phone,
-          nameLower:name.toLowerCase(),
-          agentId: currentUserId,
-          createdAt: Date.now()
-        });
-
-        resetForm();
-      });
-
-      return;
-    }
-
-    /* 3️⃣ CREATE DIRECTLY */
+    /* ===== CREATE ===== */
     await addDoc(collection(db,"borrowers"),{
       name,
       phone,
@@ -242,22 +171,16 @@ window.createBorrower = async () => {
       createdAt: Date.now()
     });
 
-    resetForm();
+    nameInput.value="";
+    phoneInput.value="";
+    addSection.classList.add("hidden");
+
+    loadBorrowers();
 
   }catch(err){
     alert("Error: "+err.message);
   }
 };
-
-
-/* ================= RESET FORM ================= */
-
-function resetForm(){
-  nameInput.value="";
-  phoneInput.value="";
-  addSection.classList.add("hidden");
-  loadBorrowers();
-}
 
 /* ================= LOAD BORROWERS ================= */
 
@@ -273,7 +196,7 @@ async function loadBorrowers(){
   const snap = await getDocs(q);
 
   snap.forEach(d=>{
-    borrowerCache.push({id:d.id,...d.data()});
+    borrowerCache.push({id:d.id, ...d.data()});
   });
 
   borrowerCache.sort((a,b)=>a.name.localeCompare(b.name));
@@ -289,7 +212,7 @@ function renderBorrowers(list){
 
   if(list.length===0){
     borrowerList.innerHTML =
-    `<div class="card">No borrowers found</div>`;
+      `<div class="card">No borrowers found</div>`;
     return;
   }
 
@@ -297,18 +220,17 @@ function renderBorrowers(list){
     borrowerList.innerHTML+=`
       <div class="card borrower-card"
            onclick="openProfile('${b.id}')">
-        <div class="borrower-info">
+        <div>
           <b>${b.name}</b><br>
           <span>${b.phone}</span>
         </div>
-      </div>
-    `;
+      </div>`;
   });
 }
 
 /* ================= SEARCH ================= */
 
-searchInput.addEventListener("input", e => {
+searchInput.addEventListener("input", e=>{
 
   const value = e.target.value.toLowerCase();
 
@@ -325,38 +247,11 @@ searchInput.addEventListener("input", e => {
   renderBorrowers(filtered);
 });
 
-/* ================= PROFILE ================= */
+/* ================= OPEN PROFILE ================= */
 
-window.openProfile = (id) => {
+window.openProfile = (id)=>{
   location.href = "borrower-profile.html?id="+id;
 };
-
-
-/* ================= MODAL ================= */
-
-window.closeModal = () => {
-  warningModal.classList.add("hidden");
-};
-
-function showModal(message, onConfirm){
-
-  modalMessage.innerHTML = message;
-  warningModal.classList.remove("hidden");
-
-  const btn = confirmAddBtn;
-
-  if(!onConfirm){
-    btn.style.display = "none";
-    return;
-  }
-
-  btn.style.display = "inline-flex";
-
-  btn.onclick = () => {
-    warningModal.classList.add("hidden");
-    onConfirm();
-  };
-}
 
 </script>
 </body>
