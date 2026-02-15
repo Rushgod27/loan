@@ -1,0 +1,95 @@
+body{
+  margin:0;
+  font-family:system-ui;
+  background:#f1f5f9;
+}
+
+.hidden{display:none;}
+
+.header{
+  background:#2563eb;
+  color:white;
+  padding:14px;
+  text-align:center;
+  font-weight:600;
+}
+
+.nav{
+  display:flex;
+  background:#fff;
+  border-bottom:1px solid #eee;
+}
+
+.nav div{
+  flex:1;
+  padding:12px;
+  text-align:center;
+  cursor:pointer;
+}
+
+.nav .active{
+  color:#2563eb;
+  border-bottom:3px solid #2563eb;
+  font-weight:600;
+}
+
+.card{
+  background:white;
+  margin:14px;
+  padding:16px;
+  border-radius:14px;
+  box-shadow:0 2px 8px rgba(0,0,0,.05);
+}
+
+input, select{
+  width:100%;
+  padding:10px;
+  border-radius:8px;
+  border:1px solid #ddd;
+  margin-bottom:10px;
+}
+
+button{
+  padding:8px 14px;
+  border:none;
+  border-radius:8px;
+  background:#2563eb;
+  color:white;
+  font-weight:600;
+  cursor:pointer;
+}
+
+.stat-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+}
+
+.stat-box{
+  background:white;
+  padding:14px;
+  border-radius:12px;
+  text-align:center;
+  box-shadow:0 2px 8px rgba(0,0,0,.05);
+}
+
+.list-item{
+  background:white;
+  padding:14px;
+  border-bottom:1px solid #eee;
+  cursor:pointer;
+}
+
+.progress{
+  height:10px;
+  background:#e5e7eb;
+  border-radius:10px;
+  overflow:hidden;
+  margin-top:8px;
+}
+
+.progress-bar{
+  height:100%;
+  background:#22c55e;
+}
+t
