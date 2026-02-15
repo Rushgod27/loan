@@ -1,3 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Agent Dashboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="css/styles.css?v=10">
+</head>
+<body>
+
+<div class="header">
+  Agent Panel
+</div>
+
+<div class="nav">
+  <div class="active">Dashboard</div>
+  <div onclick="goBorrowers()">Borrowers</div>
+  <div onclick="logoutUser()">Logout</div>
+</div>
+
+<div class="container" id="content"></div>
+
 <script type="module">
 
 import { auth, db } from "./js/firebase.js";
@@ -233,3 +255,5 @@ async function loadDashboard(){
 }
 
 </script>
+</body>
+</html>
