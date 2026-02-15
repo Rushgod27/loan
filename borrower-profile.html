@@ -5,31 +5,6 @@
 <title>Borrower Profile</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="stylesheet" href="css/styles.css">
-<style>
-.badge{
-  padding:4px 8px;
-  border-radius:20px;
-  font-size:12px;
-  font-weight:600;
-}
-.badge.green{
-  background:#dcfce7;
-  color:#166534;
-}
-.badge.blue{
-  background:#dbeafe;
-  color:#1e40af;
-}
-.completed{
-  opacity:0.6;
-}
-.section-title{
-  font-weight:600;
-  margin:16px 0 8px;
-}
-.inst{ margin-top:10px; }
-.hidden{ display:none; }
-</style>
 </head>
 <body>
 
@@ -43,7 +18,7 @@
 
 <div class="container">
 
-  <!-- PROFILE -->
+  <!-- PROFILE CARD -->
   <div id="profileCard" class="card"></div>
 
   <!-- CREATE LOAN BUTTON -->
@@ -58,16 +33,16 @@
     <input id="count" placeholder="Number of EMIs">
 
     <select id="interval">
-      <option value="7">7 Days</option>
-      <option value="15">15 Days</option>
-      <option value="30">30 Days</option>
+      <option value="7">7 Days EMI</option>
+      <option value="15">15 Days EMI</option>
+      <option value="30">30 Days EMI</option>
     </select>
 
     <input type="date" id="loanDate">
     <button onclick="createLoan()">Confirm Loan</button>
   </div>
 
-  <!-- LOANS -->
+  <!-- LOAN SECTION -->
   <div id="loanSection"></div>
 
 </div>
@@ -75,12 +50,10 @@
 <script type="module">
 
 import { auth, db } from "./js/firebase.js";
-
 import {
   onAuthStateChanged,
   signOut
-} from
-"https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 import {
   doc,
@@ -91,23 +64,18 @@ import {
   where,
   addDoc,
   updateDoc
-} from
-"https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-
-let borrowerId = null;
-let borrowerData = null;
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const params = new URLSearchParams(window.location.search);
-borrowerId = params.get("id");
+const borrowerId = params.get("id");
 
-/* AUTH PROTECTION */
-onAuthStateChanged(auth, user => {
+if(!borrowerId){
+  location.href="borrowers.html";
+}
+
+onAuthStateChanged(auth,user=>{
   if(!user){
     location.href="index.html";
-    return;
-  }
-  if(!borrowerId){
-    location.href="borrowers.html";
     return;
   }
   loadProfile();
@@ -115,31 +83,28 @@ onAuthStateChanged(auth, user => {
 });
 
 /* NAVIGATION */
-window.goBorrowers = () =>
-  location.href="borrowers.html";
-
-window.goDashboard = () =>
-  location.href="agent-dashboard.html";
-
-window.logout = async ()=>{
+window.goBorrowers=()=>location.href="borrowers.html";
+window.goDashboard=()=>location.href="agent-dashboard.html";
+window.logout=async()=>{
   await signOut(auth);
   location.href="index.html";
 };
 
 /* LOAD PROFILE */
 async function loadProfile(){
-  const snap = await getDoc(
-    doc(db,"borrowers",borrowerId)
-  );
-  borrowerData = snap.data();
+  const snap=await getDoc(doc(db,"borrowers",borrowerId));
+  if(!snap.exists()) return;
 
-  profileCard.innerHTML = `
-    <h3>${borrowerData.name}</h3>
-    📞 <a href="tel:${borrowerData.phone}">
-      ${borrowerData.phone}
+  const b=snap.data();
+
+  profileCard.innerHTML=`
+    <h3>${b.name}</h3>
+
+    📞 <a href="tel:${b.phone}">
+      ${b.phone}
     </a><br><br>
 
-    <a href="https://wa.me/${borrowerData.phone}"
+    <a href="https://wa.me/${b.phone}"
        target="_blank">
        💬 WhatsApp
     </a>
@@ -147,75 +112,65 @@ async function loadProfile(){
 }
 
 /* TOGGLE FORM */
-window.toggleLoanForm = ()=>{
+window.toggleLoanForm=()=>{
   loanForm.classList.toggle("hidden");
 };
 
 /* CREATE LOAN */
-window.createLoan = async ()=>{
+window.createLoan=async()=>{
 
-  const principalVal = parseFloat(principal.value);
-  const interestVal = parseFloat(interest.value);
-  const countVal = parseInt(count.value);
-  const intervalVal = parseInt(interval.value);
-  const dateVal = loanDate.value;
+  const principalVal=parseFloat(principal.value);
+  const interestVal=parseFloat(interest.value);
+  const countVal=parseInt(count.value);
+  const intervalVal=parseInt(interval.value);
+  const dateVal=loanDate.value;
 
-  if(!principalVal || isNaN(interestVal) ||
-     !countVal || !dateVal){
-    alert("Fill all fields");
+  if(!principalVal || isNaN(interestVal)
+     || !countVal || !dateVal){
+    alert("Fill all fields correctly");
     return;
   }
 
-  const start = new Date(dateVal).getTime();
+  const start=new Date(dateVal).getTime();
+  const interestAmount=(principalVal*interestVal)/100;
+  const disbursedAmount=principalVal-interestAmount;
+  const installmentAmount=principalVal/countVal;
 
-  const interestAmount =
-    (principalVal * interestVal)/100;
-
-  const disbursed =
-    principalVal - interestAmount;
-
-  const installmentAmount =
-    principalVal / countVal;
-
-  const loanRef = await addDoc(
-    collection(db,"loans"),{
-      borrowerId,
-      principal: principalVal,
-      interestPercent: interestVal,
-      interestAmount,
-      disbursedAmount: disbursed,
-      count: countVal,
-      interval: intervalVal,
-      startDate: start,
-      status:"active",
-      createdAt: Date.now()
-    }
-  );
-
-  // upfront interest
-  await addDoc(collection(db,"collections"),{
-    loanId: loanRef.id,
+  const loanRef=await addDoc(collection(db,"loans"),{
     borrowerId,
-    amount: interestAmount,
-    type:"upfront_interest",
-    date: Date.now()
+    principal:principalVal,
+    interestPercent:interestVal,
+    interestAmount,
+    disbursedAmount,
+    count:countVal,
+    interval:intervalVal,
+    startDate:start,
+    status:"active",
+    createdAt:Date.now()
   });
 
-  // create installments
+  // upfront interest collection
+  await addDoc(collection(db,"collections"),{
+    loanId:loanRef.id,
+    borrowerId,
+    amount:interestAmount,
+    type:"upfront_interest",
+    date:Date.now()
+  });
+
+  // create EMIs
   for(let i=0;i<countVal;i++){
     await addDoc(collection(db,"installments"),{
-      loanId: loanRef.id,
+      loanId:loanRef.id,
       borrowerId,
       number:i+1,
-      amount: installmentAmount,
-      dueDate:
-        start + ((i+1)*intervalVal*86400000),
+      amount:installmentAmount,
+      dueDate:start+((i+1)*intervalVal*86400000),
       status:"pending"
     });
   }
 
   alert("Loan Created Successfully");
-
   loanForm.classList.add("hidden");
   loadLoans();
 };
@@ -223,37 +178,37 @@ window.createLoan = async ()=>{
 /* LOAD LOANS */
 async function loadLoans(){
 
-  const q = query(
+  const snap=await getDocs(query(
     collection(db,"loans"),
     where("borrowerId","==",borrowerId)
-  );
+  ));
 
-  const snap = await getDocs(q);
-
-  let activeHTML = "";
-  let completedHTML = "";
+  let activeHTML="";
+  let completedHTML="";
 
   snap.forEach(d=>{
     const loan=d.data();
-
     const startDate=new Date(
       loan.startDate
     ).toLocaleDateString("en-IN");
 
-    const card = `
-      <div class="card ${
-        loan.status==="completed"?"completed":""
-      }">
+    const loanClass =
+      loan.status==="completed"
+      ? "loan-completed"
+      : "loan-active";
+
+    const card=`
+      <div class="card ${loanClass}">
 
         <b>Loan ₹${loan.principal}</b><br>
         Interest: ${loan.interestPercent}%<br>
         Disbursed: ₹${loan.disbursedAmount}<br>
-        Start Date: ${startDate}<br>
+        Start: ${startDate}<br>
         EMI: ${loan.count} × (${loan.interval} days)<br>
 
         <span class="badge ${
           loan.status==="completed"
-          ?"green":"blue"
+          ? "green":"blue"
         }">
           ${loan.status}
         </span>
@@ -264,8 +219,7 @@ async function loadLoans(){
           View Installments
         </button>
 
-        <div id="inst-${d.id}"
-          class="inst hidden"></div>
+        <div id="inst-${d.id}" class="inst hidden"></div>
 
       </div>
     `;
@@ -276,7 +230,7 @@ async function loadLoans(){
       activeHTML+=card;
   });
 
-  loanSection.innerHTML = `
+  loanSection.innerHTML=`
     <div class="section-title">
       Active Loans
     </div>
@@ -289,8 +243,8 @@ async function loadLoans(){
   `;
 }
 
-/* INSTALLMENTS */
-window.toggleInstallments =
+/* TOGGLE INSTALLMENTS */
+window.toggleInstallments=
 async(loanId)=>{
 
   // collapse others
@@ -302,9 +256,7 @@ async(loanId)=>{
     }
   });
 
-  const box =
-    document.getElementById(
-      `inst-${loanId}`);
+  const box=document.getElementById(`inst-${loanId}`);
 
   if(!box.classList.contains("hidden")){
     box.classList.add("hidden");
@@ -314,7 +266,7 @@ async(loanId)=>{
 
   box.classList.remove("hidden");
 
-  const snap = await getDocs(query(
+  const snap=await getDocs(query(
     collection(db,"installments"),
     where("loanId","==",loanId)
   ));
@@ -327,22 +279,26 @@ async(loanId)=>{
   list.sort((a,b)=>a.number-b.number);
 
   let pendingHTML="";
-  let completedHTML="";
+  let paidHTML="";
   let allCompleted=true;
 
   list.forEach(i=>{
 
-    const emiCard = `
-      <div class="card ${
-        i.status==="completed"
-        ?"completed":""
-      }">
+    const overdue =
+      i.status==="pending" &&
+      i.dueDate<Date.now();
 
+    let emiClass="emi-pending";
+    if(overdue) emiClass="emi-overdue";
+    if(i.status==="completed")
+      emiClass="emi-paid";
+
+    const card=`
+      <div class="card ${emiClass}">
         EMI ${i.number}<br>
         ₹${i.amount}<br>
-        ${new Date(
-          i.dueDate
-        ).toLocaleDateString("en-IN")}<br>
+        ${new Date(i.dueDate)
+        .toLocaleDateString("en-IN")}<br>
 
         ${
           i.status==="pending"
@@ -353,18 +309,18 @@ async(loanId)=>{
              Mark Paid</button>`
           : "Paid"
         }
-
       </div>
     `;
 
     if(i.status==="pending"){
-      pendingHTML+=emiCard;
+      pendingHTML+=card;
       allCompleted=false;
     }else{
-      completedHTML+=emiCard;
+      paidHTML+=card;
     }
   });
 
+  // Auto complete loan
   if(allCompleted){
     await updateDoc(
       doc(db,"loans",loanId),
@@ -373,24 +329,24 @@ async(loanId)=>{
     loadLoans();
   }
 
-  box.innerHTML = `
+  box.innerHTML=`
     <div class="section-title">
       Pending EMIs
     </div>
     ${pendingHTML || "None"}
 
     <div class="section-title">
-      Completed EMIs
+      Paid EMIs
     </div>
-    ${completedHTML || "None"}
+    ${paidHTML || "None"}
   `;
 };
 
 /* PAY */
-window.pay =
+window.pay=
 async(id,loanId,amt)=>{
 
-  const confirmPay =
+  const confirmPay=
     confirm("Confirm payment received?");
 
   if(!confirmPay) return;
