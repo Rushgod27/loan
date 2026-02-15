@@ -19,7 +19,7 @@
   height:42px;
   border-radius:50%;
   background:#2563eb;
-  color:#fff;
+  color:white;
   display:flex;
   align-items:center;
   justify-content:center;
@@ -37,16 +37,6 @@
 
 .hidden{display:none;}
 
-.badge{
-  padding:4px 8px;
-  border-radius:8px;
-  font-size:12px;
-  color:#fff;
-}
-
-.badge-active{background:#22c55e;}
-.badge-completed{background:#6b7280;}
-
 .progress{
   height:8px;
   background:#e5e7eb;
@@ -60,8 +50,14 @@
   background:#22c55e;
 }
 
-.overdue{
-  background:#fee2e2;
+.gray{
+  opacity:.6;
+  background:#f3f4f6;
+}
+
+.section-title{
+  margin:18px 0 8px;
+  font-weight:600;
 }
 </style>
 </head>
@@ -78,21 +74,25 @@
 
 <div class="section-content">
 
+  <!-- ICON ACTIONS -->
   <div class="top-actions">
     <div class="icon-btn" onclick="toggleSearch()">🔍</div>
     <div class="icon-btn" onclick="toggleAdd()">➕</div>
   </div>
 
+  <!-- SEARCH -->
   <div id="searchContainer" class="action-panel hidden">
     <input id="searchBorrower" placeholder="Search borrower...">
   </div>
 
+  <!-- ADD -->
   <div id="addContainer" class="action-panel hidden">
     <input id="newName" placeholder="Borrower Name">
     <input id="newPhone" placeholder="Phone">
     <button onclick="confirmAdd()">Save Borrower</button>
   </div>
 
+  <!-- MAIN -->
   <div id="borrowerList"></div>
 
 </div>
@@ -135,7 +135,7 @@ window.toggleAdd=()=>{
   searchContainer.classList.add("hidden");
 };
 
-/* ADD */
+/* ADD BORROWER */
 window.confirmAdd=async()=>{
   const name=newName.value.trim();
   const phone=newPhone.value.trim();
@@ -143,7 +143,6 @@ window.confirmAdd=async()=>{
 
   await addDoc(collection(db,"borrowers"),{
     name,phone,
-    nameLower:name.toLowerCase(),
     agentId:currentUserId,
     createdAt:Date.now()
   });
@@ -160,10 +159,13 @@ async function loadBorrowers(){
   borrowerCache=[];
   const q=query(collection(db,"borrowers"),
     where("agentId","==",currentUserId));
+
   const snap=await getDocs(q);
+
   snap.forEach(d=>{
     borrowerCache.push({id:d.id,...d.data()});
   });
+
   renderBorrowers(borrowerCache);
 }
 
@@ -171,15 +173,18 @@ function renderBorrowers(list){
   borrowerList.innerHTML="";
   if(list.length===0){
     borrowerList.innerHTML=
-    `<div class="card">No Borrowers</div>`;
+      `<div class="card">No Borrowers</div>`;
     return;
   }
+
   list.forEach(b=>{
     borrowerList.innerHTML+=`
-    <div class="card"
-      onclick="viewBorrower('${b.id}')">
-      <b>${b.name}</b><br>${b.phone}
-    </div>`;
+      <div class="card"
+        onclick="viewBorrower('${b.id}')">
+        <b>${b.name}</b><br>
+        ${b.phone}
+      </div>
+    `;
   });
 }
 
@@ -187,14 +192,16 @@ function renderBorrowers(list){
 searchInput.addEventListener("keyup",()=>{
   const val=searchInput.value.trim().toLowerCase();
   if(!val){ renderBorrowers(borrowerCache); return; }
+
   const filtered=borrowerCache.filter(b=>{
     return (b.name||"").toLowerCase().includes(val)
        || (b.phone||"").includes(val);
   });
+
   renderBorrowers(filtered);
 });
 
-/* PROFILE VIEW */
+/* VIEW BORROWER */
 window.viewBorrower=async(id)=>{
   currentBorrowerId=id;
 
@@ -210,9 +217,9 @@ window.viewBorrower=async(id)=>{
       </a><br><br>
 
       💬 <a href="https://wa.me/${b.phone}"
-            target="_blank"
-            style="color:#22c55e">
-         WhatsApp
+         target="_blank"
+         style="color:#22c55e">
+        WhatsApp
       </a><br><br>
 
       <button onclick="showLoanForm('${id}')">
@@ -228,101 +235,31 @@ window.viewBorrower=async(id)=>{
   loadLoans(id);
 };
 
-/* SHOW LOAN FORM */
-window.showLoanForm=(borrowerId)=>{
-  const container=
-    document.getElementById("loanFormContainer");
-
-  if(container.innerHTML!=="") return;
-
-  container.innerHTML=`
-    <div class="card">
-      <input id="principalInput" placeholder="Principal">
-      <input id="interestInput" placeholder="Interest %">
-      <input id="countInput" placeholder="Installments">
-      <select id="intervalInput">
-        <option value="7">7 Days</option>
-        <option value="15">15 Days</option>
-        <option value="30">30 Days</option>
-      </select>
-      <input type="date" id="startInput">
-      <button onclick="createLoan('${borrowerId}')">
-        Confirm Loan
-      </button>
-    </div>
-  `;
-};
-
-/* CREATE LOAN */
-window.createLoan=async(borrowerId)=>{
-
-  const principal=parseFloat(principalInput.value);
-  const percent=parseFloat(interestInput.value);
-  const count=parseInt(countInput.value);
-  const interval=parseInt(intervalInput.value);
-  const startValue=startInput.value;
-
-  if(!principal||isNaN(percent)
-     ||!count||!startValue){ alert("Fill correctly");return;}
-
-  const start=new Date(startValue).getTime();
-  const installmentAmount=principal/count;
-  const interestAmount=(principal*percent)/100;
-
-  const loan=await addDoc(collection(db,"loans"),{
-    borrowerId,
-    agentId:currentUserId,
-    principal,
-    interestPercent:percent,
-    interestAmount,
-    count,
-    interval,
-    startDate:start,
-    status:"active",
-    createdAt:Date.now()
-  });
-
-  await addDoc(collection(db,"collections"),{
-    loanId:loan.id,
-    agentId:currentUserId,
-    amount:interestAmount,
-    type:"upfront_interest",
-    date:Date.now()
-  });
-
-  for(let i=0;i<count;i++){
-    await addDoc(collection(db,"installments"),{
-      loanId:loan.id,
-      borrowerId,
-      number:i+1,
-      amount:installmentAmount,
-      dueDate:start+(i+1)*interval*86400000,
-      status:"pending"
-    });
-  }
-
-  alert("Loan Created");
-  viewBorrower(borrowerId);
-};
-
 /* LOAD LOANS */
 async function loadLoans(borrowerId){
 
   const loanContent=document.getElementById("loanContent");
-  loanContent.innerHTML="";
+
+  loanContent.innerHTML=`
+    <div class="section-title">Active Loans</div>
+    <div id="activeLoans"></div>
+
+    <div class="section-title">
+      Completed Loans
+    </div>
+    <div id="completedLoans"></div>
+  `;
+
+  const activeDiv=document.getElementById("activeLoans");
+  const completedDiv=document.getElementById("completedLoans");
 
   const snap=await getDocs(query(
     collection(db,"loans"),
     where("borrowerId","==",borrowerId)
   ));
 
-  if(snap.empty){
-    loanContent.innerHTML=
-    `<div class="card">No Loans</div>`;
-    return;
-  }
-
   for(const d of snap.docs){
+
     const loan=d.data();
 
     const instSnap=await getDocs(query(
@@ -331,6 +268,7 @@ async function loadLoans(borrowerId){
     ));
 
     let total=0,paid=0;
+
     instSnap.forEach(i=>{
       total+=i.data().amount;
       if(i.data().status==="completed")
@@ -340,22 +278,35 @@ async function loadLoans(borrowerId){
     const percent=
       total?Math.round((paid/total)*100):0;
 
-    loanContent.innerHTML+=`
-      <div class="card">
+    const gray=
+      loan.status==="completed"
+      ? "gray" : "";
+
+    const card=`
+      <div class="card ${gray}">
         <b>₹${loan.principal}</b><br>
         Start:
         ${new Date(loan.startDate)
-         .toLocaleDateString("en-IN")}<br>
+          .toLocaleDateString("en-IN")}<br>
+
         <div class="progress">
           <div class="progress-bar"
-           style="width:${percent}%"></div>
+           style="width:${percent}%">
+          </div>
         </div>
+
         ${percent}% paid<br>
-        <button onclick="viewInstallments('${d.id}')">
+
+        <button onclick="
+         viewInstallments('${d.id}')">
           View Installments
         </button>
       </div>
     `;
+
+    loan.status==="active"
+      ? activeDiv.innerHTML+=card
+      : completedDiv.innerHTML+=card;
   }
 }
 
@@ -365,18 +316,34 @@ window.viewInstallments=async(loanId)=>{
   const loanContent=
     document.getElementById("loanContent");
 
+  loanContent.innerHTML=`
+    <div class="card">
+      <button onclick="
+       loadLoans(currentBorrowerId)">
+        ⬅ Back to Loans
+      </button>
+    </div>
+
+    <div class="section-title">
+      Pending Installments
+    </div>
+    <div id="pendingInstallments"></div>
+
+    <div class="section-title">
+      Completed Installments
+    </div>
+    <div id="completedInstallments"></div>
+  `;
+
+  const pendingDiv=
+    document.getElementById("pendingInstallments");
+  const completedDiv=
+    document.getElementById("completedInstallments");
+
   const snap=await getDocs(query(
     collection(db,"installments"),
     where("loanId","==",loanId)
   ));
-
-  loanContent.innerHTML=`
-    <div class="card">
-      <button onclick="loadLoans(currentBorrowerId)">
-        ⬅ Back to Loans
-      </button>
-    </div>
-  `;
 
   let list=[];
   snap.forEach(d=>{
@@ -386,18 +353,22 @@ window.viewInstallments=async(loanId)=>{
   list.sort((a,b)=>a.number-b.number);
 
   list.forEach(i=>{
-    const overdue=
-      i.status==="pending"
-      && i.dueDate<Date.now();
 
-    loanContent.innerHTML+=`
-      <div class="card ${overdue?"overdue":""}">
+    const gray=
+      i.status==="completed"
+      ? "gray":"";
+
+    const card=`
+      <div class="card ${gray}">
         Installment ${i.number}<br>
         ₹${i.amount}<br>
         📅 ${new Date(i.dueDate)
          .toLocaleDateString("en-IN")}<br>
-        ${i.status}
-        ${i.status==="pending"
+
+        Status: ${i.status}
+
+        ${
+          i.status==="pending"
           ? `<button onclick="
              markPaid('${i.id}',
              '${loanId}',
@@ -407,14 +378,20 @@ window.viewInstallments=async(loanId)=>{
         }
       </div>
     `;
+
+    i.status==="pending"
+      ? pendingDiv.innerHTML+=card
+      : completedDiv.innerHTML+=card;
   });
 };
 
 /* MARK PAID */
 window.markPaid=async(instId,loanId,amount)=>{
 
-  await updateDoc(doc(db,"installments",instId),
-  {status:"completed"});
+  await updateDoc(
+    doc(db,"installments",instId),
+    {status:"completed"}
+  );
 
   await addDoc(collection(db,"collections"),{
     loanId,
