@@ -450,3 +450,55 @@ body{
   border-left:5px solid #f59e0b;
   background:#fffaf0;
 }
+
+/* =======================
+   MODAL SYSTEM
+======================= */
+
+.modal{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.45);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  z-index:9999;
+}
+
+.modal-box{
+  width:90%;
+  max-width:420px;
+  background:white;
+  border-radius:18px;
+  padding:20px;
+  animation:modalPop .25s ease;
+}
+
+.modal-header{
+  font-weight:600;
+  font-size:16px;
+  margin-bottom:12px;
+}
+
+.modal-body{
+  font-size:14px;
+  line-height:1.6;
+  margin-bottom:18px;
+}
+
+.modal-actions{
+  display:flex;
+  justify-content:flex-end;
+  gap:10px;
+}
+
+@keyframes modalPop{
+  from{
+    transform:scale(.9);
+    opacity:0;
+  }
+  to{
+    transform:scale(1);
+    opacity:1;
+  }
+}
