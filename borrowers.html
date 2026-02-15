@@ -6,6 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="stylesheet" href="css/styles.css">
 </head>
+
 <body>
 
 <div class="header">Agent Panel</div>
@@ -19,9 +20,7 @@
 <div class="section-content">
 
   <div class="card">
-    <input id="searchBorrower"
-           placeholder="Search borrower..."
-           onkeyup="debouncedSearch()">
+    <input id="searchBorrower" placeholder="Search borrower...">
     <button onclick="addBorrower()">Add Borrower</button>
   </div>
 
@@ -49,48 +48,59 @@ import {
   updateDoc
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
+/* ================= VARIABLES ================= */
+
 let currentUserId = null;
 let borrowerCache = [];
-let searchTimeout = null;
 
-const borrowerListEl = document.getElementById("borrowerList");
-const searchInputEl = document.getElementById("searchBorrower");
+const borrowerList = document.getElementById("borrowerList");
+const searchInput = document.getElementById("searchBorrower");
 
-/* NAVIGATION */
-window.goDashboard = () => location.href="./agent-dashboard.html";
-window.logoutUser = () => signOut(auth).then(()=>location.href="./index.html");
+/* ================= NAVIGATION ================= */
 
-/* AUTH CHECK */
-onAuthStateChanged(auth,user=>{
+window.goDashboard = () =>
+  window.location.href = "./agent-dashboard.html";
+
+window.logoutUser = async ()=>{
+  await signOut(auth);
+  window.location.href = "./index.html";
+};
+
+/* ================= AUTH ================= */
+
+onAuthStateChanged(auth, user=>{
   if(!user){
-    location.href="./index.html";
+    window.location.href = "./index.html";
     return;
   }
-  currentUserId=user.uid;
+  currentUserId = user.uid;
   loadBorrowers();
 });
 
-/* ADD BORROWER */
+/* ================= ADD BORROWER ================= */
+
 window.addBorrower = async ()=>{
   const name = prompt("Borrower Name");
   const phone = prompt("Phone");
+
   if(!name || !phone) return;
 
   await addDoc(collection(db,"borrowers"),{
     name,
     phone,
-    nameLower:name.toLowerCase(),
-    agentId:currentUserId,
-    createdAt:Date.now()
+    agentId: currentUserId,
+    createdAt: Date.now()
   });
 
   loadBorrowers();
 };
 
-/* LOAD BORROWERS */
+/* ================= LOAD BORROWERS ================= */
+
 async function loadBorrowers(){
 
   borrowerCache = [];
+  borrowerList.innerHTML = "Loading...";
 
   const q = query(
     collection(db,"borrowers"),
@@ -106,59 +116,62 @@ async function loadBorrowers(){
   renderBorrowers(borrowerCache);
 }
 
-/* RENDER BORROWERS */
+/* ================= RENDER ================= */
+
 function renderBorrowers(list){
 
-  borrowerListEl.innerHTML="";
+  borrowerList.innerHTML = "";
 
-  if(list.length===0){
-    borrowerListEl.innerHTML=
-      `<div class="card">No Borrowers</div>`;
+  if(list.length === 0){
+    borrowerList.innerHTML =
+      "<div class='card'>No Borrowers</div>";
     return;
   }
 
   list.forEach(b=>{
-    borrowerListEl.innerHTML+=`
+    borrowerList.innerHTML += `
       <div class="list-item"
         onclick="viewBorrower('${b.id}')">
-        <b>${b.name}</b><br>
+        <strong>${b.name}</strong><br>
         ${b.phone}
       </div>
     `;
   });
 }
 
-/* SEARCH */
-window.debouncedSearch = ()=>{
+/* ================= SEARCH (FIXED PROPERLY) ================= */
 
-  const value = searchInputEl.value.trim().toLowerCase();
+searchInput.addEventListener("keyup", ()=>{
 
-  clearTimeout(searchTimeout);
+  const value =
+    searchInput.value.trim().toLowerCase();
 
-  searchTimeout = setTimeout(()=>{
+  if(!value){
+    renderBorrowers(borrowerCache);
+    return;
+  }
 
-    if(!value){
-      renderBorrowers(borrowerCache);
-      return;
-    }
+  const filtered = borrowerCache.filter(b=>{
+    return (b.name || "")
+      .toLowerCase()
+      .includes(value)
+      ||
+      (b.phone || "")
+      .includes(value);
+  });
 
-    const filtered = borrowerCache.filter(b=>{
-      return (b.name || "").toLowerCase().includes(value)
-        || (b.phone || "").includes(value);
-    });
+  renderBorrowers(filtered);
 
-    renderBorrowers(filtered);
+});
 
-  },300);
-};
+/* ================= VIEW BORROWER ================= */
 
-/* VIEW BORROWER */
-window.viewBorrower=async(id)=>{
+window.viewBorrower = async (id)=>{
 
-  const snap=await getDoc(doc(db,"borrowers",id));
-  const b=snap.data();
+  const snap = await getDoc(doc(db,"borrowers",id));
+  const b = snap.data();
 
-  borrowerListEl.innerHTML=`
+  borrowerList.innerHTML = `
     <div class="card">
       <button onclick="loadBorrowers()">Back</button>
       <h3>${b.name}</h3>
@@ -172,9 +185,10 @@ window.viewBorrower=async(id)=>{
   loadLoans(id);
 };
 
-/* SHOW LOAN FORM */
-window.showLoanForm=(borrowerId)=>{
-  borrowerListEl.innerHTML+=`
+/* ================= SHOW LOAN FORM ================= */
+
+window.showLoanForm = (borrowerId)=>{
+  borrowerList.innerHTML += `
     <div class="card">
       <input id="principalInput" placeholder="Principal">
       <input id="interestInput" placeholder="Interest %">
@@ -192,14 +206,15 @@ window.showLoanForm=(borrowerId)=>{
   `;
 };
 
-/* CREATE LOAN */
-window.createLoan=async(borrowerId)=>{
+/* ================= CREATE LOAN ================= */
 
-  const principal=parseFloat(principalInput.value);
-  const percent=parseFloat(interestInput.value);
-  const count=parseInt(countInput.value);
-  const interval=parseInt(intervalInput.value);
-  const startValue=startInput.value;
+window.createLoan = async (borrowerId)=>{
+
+  const principal = parseFloat(principalInput.value);
+  const percent = parseFloat(interestInput.value);
+  const count = parseInt(countInput.value);
+  const interval = parseInt(intervalInput.value);
+  const startValue = startInput.value;
 
   if(!principal || isNaN(percent)
      || !count || !startValue){
@@ -207,43 +222,39 @@ window.createLoan=async(borrowerId)=>{
     return;
   }
 
-  const start=new Date(startValue).getTime();
+  const start = new Date(startValue).getTime();
+  const interestAmount = (principal*percent)/100;
+  const installmentAmount = principal/count;
 
-  const interestAmount=(principal*percent)/100;
-  const disbursedAmount=principal-interestAmount;
-  const installmentAmount=principal/count;
-
-  const loan=await addDoc(collection(db,"loans"),{
+  const loan = await addDoc(collection(db,"loans"),{
     borrowerId,
-    agentId:currentUserId,
+    agentId: currentUserId,
     principal,
-    interestPercent:percent,
+    interestPercent: percent,
     interestAmount,
-    disbursedAmount,
     count,
     interval,
-    startDate:start,
-    status:"active",
-    createdAt:Date.now()
+    startDate: start,
+    status: "active",
+    createdAt: Date.now()
   });
 
   await addDoc(collection(db,"collections"),{
-    loanId:loan.id,
-    borrowerId,
-    agentId:currentUserId,
-    amount:interestAmount,
-    type:"upfront_interest",
-    date:Date.now()
+    loanId: loan.id,
+    agentId: currentUserId,
+    amount: interestAmount,
+    type: "upfront_interest",
+    date: Date.now()
   });
 
   for(let i=0;i<count;i++){
     await addDoc(collection(db,"installments"),{
-      loanId:loan.id,
+      loanId: loan.id,
       borrowerId,
-      number:i+1,
-      amount:installmentAmount,
-      dueDate:start+((i+1)*interval*86400000),
-      status:"pending"
+      number: i+1,
+      amount: installmentAmount,
+      dueDate: start+((i+1)*interval*86400000),
+      status: "pending"
     });
   }
 
@@ -251,18 +262,17 @@ window.createLoan=async(borrowerId)=>{
   viewBorrower(borrowerId);
 };
 
-/* LOAD LOANS */
+/* ================= LOAD LOANS ================= */
+
 async function loadLoans(borrowerId){
 
-  const q=query(
+  const snap = await getDocs(query(
     collection(db,"loans"),
     where("borrowerId","==",borrowerId)
-  );
-
-  const snap=await getDocs(q);
+  ));
 
   snap.forEach(d=>{
-    borrowerListEl.innerHTML+=`
+    borrowerList.innerHTML += `
       <div class="card">
         Loan ₹${d.data().principal}<br>
         <button onclick="viewInstallments('${d.id}')">
@@ -273,10 +283,11 @@ async function loadLoans(borrowerId){
   });
 }
 
-/* VIEW INSTALLMENTS */
+/* ================= INSTALLMENTS ================= */
+
 window.viewInstallments = async (loanId)=>{
 
-  borrowerListEl.innerHTML=
+  borrowerList.innerHTML =
     `<button onclick="loadBorrowers()">Back</button>`;
 
   const snap = await getDocs(query(
@@ -285,22 +296,21 @@ window.viewInstallments = async (loanId)=>{
   ));
 
   if(snap.empty){
-    borrowerListEl.innerHTML+=`
-      <div class="card">No Installments</div>`;
+    borrowerList.innerHTML+=
+      "<div class='card'>No Installments</div>";
     return;
   }
 
-  let installments=[];
-  snap.forEach(d=>{
-    installments.push({id:d.id,...d.data()});
-  });
+  let list=[];
+  snap.forEach(d=>
+    list.push({id:d.id,...d.data()})
+  );
 
-  installments.sort((a,b)=>a.number-b.number);
+  list.sort((a,b)=>a.number-b.number);
 
-  let total=0;
-  let paid=0;
+  let total=0,paid=0;
 
-  installments.forEach(i=>{
+  list.forEach(i=>{
     total+=i.amount;
     if(i.status==="completed"){
       paid+=i.amount;
@@ -310,28 +320,28 @@ window.viewInstallments = async (loanId)=>{
   const percent =
     total ? Math.round((paid/total)*100) : 0;
 
-  borrowerListEl.innerHTML+=`
+  borrowerList.innerHTML+=`
     <div class="card">
-      Progress: ${percent}%<br>
+      Progress ${percent}%
       <div class="progress">
         <div class="progress-bar"
-             style="width:${percent}%"></div>
+        style="width:${percent}%"></div>
       </div>
     </div>
   `;
 
-  installments.forEach(i=>{
+  list.forEach(i=>{
 
     const overdue =
       i.status==="pending" &&
       i.dueDate < Date.now();
 
-    borrowerListEl.innerHTML+=`
-      <div class="card ${overdue ? "overdue":""}">
+    borrowerList.innerHTML+=`
+      <div class="card ${overdue?"overdue":""}">
         Installment ${i.number}<br>
         ₹${i.amount}<br>
         📅 ${new Date(i.dueDate).toLocaleDateString("en-IN")}<br>
-        Status: ${i.status}<br>
+        Status: ${i.status}
         ${
           i.status==="pending"
           ? `<button onclick="
@@ -346,24 +356,24 @@ window.viewInstallments = async (loanId)=>{
   });
 };
 
-/* MARK PAID */
-window.markPaid=async(instId,loanId,amount)=>{
+/* ================= MARK PAID ================= */
+
+window.markPaid = async (instId,loanId,amount)=>{
 
   await updateDoc(doc(db,"installments",instId),
   {status:"completed"});
 
   await addDoc(collection(db,"collections"),{
     loanId,
-    agentId:currentUserId,
+    agentId: currentUserId,
     amount,
-    type:"installment",
-    date:Date.now()
+    type: "installment",
+    date: Date.now()
   });
 
   viewInstallments(loanId);
 };
 
 </script>
-
 </body>
 </html>
