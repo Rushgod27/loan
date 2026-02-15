@@ -63,93 +63,121 @@ onAuthStateChanged(auth, user => {
 
 /* ===== DASHBOARD LOADER ===== */
 
-async function loadDashboard() {
+async function loadDashboard(){
 
-  // Active Loans
-  const loanSnap = await getDocs(query(
-    collection(db, "loans"),
-    where("agentId", "==", uid)
-  ));
-
-  let activeLoans = 0;
-
-  loanSnap.forEach(doc => {
-    if (doc.data().status === "active") {
-      activeLoans++;
-    }
-  });
-
-  // Borrowers Count
-  const borrowerSnap = await getDocs(query(
-    collection(db, "borrowers"),
-    where("agentId", "==", uid)
-  ));
-
-  const borrowerCount = borrowerSnap.size;
-
-  // Today's Collection
   const today = new Date();
   today.setHours(0,0,0,0);
 
   const tomorrow = new Date(today);
   tomorrow.setDate(today.getDate()+1);
 
-  const collectionSnap = await getDocs(query(
+  let dueTodayHTML="";
+  let overdueHTML="";
+  let dueCount=0;
+  let overdueCount=0;
+  let todayCollection=0;
+
+  /* ===== Borrower Map ===== */
+  const borrowerSnap = await getDocs(query(
+    collection(db,"borrowers"),
+    where("agentId","==",uid)
+  ));
+
+  const borrowerMap={};
+
+  borrowerSnap.forEach(d=>{
+    borrowerMap[d.id] = d.data();
+  });
+
+  /* ===== Installments ===== */
+  const instSnap = await getDocs(query(
+    collection(db,"installments"),
+    where("status","==","pending")
+  ));
+
+  instSnap.forEach(d=>{
+
+    const data = d.data();
+    if(!borrowerMap[data.borrowerId]) return;
+
+    const dueDate = new Date(data.dueDate);
+    const borrower = borrowerMap[data.borrowerId];
+    const phone = borrower.phone;
+
+    const whatsappMsg =
+      `Hello ${borrower.name}, your installment of ₹${data.amount} is due. Please pay on time.`;
+
+    const waLink =
+      `https://wa.me/${phone}?text=${encodeURIComponent(whatsappMsg)}`;
+
+    if(dueDate>=today && dueDate<tomorrow){
+
+      dueCount++;
+
+      dueTodayHTML+=`
+      <div class="card">
+        <b>${borrower.name}</b><br>
+        ₹${data.amount}<br>
+        📅 Today<br>
+        <button class="whatsapp-btn"
+          onclick="window.open('${waLink}','_blank')">
+          WhatsApp Reminder
+        </button>
+      </div>`;
+    }
+
+    if(dueDate < today){
+
+      overdueCount++;
+
+      const daysLate = Math.floor(
+        (today - dueDate)/86400000
+      );
+
+      overdueHTML+=`
+      <div class="card overdue">
+        <b>${borrower.name}</b><br>
+        ₹${data.amount}<br>
+        🔴 ${daysLate} days overdue<br>
+        <button class="whatsapp-btn"
+          onclick="window.open('${waLink}','_blank')">
+          Send Reminder
+        </button>
+      </div>`;
+    }
+
+  });
+
+  /* ===== Collection ===== */
+  const colSnap = await getDocs(query(
     collection(db,"collections"),
     where("agentId","==",uid)
   ));
 
-  let todayCollection = 0;
-
-  collectionSnap.forEach(d=>{
-    const data = d.data();
-    if(data.date >= today.getTime() &&
-       data.date < tomorrow.getTime()){
-      todayCollection += data.amount;
+  colSnap.forEach(d=>{
+    const date = new Date(d.data().date);
+    if(date>=today && date<tomorrow){
+      todayCollection+=d.data().amount;
     }
   });
 
-  /* ===== RENDER ===== */
+  content.innerHTML=`
 
-  content.innerHTML = `
     <div class="card">
-      <h3>📊 Active Loans</h3>
-      <div style="
-        font-size:32px;
-        font-weight:700;
-        margin-top:10px;
-        color:#2563eb;">
-        ${activeLoans}
-      </div>
+      <h3>📊 Stats</h3>
+      Due Today: <b>${dueCount}</b><br>
+      Overdue: <b>${overdueCount}</b><br>
+      Today Collection: <b>₹${todayCollection}</b>
     </div>
 
     <div class="card">
-      <h3>👥 Total Borrowers</h3>
-      <div style="
-        font-size:32px;
-        font-weight:700;
-        margin-top:10px;
-        color:#10b981;">
-        ${borrowerCount}
-      </div>
+      <h3>📅 Due Today</h3>
+      ${dueTodayHTML || "No dues today"}
     </div>
 
     <div class="card">
-      <h3>💰 Today Collection</h3>
-      <div style="
-        font-size:32px;
-        font-weight:700;
-        margin-top:10px;
-        color:#f59e0b;">
-        ₹ ${todayCollection}
-      </div>
-    </div>
-
-    <div class="card">
-      <h3>🚀 Quick Access</h3>
-      <button onclick="goBorrowers()">
-        Manage Borrowers
-      </button>
+      <h3>🔴 Overdue</h3>
+      ${overdueHTML || "No overdue"}
     </div>
   `;
 }
