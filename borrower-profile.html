@@ -5,6 +5,31 @@
 <title>Borrower Profile</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="stylesheet" href="css/styles.css">
+<style>
+.badge{
+  padding:4px 8px;
+  border-radius:20px;
+  font-size:12px;
+  font-weight:600;
+}
+.badge.green{
+  background:#dcfce7;
+  color:#166534;
+}
+.badge.blue{
+  background:#dbeafe;
+  color:#1e40af;
+}
+.completed{
+  opacity:0.6;
+}
+.section-title{
+  font-weight:600;
+  margin:16px 0 8px;
+}
+.inst{ margin-top:10px; }
+.hidden{ display:none; }
+</style>
 </head>
 <body>
 
@@ -29,9 +54,9 @@
   <!-- LOAN FORM -->
   <div id="loanForm" class="card hidden">
     <input id="principal" placeholder="Principal Amount">
-    <input id="interest" placeholder="Interest %" >
+    <input id="interest" placeholder="Interest %">
     <input id="count" placeholder="Number of EMIs">
-    
+
     <select id="interval">
       <option value="7">7 Days</option>
       <option value="15">15 Days</option>
@@ -39,7 +64,6 @@
     </select>
 
     <input type="date" id="loanDate">
-
     <button onclick="createLoan()">Confirm Loan</button>
   </div>
 
@@ -71,21 +95,26 @@ import {
 "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 let borrowerId = null;
+let borrowerData = null;
 
 const params = new URLSearchParams(window.location.search);
 borrowerId = params.get("id");
 
-/* AUTH */
-onAuthStateChanged(auth, user=>{
+/* AUTH PROTECTION */
+onAuthStateChanged(auth, user => {
   if(!user){
     location.href="index.html";
     return;
   }
-  loadBorrower();
+  if(!borrowerId){
+    location.href="borrowers.html";
+    return;
+  }
+  loadProfile();
   loadLoans();
 });
 
-/* NAV */
+/* NAVIGATION */
 window.goBorrowers = () =>
   location.href="borrowers.html";
 
@@ -97,22 +126,20 @@ window.logout = async ()=>{
   location.href="index.html";
 };
 
-/* PROFILE LOAD */
-async function loadBorrower(){
-
+/* LOAD PROFILE */
+async function loadProfile(){
   const snap = await getDoc(
     doc(db,"borrowers",borrowerId)
   );
-
-  const b = snap.data();
+  borrowerData = snap.data();
 
   profileCard.innerHTML = `
-    <h3>${b.name}</h3>
-    📞 <a href="tel:${b.phone}">
-      ${b.phone}
+    <h3>${borrowerData.name}</h3>
+    📞 <a href="tel:${borrowerData.phone}">
+      ${borrowerData.phone}
     </a><br><br>
 
-    <a href="https://wa.me/${b.phone}"
+    <a href="https://wa.me/${borrowerData.phone}"
        target="_blank">
        💬 WhatsApp
     </a>
@@ -151,8 +178,7 @@ window.createLoan = async ()=>{
     principalVal / countVal;
 
   const loanRef = await addDoc(
-    collection(db,"loans"),
-    {
+    collection(db,"loans"),{
       borrowerId,
       principal: principalVal,
       interestPercent: interestVal,
@@ -166,7 +192,7 @@ window.createLoan = async ()=>{
     }
   );
 
-  // Save upfront interest collection
+  // upfront interest
   await addDoc(collection(db,"collections"),{
     loanId: loanRef.id,
     borrowerId,
@@ -175,7 +201,7 @@ window.createLoan = async ()=>{
     date: Date.now()
   });
 
-  // Create installments
+  // create installments
   for(let i=0;i<countVal;i++){
     await addDoc(collection(db,"installments"),{
       loanId: loanRef.id,
@@ -204,29 +230,77 @@ async function loadLoans(){
 
   const snap = await getDocs(q);
 
-  loanSection.innerHTML="";
+  let activeHTML = "";
+  let completedHTML = "";
 
   snap.forEach(d=>{
     const loan=d.data();
 
-    loanSection.innerHTML+=`
-      <div class="card">
+    const startDate=new Date(
+      loan.startDate
+    ).toLocaleDateString("en-IN");
+
+    const card = `
+      <div class="card ${
+        loan.status==="completed"?"completed":""
+      }">
+
         <b>Loan ₹${loan.principal}</b><br>
-        Status: ${loan.status}<br>
+        Interest: ${loan.interestPercent}%<br>
+        Disbursed: ₹${loan.disbursedAmount}<br>
+        Start Date: ${startDate}<br>
+        EMI: ${loan.count} × (${loan.interval} days)<br>
+
+        <span class="badge ${
+          loan.status==="completed"
+          ?"green":"blue"
+        }">
+          ${loan.status}
+        </span>
+
+        <br><br>
         <button onclick="
           toggleInstallments('${d.id}')">
           View Installments
         </button>
+
         <div id="inst-${d.id}"
-          class="hidden"></div>
+          class="inst hidden"></div>
+
       </div>
     `;
+
+    if(loan.status==="completed")
+      completedHTML+=card;
+    else
+      activeHTML+=card;
   });
+
+  loanSection.innerHTML = `
+    <div class="section-title">
+      Active Loans
+    </div>
+    ${activeHTML || "No active loans"}
+
+    <div class="section-title">
+      Completed Loans
+    </div>
+    ${completedHTML || "No completed loans"}
+  `;
 }
 
 /* INSTALLMENTS */
 window.toggleInstallments =
 async(loanId)=>{
+
+  // collapse others
+  document.querySelectorAll(".inst")
+  .forEach(el=>{
+    if(el.id!==`inst-${loanId}`){
+      el.classList.add("hidden");
+      el.innerHTML="";
+    }
+  });
 
   const box =
     document.getElementById(
@@ -240,7 +314,7 @@ async(loanId)=>{
 
   box.classList.remove("hidden");
 
-  const snap=await getDocs(query(
+  const snap = await getDocs(query(
     collection(db,"installments"),
     where("loanId","==",loanId)
   ));
@@ -252,20 +326,23 @@ async(loanId)=>{
 
   list.sort((a,b)=>a.number-b.number);
 
-  box.innerHTML="";
+  let pendingHTML="";
+  let completedHTML="";
+  let allCompleted=true;
 
   list.forEach(i=>{
-    box.innerHTML+=`
+
+    const emiCard = `
       <div class="card ${
         i.status==="completed"
-        ? "completed":""
+        ?"completed":""
       }">
 
         EMI ${i.number}<br>
         ₹${i.amount}<br>
         ${new Date(
           i.dueDate
-        ).toLocaleDateString()}<br>
+        ).toLocaleDateString("en-IN")}<br>
 
         ${
           i.status==="pending"
@@ -276,18 +353,60 @@ async(loanId)=>{
              Mark Paid</button>`
           : "Paid"
         }
-      </div>`;
+
+      </div>
+    `;
+
+    if(i.status==="pending"){
+      pendingHTML+=emiCard;
+      allCompleted=false;
+    }else{
+      completedHTML+=emiCard;
+    }
   });
+
+  if(allCompleted){
+    await updateDoc(
+      doc(db,"loans",loanId),
+      {status:"completed"}
+    );
+    loadLoans();
+  }
+
+  box.innerHTML = `
+    <div class="section-title">
+      Pending EMIs
+    </div>
+    ${pendingHTML || "None"}
+
+    <div class="section-title">
+      Completed EMIs
+    </div>
+    ${completedHTML || "None"}
+  `;
 };
 
 /* PAY */
 window.pay =
 async(id,loanId,amt)=>{
 
+  const confirmPay =
+    confirm("Confirm payment received?");
+
+  if(!confirmPay) return;
+
   await updateDoc(
     doc(db,"installments",id),
     {status:"completed"}
   );
+
+  await addDoc(collection(db,"collections"),{
+    loanId,
+    borrowerId,
+    amount:amt,
+    type:"installment",
+    date:Date.now()
+  });
 
   toggleInstallments(loanId);
 };
