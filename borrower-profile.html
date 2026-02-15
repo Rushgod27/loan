@@ -18,8 +18,32 @@
 
 <div class="container">
 
+  <!-- PROFILE -->
   <div id="profileCard" class="card"></div>
 
+  <!-- CREATE LOAN BUTTON -->
+  <div class="card">
+    <button onclick="toggleLoanForm()">+ Create Loan</button>
+  </div>
+
+  <!-- LOAN FORM -->
+  <div id="loanForm" class="card hidden">
+    <input id="principal" placeholder="Principal Amount">
+    <input id="interest" placeholder="Interest %" >
+    <input id="count" placeholder="Number of EMIs">
+    
+    <select id="interval">
+      <option value="7">7 Days</option>
+      <option value="15">15 Days</option>
+      <option value="30">30 Days</option>
+    </select>
+
+    <input type="date" id="loanDate">
+
+    <button onclick="createLoan()">Confirm Loan</button>
+  </div>
+
+  <!-- LOANS -->
   <div id="loanSection"></div>
 
 </div>
@@ -41,61 +65,44 @@ import {
   collection,
   query,
   where,
+  addDoc,
   updateDoc
 } from
 "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 let borrowerId = null;
-let currentUserId = null;
 
-/* GET URL PARAM */
 const params = new URLSearchParams(window.location.search);
 borrowerId = params.get("id");
 
-/* AUTH PROTECT */
-onAuthStateChanged(auth, async(user)=>{
-
+/* AUTH */
+onAuthStateChanged(auth, user=>{
   if(!user){
-    window.location.href="index.html";
+    location.href="index.html";
     return;
   }
-
-  currentUserId=user.uid;
-
-  if(!borrowerId){
-    alert("Borrower not found");
-    window.location.href="borrowers.html";
-    return;
-  }
-
   loadBorrower();
   loadLoans();
 });
 
-/* NAVIGATION */
+/* NAV */
 window.goBorrowers = () =>
-  window.location.href="borrowers.html";
+  location.href="borrowers.html";
 
 window.goDashboard = () =>
-  window.location.href="agent-dashboard.html";
+  location.href="agent-dashboard.html";
 
 window.logout = async ()=>{
   await signOut(auth);
-  window.location.href="index.html";
+  location.href="index.html";
 };
 
-/* LOAD PROFILE */
+/* PROFILE LOAD */
 async function loadBorrower(){
 
   const snap = await getDoc(
     doc(db,"borrowers",borrowerId)
   );
-
-  if(!snap.exists()){
-    profileCard.innerHTML =
-      "Borrower not found";
-    return;
-  }
 
   const b = snap.data();
 
@@ -112,6 +119,81 @@ async function loadBorrower(){
   `;
 }
 
+/* TOGGLE FORM */
+window.toggleLoanForm = ()=>{
+  loanForm.classList.toggle("hidden");
+};
+
+/* CREATE LOAN */
+window.createLoan = async ()=>{
+
+  const principalVal = parseFloat(principal.value);
+  const interestVal = parseFloat(interest.value);
+  const countVal = parseInt(count.value);
+  const intervalVal = parseInt(interval.value);
+  const dateVal = loanDate.value;
+
+  if(!principalVal || isNaN(interestVal) ||
+     !countVal || !dateVal){
+    alert("Fill all fields");
+    return;
+  }
+
+  const start = new Date(dateVal).getTime();
+
+  const interestAmount =
+    (principalVal * interestVal)/100;
+
+  const disbursed =
+    principalVal - interestAmount;
+
+  const installmentAmount =
+    principalVal / countVal;
+
+  const loanRef = await addDoc(
+    collection(db,"loans"),
+    {
+      borrowerId,
+      principal: principalVal,
+      interestPercent: interestVal,
+      interestAmount,
+      disbursedAmount: disbursed,
+      count: countVal,
+      interval: intervalVal,
+      startDate: start,
+      status:"active",
+      createdAt: Date.now()
+    }
+  );
+
+  // Save upfront interest collection
+  await addDoc(collection(db,"collections"),{
+    loanId: loanRef.id,
+    borrowerId,
+    amount: interestAmount,
+    type:"upfront_interest",
+    date: Date.now()
+  });
+
+  // Create installments
+  for(let i=0;i<countVal;i++){
+    await addDoc(collection(db,"installments"),{
+      loanId: loanRef.id,
+      borrowerId,
+      number:i+1,
+      amount: installmentAmount,
+      dueDate:
+        start + ((i+1)*intervalVal*86400000),
+      status:"pending"
+    });
+  }
+
+  alert("Loan Created Successfully");
+
+  loanForm.classList.add("hidden");
+  loadLoans();
+};
+
 /* LOAD LOANS */
 async function loadLoans(){
 
@@ -122,18 +204,9 @@ async function loadLoans(){
 
   const snap = await getDocs(q);
 
-  if(snap.empty){
-    loanSection.innerHTML=
-      `<div class="card">
-      No loans found
-      </div>`;
-    return;
-  }
-
   loanSection.innerHTML="";
 
   snap.forEach(d=>{
-
     const loan=d.data();
 
     loanSection.innerHTML+=`
@@ -151,9 +224,9 @@ async function loadLoans(){
   });
 }
 
-/* TOGGLE INSTALLMENTS */
+/* INSTALLMENTS */
 window.toggleInstallments =
-async (loanId)=>{
+async(loanId)=>{
 
   const box =
     document.getElementById(
@@ -207,7 +280,7 @@ async (loanId)=>{
   });
 };
 
-/* PAY INSTALLMENT */
+/* PAY */
 window.pay =
 async(id,loanId,amt)=>{
 
