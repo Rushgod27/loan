@@ -6,7 +6,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="stylesheet" href="css/borrowers.css">
 </head>
-
 <body>
 
 <div class="header">
@@ -26,16 +25,17 @@
   </div>
 
   <div id="borrowerList"></div>
-
 </div>
 
 <!-- PROFILE SCREEN -->
-<div id="profileScreen" class="hidden"></div>
+<div id="profileScreen" class="hidden">
+  <div id="profileContent"></div>
+  <div id="loansContainer"></div>
+</div>
 
 <script type="module">
 
 import { auth, db } from "./js/firebase.js";
-
 import {
   onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
@@ -48,8 +48,8 @@ import {
 "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 let currentUserId=null;
-let borrowerCache=[];
 let currentBorrowerId=null;
+let borrowerCache=[];
 
 /* AUTH */
 onAuthStateChanged(auth,user=>{
@@ -61,21 +61,34 @@ onAuthStateChanged(auth,user=>{
   loadBorrowers();
 });
 
-/* LOAD BORROWERS */
+/* =========================
+   LOAD BORROWERS LIST
+========================= */
+
 async function loadBorrowers(){
   borrowerCache=[];
+
   const snap=await getDocs(query(
     collection(db,"borrowers"),
     where("agentId","==",currentUserId)
   ));
+
   snap.forEach(d=>{
     borrowerCache.push({id:d.id,...d.data()});
   });
+
   renderBorrowers(borrowerCache);
 }
 
 function renderBorrowers(list){
   borrowerList.innerHTML="";
+
+  if(list.length===0){
+    borrowerList.innerHTML=
+      `<div class="card">No Borrowers</div>`;
+    return;
+  }
+
   list.forEach(b=>{
     borrowerList.innerHTML+=`
       <div class="list-item"
@@ -97,15 +110,18 @@ window.searchBorrowers=()=>{
   }
 
   const filtered=
-  borrowerCache.filter(b=>
-    b.name.toLowerCase().includes(value)||
-    b.phone.includes(value)
-  );
+    borrowerCache.filter(b=>
+      (b.name||"").toLowerCase().includes(value)||
+      (b.phone||"").includes(value)
+    );
 
   renderBorrowers(filtered);
 };
 
-/* ADD BORROWER */
+/* =========================
+   ADD BORROWER
+========================= */
+
 window.addBorrower=async()=>{
   const name=prompt("Borrower Name");
   const phone=prompt("Phone");
@@ -121,7 +137,10 @@ window.addBorrower=async()=>{
   loadBorrowers();
 };
 
-/* VIEW PROFILE */
+/* =========================
+   VIEW BORROWER PROFILE
+========================= */
+
 window.viewBorrower=async(id)=>{
   currentBorrowerId=id;
 
@@ -135,11 +154,13 @@ window.viewBorrower=async(id)=>{
   profileScreen.classList.remove("hidden");
   backBtn.classList.remove("hidden");
 
-  profileScreen.innerHTML=`
+  profileContent.innerHTML=`
     <div class="card">
       <h2>${b.name}</h2>
+
       📞 <a href="tel:${b.phone}">
       ${b.phone}</a><br>
+
       💬 <a href="https://wa.me/${b.phone}"
       target="_blank">
       WhatsApp</a><br>
@@ -149,130 +170,243 @@ window.viewBorrower=async(id)=>{
 
       <div id="loanForm"></div>
     </div>
-
-    <div id="loansContainer"></div>
   `;
 
   loadLoans(id);
 };
 
-/* BACK */
 window.goBack=()=>{
   profileScreen.classList.add("hidden");
   listScreen.classList.remove("hidden");
   backBtn.classList.add("hidden");
 };
 
-/* CREATE LOAN FORM */
+/* =========================
+   LOAN FORM
+========================= */
+
 window.toggleLoanForm=()=>{
-  if(loanForm.innerHTML!==""){
-    loanForm.innerHTML="";
+
+  const container=document.getElementById("loanForm");
+
+  if(container.innerHTML!==""){
+    container.innerHTML="";
     return;
   }
 
-  loanForm.innerHTML=`
+  container.innerHTML=`
     <div class="card">
-    <input id="principal"
-      placeholder="Principal">
-    <input id="interest"
-      placeholder="Interest %">
-    <input id="count"
-      placeholder="Installments">
-    <button onclick="createLoan()">
-      Confirm
-    </button>
+      <input id="principal"
+       placeholder="Principal">
+      <input id="interest"
+       placeholder="Interest %">
+      <input id="count"
+       placeholder="Installments">
+      <button onclick="createLoan()">
+       Confirm Loan</button>
     </div>`;
 };
 
-/* CREATE LOAN */
 window.createLoan=async()=>{
-  const principal=parseFloat(principal.value);
-  const percent=parseFloat(interest.value);
-  const count=parseInt(count.value);
 
-  if(!principal||isNaN(percent)||!count){
-    alert("Fill properly");
+  const principalVal=
+    parseFloat(document.getElementById("principal").value);
+
+  const percentVal=
+    parseFloat(document.getElementById("interest").value);
+
+  const countVal=
+    parseInt(document.getElementById("count").value);
+
+  if(!principalVal||isNaN(percentVal)||!countVal){
+    alert("Fill all fields correctly");
     return;
   }
 
   const interestAmount=
-    (principal*percent)/100;
+    (principalVal*percentVal)/100;
 
   const installmentAmount=
-    principal/count;
+    principalVal/countVal;
 
   const loan=await addDoc(
     collection(db,"loans"),{
       borrowerId:currentBorrowerId,
       agentId:currentUserId,
-      principal,
-      interestPercent:percent,
+      principal:principalVal,
+      interestPercent:percentVal,
       interestAmount,
-      count,
+      count:countVal,
       status:"active",
       createdAt:Date.now()
     });
 
-  for(let i=0;i<count;i++){
-    await addDoc(
-      collection(db,"installments"),{
-        loanId:loan.id,
-        borrowerId:currentBorrowerId,
-        number:i+1,
-        amount:installmentAmount,
-        dueDate:Date.now()+((i+1)*7*86400000),
-        status:"pending"
-      });
+  for(let i=0;i<countVal;i++){
+    await addDoc(collection(db,"installments"),{
+      loanId:loan.id,
+      borrowerId:currentBorrowerId,
+      number:i+1,
+      amount:installmentAmount,
+      dueDate:Date.now()+((i+1)*7*86400000),
+      status:"pending"
+    });
   }
 
-  loanForm.innerHTML="";
+  document.getElementById("loanForm").innerHTML="";
   loadLoans(currentBorrowerId);
 };
 
-/* LOAD LOANS */
+/* =========================
+   LOAD LOANS + INSTALLMENTS
+========================= */
+
 async function loadLoans(borrowerId){
-  const snap=await getDocs(query(
+
+  const loanSnap=await getDocs(query(
     collection(db,"loans"),
     where("borrowerId","==",borrowerId)
   ));
 
-  loansContainer.innerHTML="";
+  loansContainer.innerHTML=`
+    <div class="section-title">
+    Active Loans</div>
+    <div id="activeLoans"></div>
 
-  for(const docSnap of snap.docs){
-    const loan=docSnap.data();
+    <div class="section-title">
+    Completed Loans</div>
+    <div id="completedLoans"></div>
+  `;
+
+  const activeDiv=
+    document.getElementById("activeLoans");
+
+  const completedDiv=
+    document.getElementById("completedLoans");
+
+  for(const loanDoc of loanSnap.docs){
+
+    const loan=loanDoc.data();
+    const loanId=loanDoc.id;
 
     const instSnap=await getDocs(query(
       collection(db,"installments"),
-      where("loanId","==",docSnap.id)
+      where("loanId","==",loanId)
     ));
 
     let total=0;
     let paid=0;
 
-    instSnap.forEach(i=>{
-      total+=i.data().amount;
-      if(i.data().status==="completed"){
-        paid+=i.data().amount;
+    let pendingHTML="";
+    let completedHTML="";
+
+    const today=Date.now();
+
+    instSnap.forEach(d=>{
+      const i=d.data();
+      total+=i.amount;
+
+      const overdue=
+        i.status==="pending" &&
+        i.dueDate<today;
+
+      const card=`
+        <div class="card ${
+          overdue ? "overdue" :
+          i.status==="completed"
+          ? "gray-out" : ""
+        }">
+        Installment ${i.number}<br>
+        ₹${i.amount}<br>
+        📅 ${new Date(i.dueDate)
+          .toLocaleDateString("en-IN")}<br>
+        Status: ${i.status}
+        ${
+          i.status==="pending"
+          ? `<button onclick="
+            markPaid('${d.id}',
+            '${loanId}',
+            ${i.amount})">
+            Mark Paid</button>`
+          : ""
+        }
+        </div>
+      `;
+
+      if(i.status==="completed"){
+        paid+=i.amount;
+        completedHTML+=card;
+      }else{
+        pendingHTML+=card;
       }
     });
 
     const percent=
       total?Math.round((paid/total)*100):0;
 
-    loansContainer.innerHTML+=`
+    const loanCard=`
       <div class="card ${
-        loan.status!=="active"?
-        "gray-out":""}">
-        Loan ₹${loan.principal}
+        loan.status!=="active"
+        ? "gray-out" : ""
+      }">
+        <b>Loan ₹${loan.principal}</b><br>
+        Interest: ${loan.interestPercent}%<br>
+        Status: ${loan.status}
         <div class="progress">
-        <div class="progress-bar"
-          style="width:${percent}%">
+          <div class="progress-bar"
+            style="width:${percent}%">
+          </div>
         </div>
-        </div>
-        ${percent}% paid
-      </div>`;
+        ${percent}% Paid
+      </div>
+
+      ${
+        pendingHTML
+        ? `<div class="section-title">
+           Pending Installments
+           </div>${pendingHTML}`
+        : ""
+      }
+
+      ${
+        completedHTML
+        ? `<div class="section-title">
+           Completed Installments
+           </div>${completedHTML}`
+        : ""
+      }
+    `;
+
+    if(loan.status==="active"){
+      activeDiv.innerHTML+=loanCard;
+    }else{
+      completedDiv.innerHTML+=loanCard;
+    }
   }
 }
+
+/* =========================
+   MARK PAID
+========================= */
+
+window.markPaid=async(instId,loanId,amount)=>{
+
+  await updateDoc(
+    doc(db,"installments",instId),
+    {status:"completed"}
+  );
+
+  await addDoc(
+    collection(db,"collections"),{
+      loanId,
+      borrowerId:currentBorrowerId,
+      agentId:currentUserId,
+      amount,
+      type:"installment",
+      date:Date.now()
+  });
+
+  loadLoans(currentBorrowerId);
+};
 
 </script>
 </body>
