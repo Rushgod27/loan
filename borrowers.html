@@ -12,7 +12,6 @@
 <div class="nav">
 <div onclick="goDashboard()">Dashboard</div>
 <div class="active">Borrowers</div>
-<div onclick="goReports()">Reports</div>
 <div onclick="logoutUser()">Logout</div>
 </div>
 
@@ -50,7 +49,7 @@ let borrowerCache = [];
 let searchTimeout = null;
 
 /* NAVIGATION */
-window.goDashboard = () => location.href="dashboard.html";
+window.goDashboard = () => location.href="agent-dashboard.html";
 window.goReports = () => location.href="reports.html";
 window.logoutUser = () => signOut(auth);
 
