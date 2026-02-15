@@ -3,39 +3,222 @@
 <head>
 <meta charset="UTF-8">
 <title>Owner Dashboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
 
-<div class="header">Owner Panel</div>
+<div class="header">Owner Control Panel</div>
 
 <div class="nav">
-<div class="active">Owner Dashboard</div>
-<div onclick="logoutUser()">Logout</div>
+  <div class="active">Dashboard</div>
+  <div onclick="logout()">Logout</div>
 </div>
 
-<div class="card">
-<h3>Welcome Owner 🏢</h3>
-<p>This is Owner level dashboard.</p>
-</div>
+<div class="container" id="content"></div>
 
 <script type="module">
 
-import { auth } from "./js/firebase.js";
+import { auth, db } from "./js/firebase.js";
+
 import {
-  signOut,
-  onAuthStateChanged
+  onAuthStateChanged,
+  signOut
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
-window.logoutUser=()=>signOut(auth);
+import {
+  collection,
+  getDocs,
+  query,
+  where
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-onAuthStateChanged(auth,user=>{
+window.logout = async () => {
+  await signOut(auth);
+  location.href="index.html";
+};
+
+onAuthStateChanged(auth, user => {
   if(!user){
     location.href="index.html";
+    return;
   }
+  loadOwnerDashboard();
 });
+
+async function loadOwnerDashboard(){
+
+  let totalAgents=0;
+  let totalBorrowers=0;
+  let activeLoans=0;
+  let totalActiveAmount=0;
+  let todayCollection=0;
+  let monthCollection=0;
+  let overdueCount=0;
+  let overdueAmount=0;
+
+  const today=new Date();
+  today.setHours(0,0,0,0);
+
+  const firstDayMonth=new Date(today.getFullYear(),today.getMonth(),1);
+
+  /* ================= USERS ================= */
+
+  const usersSnap = await getDocs(
+    query(collection(db,"users"), where("role","==","agent"))
+  );
+
+  const agents=[];
+  usersSnap.forEach(d=>{
+    totalAgents++;
+    agents.push({id:d.id,...d.data()});
+  });
+
+  /* ================= BORROWERS ================= */
+
+  const borrowerSnap = await getDocs(collection(db,"borrowers"));
+  totalBorrowers = borrowerSnap.size;
+
+  /* ================= LOANS ================= */
+
+  const loanSnap = await getDocs(collection(db,"loans"));
+
+  loanSnap.forEach(d=>{
+    const data=d.data();
+    if(data.status==="active"){
+      activeLoans++;
+      totalActiveAmount+=data.principal;
+    }
+  });
+
+  /* ================= COLLECTION ================= */
+
+  const colSnap = await getDocs(collection(db,"collections"));
+
+  colSnap.forEach(d=>{
+    const data=d.data();
+    const date=new Date(data.date);
+
+    if(date>=today) todayCollection+=data.amount;
+    if(date>=firstDayMonth) monthCollection+=data.amount;
+  });
+
+  /* ================= INSTALLMENTS ================= */
+
+  const instSnap=await getDocs(
+    query(collection(db,"installments"),
+    where("status","==","pending"))
+  );
+
+  instSnap.forEach(d=>{
+    const data=d.data();
+    if(data.dueDate < Date.now()){
+      overdueCount++;
+      overdueAmount+=data.amount;
+    }
+  });
+
+  /* ================= AGENT PERFORMANCE ================= */
+
+  let agentHTML="";
+  for(const agent of agents){
+
+    const loanSnap = await getDocs(
+      query(collection(db,"loans"),
+      where("agentId","==",agent.id),
+      where("status","==","active"))
+    );
+
+    let agentActiveLoans=loanSnap.size;
+    let agentActiveAmount=0;
+
+    loanSnap.forEach(d=>{
+      agentActiveAmount+=d.data().principal;
+    });
+
+    const colSnap = await getDocs(
+      query(collection(db,"collections"),
+      where("agentId","==",agent.id))
+    );
+
+    let agentTotalCollection=0;
+
+    colSnap.forEach(d=>{
+      agentTotalCollection+=d.data().amount;
+    });
+
+    agentHTML += `
+      <div class="card">
+        <div class="card-row">
+          <div class="card-details">
+            <div class="card-title">${agent.name || "Agent"}</div>
+            <div class="card-sub">
+              Active Loans: ${agentActiveLoans}<br>
+              Active Amount: ₹${agentActiveAmount}<br>
+              Total Collection: ₹${agentTotalCollection}
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  /* ================= RENDER ================= */
+
+  content.innerHTML=`
+
+    <div class="card">
+      <h3>📊 Business Overview</h3>
+
+      <div class="card-row">
+        <div>Total Agents</div>
+        <b>${totalAgents}</b>
+      </div>
+
+      <div class="card-row">
+        <div>Total Borrowers</div>
+        <b>${totalBorrowers}</b>
+      </div>
+
+      <div class="card-row">
+        <div>Active Loans</div>
+        <b>${activeLoans}</b>
+      </div>
+
+      <div class="card-row">
+        <div>Active Loan Amount</div>
+        <b>₹${totalActiveAmount}</b>
+      </div>
+
+      <div class="card-row">
+        <div>Today Collection</div>
+        <b>₹${todayCollection}</b>
+      </div>
+
+      <div class="card-row">
+        <div>This Month Collection</div>
+        <b>₹${monthCollection}</b>
+      </div>
+
+      <div class="card-row">
+        <div>Overdue EMIs</div>
+        <b>${overdueCount}</b>
+      </div>
+
+      <div class="card-row">
+        <div>Total Overdue Amount</div>
+        <b>₹${overdueAmount}</b>
+      </div>
+
+    </div>
+
+    <div class="card">
+      <h3>👥 Agent Performance</h3>
+      ${agentHTML}
+    </div>
+  `;
+}
 
 </script>
 </body>
 </html>
-
