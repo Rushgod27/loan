@@ -82,27 +82,38 @@ onAuthStateChanged(auth, async(user)=>{
 
   try{
 
-    const snap=await getDoc(doc(db,"users",user.uid));
+    const snap = await getDoc(doc(db,"users",user.uid));
 
     if(!snap.exists()){
-      alert("User role not assigned");
+      alert("User role not assigned.");
       return;
     }
 
-    const role=(snap.data().role || "").toLowerCase();
+    const data = snap.data();
+    const role = (data.role || "").toLowerCase();
 
-    if(role==="boss"){
-      location.href="boss-dashboard.html";
+    /* 🔥 FORCE PASSWORD CHANGE CHECK */
+    if(data.mustChangePassword){
+      window.location.href = "change-password.html";
+      return;
     }
-    else if(role==="owner"){
-      location.href="owner-dashboard.html";
+
+    /* ROLE BASED REDIRECT */
+    if(role === "boss"){
+      window.location.href = "boss-dashboard.html";
     }
-    else if(role==="agent"){
-      location.href="agent-dashboard.html";
+    else if(role === "owner"){
+      window.location.href = "owner-dashboard.html";
+    }
+    else if(role === "agent"){
+      window.location.href = "agent-dashboard.html";
+    }
+    else{
+      alert("Invalid role.");
     }
 
   }catch(err){
-    alert("Error reading role");
+    alert("Error loading role: " + err.message);
   }
 
 });
