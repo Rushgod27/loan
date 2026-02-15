@@ -2,17 +2,122 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Login</title>
+<title>Loan Management Login</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="stylesheet" href="css/styles.css">
+
+<style>
+
+/* ===== GLOBAL ===== */
+body{
+  margin:0;
+  font-family: system-ui, -apple-system, sans-serif;
+  height:100vh;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  background: linear-gradient(135deg,#1d4ed8,#2563eb,#3b82f6);
+}
+
+/* ===== LOGIN CARD ===== */
+.login-card{
+  width:100%;
+  max-width:380px;
+  background:rgba(255,255,255,0.12);
+  backdrop-filter: blur(20px);
+  border-radius:18px;
+  padding:35px 25px;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.2);
+  text-align:center;
+  animation: fadeIn 0.6s ease;
+}
+
+/* ===== TITLE ===== */
+.login-title{
+  color:white;
+  font-size:24px;
+  font-weight:600;
+  margin-bottom:25px;
+}
+
+/* ===== INPUTS ===== */
+.input-group{
+  margin-bottom:18px;
+}
+
+.input-group input{
+  width:100%;
+  padding:14px;
+  border-radius:12px;
+  border:none;
+  outline:none;
+  font-size:14px;
+  background:rgba(255,255,255,0.95);
+  transition:0.3s;
+}
+
+.input-group input:focus{
+  box-shadow:0 0 0 3px rgba(59,130,246,0.4);
+}
+
+/* ===== BUTTON ===== */
+.login-btn{
+  width:100%;
+  padding:14px;
+  border:none;
+  border-radius:14px;
+  background:white;
+  color:#1d4ed8;
+  font-weight:600;
+  font-size:15px;
+  cursor:pointer;
+  transition:0.3s;
+}
+
+.login-btn:hover{
+  transform: translateY(-2px);
+  box-shadow:0 8px 20px rgba(0,0,0,0.25);
+}
+
+/* ===== FOOTER ===== */
+.login-footer{
+  margin-top:18px;
+  font-size:12px;
+  color:rgba(255,255,255,0.8);
+}
+
+/* ===== ANIMATION ===== */
+@keyframes fadeIn{
+  from{ opacity:0; transform:translateY(15px);}
+  to{ opacity:1; transform:translateY(0);}
+}
+
+</style>
+
 </head>
 <body>
 
-<div class="card">
-  <h3>Login</h3>
-  <input id="loginEmail" placeholder="Email">
-  <input id="loginPassword" type="password" placeholder="Password">
-  <button onclick="loginUser()">Login</button>
+<div class="login-card">
+
+  <div class="login-title">
+    Loan Management System
+  </div>
+
+  <div class="input-group">
+    <input id="loginEmail" placeholder="Email">
+  </div>
+
+  <div class="input-group">
+    <input id="loginPassword" type="password" placeholder="Password">
+  </div>
+
+  <button class="login-btn" onclick="loginUser()">
+    Login
+  </button>
+
+  <div class="login-footer">
+    Secure role-based access
+  </div>
+
 </div>
 
 <script type="module">
@@ -28,8 +133,6 @@ import {
   doc,
   getDoc
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-
-/* ================= LOGIN FUNCTION ================= */
 
 window.loginUser = async () => {
 
@@ -48,31 +151,20 @@ window.loginUser = async () => {
   }
 };
 
-/* ================= ROLE BASED REDIRECT ================= */
-
 onAuthStateChanged(auth, async(user)=>{
 
-  if(!user) return;  // Not logged in
+  if(!user) return;
 
   try{
 
-    console.log("Logged in UID:", user.uid);
-
-    // 🔥 Very Important:
-    // Make sure document ID = user.uid inside users collection
-
-    const userRef = doc(db, "users", user.uid);
-    const snap = await getDoc(userRef);
+    const snap = await getDoc(doc(db,"users",user.uid));
 
     if(!snap.exists()){
       alert("User role not assigned in Firestore.");
       return;
     }
 
-    const data = snap.data();
-    const role = (data.role || "").toLowerCase();
-
-    console.log("User Role:", role);
+    const role = (snap.data().role || "").toLowerCase();
 
     if(role === "boss"){
       window.location.href = "boss-dashboard.html";
