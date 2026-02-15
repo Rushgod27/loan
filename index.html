@@ -2,362 +2,98 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Borrowers</title>
+<title>Login</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
 
-<body>
-
-<div class="header">Agent Panel</div>
-
-<div class="nav">
-  <div onclick="goDashboard()">Dashboard</div>
-  <div class="active">Borrowers</div>
-  <div onclick="logoutUser()">Logout</div>
+<div class="card">
+  <h3>Login</h3>
+  <input id="loginEmail" placeholder="Email">
+  <input id="loginPassword" type="password" placeholder="Password">
+  <button onclick="loginUser()">Login</button>
 </div>
-
-<div class="section-content">
-
-  <div class="card">
-    <input id="searchBorrower"
-           placeholder="Search borrower..."
-           onkeyup="debouncedSearch()">
-    <button onclick="addBorrower()">Add Borrower</button>
-  </div>
-
-  <div id="borrowerList"></div>
-
-</div>
-
-</body>
 
 <script type="module">
 
 import { auth, db } from "./js/firebase.js";
 
 import {
-  onAuthStateChanged,
-  signOut
+  signInWithEmailAndPassword,
+  onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 import {
-  collection,
-  addDoc,
-  query,
-  where,
-  getDocs,
   doc,
-  getDoc,
-  updateDoc
+  getDoc
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-let currentUserId = null;
-let borrowerCache = [];
-let searchTimeout = null;
+/* ================= LOGIN FUNCTION ================= */
 
-/* NAVIGATION */
-window.goDashboard = () => location.href="agent-dashboard.html";
-window.goReports = () => location.href="reports.html";
-window.logoutUser = () => signOut(auth);
+window.loginUser = async () => {
 
-/* AUTH CHECK */
-onAuthStateChanged(auth,user=>{
-  if(!user){
-    location.href="index.html";
+  const email = document.getElementById("loginEmail").value.trim();
+  const password = document.getElementById("loginPassword").value.trim();
+
+  if(!email || !password){
+    alert("Enter email and password");
     return;
   }
-  currentUserId=user.uid;
-  loadBorrowers();
-});
 
-/* ADD BORROWER */
-window.addBorrower = async ()=>{
-  const name = prompt("Borrower Name");
-  const phone = prompt("Phone");
-
-  if(!name || !phone) return;
-
-  await addDoc(collection(db,"borrowers"),{
-    name,
-    phone,
-    nameLower:name.toLowerCase(),
-    agentId:currentUserId,
-    createdAt:Date.now()
-  });
-
-  loadBorrowers();
+  try{
+    await signInWithEmailAndPassword(auth, email, password);
+  }catch(err){
+    alert("Login Failed: " + err.message);
+  }
 };
 
-/* LOAD BORROWERS */
-async function loadBorrowers(){
-  borrowerCache = [];
+/* ================= ROLE BASED REDIRECT ================= */
 
-  const q = query(
-    collection(db,"borrowers"),
-    where("agentId","==",currentUserId)
-  );
+onAuthStateChanged(auth, async(user)=>{
 
-  const snap = await getDocs(q);
+  if(!user) return;  // Not logged in
 
-  snap.forEach(d=>{
-    borrowerCache.push({id:d.id,...d.data()});
-  });
+  try{
 
-  renderBorrowers(borrowerCache);
-}
+    console.log("Logged in UID:", user.uid);
 
-/* RENDER BORROWERS */
-function renderBorrowers(list){
-  borrowerList.innerHTML="";
+    // 🔥 Very Important:
+    // Make sure document ID = user.uid inside users collection
 
-  if(list.length===0){
-    borrowerList.innerHTML=
-    `<div class="card">No Borrowers</div>`;
-    return;
-  }
+    const userRef = doc(db, "users", user.uid);
+    const snap = await getDoc(userRef);
 
-  list.forEach(b=>{
-    borrowerList.innerHTML+=`
-    <div class="list-item"
-      onclick="viewBorrower('${b.id}')">
-    <b>${b.name}</b><br>
-    ${b.phone}
-    </div>`;
-  });
-}
-
-/* SEARCH */
-window.debouncedSearch=()=>{
-  const value=
-    document.getElementById("searchBorrower")
-    .value.trim().toLowerCase();
-
-  clearTimeout(searchTimeout);
-
-  searchTimeout=setTimeout(()=>{
-    if(!value){
-      renderBorrowers(borrowerCache);
+    if(!snap.exists()){
+      alert("User role not assigned in Firestore.");
       return;
     }
 
-    const filtered=borrowerCache.filter(b=>{
-      const name=(b.name||"").toLowerCase();
-      const phone=(b.phone||"");
-      return name.includes(value)||
-             phone.includes(value);
-    });
+    const data = snap.data();
+    const role = (data.role || "").toLowerCase();
 
-    renderBorrowers(filtered);
-  },300);
-};
+    console.log("User Role:", role);
 
-/* VIEW BORROWER */
-window.viewBorrower=async(id)=>{
-
-  const snap=await getDoc(doc(db,"borrowers",id));
-  const b=snap.data();
-
-  borrowerList.innerHTML=`
-  <div class="card">
-  <button onclick="loadBorrowers()">Back</button>
-  <h3>${b.name}</h3>
-  📞 ${b.phone}<br><br>
-
-  <button onclick="showLoanForm('${id}')">
-  Create Loan</button>
-  </div>`;
-
-  loadLoans(id);
-};
-
-/* SHOW LOAN FORM */
-window.showLoanForm=(borrowerId)=>{
-  borrowerList.innerHTML+=`
-  <div class="card">
-  <input id="principalInput" placeholder="Principal">
-  <input id="interestInput" placeholder="Interest %">
-  <input id="countInput" placeholder="Installments">
-  <select id="intervalInput">
-  <option value="7">7 Days</option>
-  <option value="15">15 Days</option>
-  <option value="30">30 Days</option>
-  </select>
-  <input type="date" id="startInput">
-  <button onclick="createLoan('${borrowerId}')">
-  Confirm Loan</button>
-  </div>`;
-};
-
-/* CREATE LOAN */
-window.createLoan=async(borrowerId)=>{
-
-  const principal=parseFloat(principalInput.value);
-  const percent=parseFloat(interestInput.value);
-  const count=parseInt(countInput.value);
-  const interval=parseInt(intervalInput.value);
-  const startValue=startInput.value;
-
-  if(!principal || isNaN(percent)
-     || !count || !startValue){
-    alert("Fill all fields correctly");
-    return;
-  }
-
-  const start=new Date(startValue).getTime();
-
-  const interestAmount=(principal*percent)/100;
-  const disbursedAmount=principal-interestAmount;
-  const installmentAmount=principal/count;
-
-  const loan=await addDoc(collection(db,"loans"),{
-    borrowerId,
-    agentId:currentUserId,
-    principal,
-    interestPercent:percent,
-    interestAmount,
-    disbursedAmount,
-    count,
-    interval,
-    startDate:start,
-    status:"active",
-    createdAt:Date.now()
-  });
-
-  await addDoc(collection(db,"collections"),{
-    loanId:loan.id,
-    borrowerId,
-    agentId:currentUserId,
-    amount:interestAmount,
-    type:"upfront_interest",
-    date:Date.now()
-  });
-
-  for(let i=0;i<count;i++){
-    await addDoc(collection(db,"installments"),{
-      loanId:loan.id,
-      borrowerId,
-      number:i+1,
-      amount:installmentAmount,
-      dueDate:start+((i+1)*interval*86400000),
-      status:"pending"
-    });
-  }
-
-  alert("Loan Created");
-  viewBorrower(borrowerId);
-};
-
-/* LOAD LOANS */
-async function loadLoans(borrowerId){
-
-  const q=query(
-    collection(db,"loans"),
-    where("borrowerId","==",borrowerId)
-  );
-
-  const snap=await getDocs(q);
-
-  snap.forEach(d=>{
-    borrowerList.innerHTML+=`
-    <div class="card">
-    Loan ₹${d.data().principal}<br>
-    <button onclick="viewInstallments('${d.id}')">
-    Installments</button>
-    </div>`;
-  });
-}
-
-/* VIEW INSTALLMENTS */
-window.viewInstallments = async (loanId)=>{
-
-  borrowerList.innerHTML =
-  `<button onclick="loadBorrowers()">Back</button>`;
-
-  const snap = await getDocs(query(
-    collection(db,"installments"),
-    where("loanId","==",loanId)
-  ));
-
-  if(snap.empty){
-    borrowerList.innerHTML+=`
-    <div class="card">No Installments</div>`;
-    return;
-  }
-
-  let installments=[];
-  snap.forEach(d=>{
-    installments.push({id:d.id,...d.data()});
-  });
-
-  installments.sort((a,b)=>a.number-b.number);
-
-  let total=0;
-  let paid=0;
-
-  installments.forEach(i=>{
-    total+=i.amount;
-    if(i.status==="completed"){
-      paid+=i.amount;
+    if(role === "boss"){
+      window.location.href = "boss-dashboard.html";
     }
-  });
+    else if(role === "owner"){
+      window.location.href = "owner-dashboard.html";
+    }
+    else if(role === "agent"){
+      window.location.href = "agent-dashboard.html";
+    }
+    else{
+      alert("Invalid role found.");
+    }
 
-  const percent =
-    total ? Math.round((paid/total)*100) : 0;
+  }catch(err){
+    alert("Error reading role: " + err.message);
+  }
 
-  borrowerList.innerHTML+=`
-  <div class="card">
-    Progress: ${percent}%<br>
-    <div class="progress">
-      <div class="progress-bar"
-           style="width:${percent}%"></div>
-    </div>
-  </div>`;
-
-  installments.forEach(i=>{
-
-    const overdue =
-      i.status==="pending" &&
-      i.dueDate < Date.now();
-
-    borrowerList.innerHTML+=`
-    <div class="card ${overdue ? "overdue":""}">
-      Installment ${i.number}<br>
-      ₹${i.amount}<br>
-      📅 ${new Date(i.dueDate)
-      .toLocaleDateString("en-IN")}<br>
-      Status: ${i.status}
-      ${
-        i.status==="pending"
-        ? `<button onclick="
-           markPaid('${i.id}',
-           '${loanId}',
-           ${i.amount})">
-           Mark Paid</button>`
-        : ""
-      }
-    </div>`;
-  });
-};
-
-/* MARK PAID */
-window.markPaid=async(instId,loanId,amount)=>{
-
-  await updateDoc(doc(db,"installments",instId),
-  {status:"completed"});
-
-  await addDoc(collection(db,"collections"),{
-    loanId,
-    agentId:currentUserId,
-    amount,
-    type:"installment",
-    date:Date.now()
-  });
-
-  viewInstallments(loanId);
-};
+});
 
 </script>
+
 </body>
 </html>
