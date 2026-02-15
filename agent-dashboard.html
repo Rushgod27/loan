@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <title>Agent Dashboard</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="stylesheet" href="css/styles.css?v=10">
+<link rel="stylesheet" href="css/styles.css?v=11">
 </head>
 <body>
 
@@ -56,7 +56,6 @@ onAuthStateChanged(auth, user => {
     location.href = "index.html";
     return;
   }
-
   uid = user.uid;
   loadDashboard();
 });
@@ -91,10 +90,10 @@ async function loadDashboard(){
   totalBorrowers = borrowerSnap.size;
 
   const borrowerMap={};
-  const borrowerSetWithActiveLoan = new Set();
+  const activeBorrowerSet=new Set();
 
   borrowerSnap.forEach(d=>{
-    borrowerMap[d.id] = d.data();
+    borrowerMap[d.id]=d.data();
   });
 
   /* ================= LOANS ================= */
@@ -108,10 +107,10 @@ async function loadDashboard(){
   activeLoans = loanSnap.size;
 
   loanSnap.forEach(d=>{
-    borrowerSetWithActiveLoan.add(d.data().borrowerId);
+    activeBorrowerSet.add(d.data().borrowerId);
   });
 
-  activeBorrowers = borrowerSetWithActiveLoan.size;
+  activeBorrowers = activeBorrowerSet.size;
 
   /* ================= INSTALLMENTS ================= */
 
@@ -136,6 +135,7 @@ async function loadDashboard(){
       `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
 
     /* ===== Due Today ===== */
+
     if(dueDate>=today && dueDate<tomorrow){
 
       dueCount++;
@@ -148,8 +148,17 @@ async function loadDashboard(){
             <div class="card-sub">
               ₹${data.amount} • Due Today
             </div>
+            <div class="card-sub">
+              📞 <a href="tel:${phone}" style="color:#2563eb;text-decoration:none;">
+              ${phone}
+              </a>
+            </div>
           </div>
           <div class="card-actions">
+            <button class="btn btn-success"
+              onclick="window.location.href='tel:${phone}'">
+              📞
+            </button>
             <button class="btn btn-warning"
               onclick="window.open('${waLink}','_blank')">
               💬
@@ -160,6 +169,7 @@ async function loadDashboard(){
     }
 
     /* ===== Overdue ===== */
+
     if(dueDate < today){
 
       overdueCount++;
@@ -175,8 +185,17 @@ async function loadDashboard(){
             <div class="card-sub">
               ₹${data.amount} • ${daysLate} days overdue
             </div>
+            <div class="card-sub">
+              📞 <a href="tel:${phone}" style="color:#2563eb;text-decoration:none;">
+              ${phone}
+              </a>
+            </div>
           </div>
           <div class="card-actions">
+            <button class="btn btn-success"
+              onclick="window.location.href='tel:${phone}'">
+              📞
+            </button>
             <button class="btn btn-danger"
               onclick="window.open('${waLink}','_blank')">
               💬
@@ -196,9 +215,15 @@ async function loadDashboard(){
   ));
 
   colSnap.forEach(d=>{
-    const date = new Date(d.data().date);
-    if(date>=today && date<tomorrow){
-      todayCollection+=d.data().amount;
+
+    let rawDate = d.data().date;
+
+    let dateObj =
+      rawDate?.toDate ? rawDate.toDate()
+      : new Date(rawDate);
+
+    if(dateObj>=today && dateObj<tomorrow){
+      todayCollection += d.data().amount;
     }
   });
 
