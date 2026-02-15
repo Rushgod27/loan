@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <title>Owner Dashboard</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="stylesheet" href="css/styles.css?v=15">
+<link rel="stylesheet" href="css/styles.css?v=20">
 </head>
 <body>
 
@@ -21,27 +21,28 @@
 
 <script type="module">
 
-import { auth, db } from "./js/firebase.js";
-
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import {
+  getAuth,
   signOut,
   onAuthStateChanged,
   createUserWithEmailAndPassword
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 import {
+  getFirestore,
   collection,
   query,
   where,
   getDocs,
-  addDoc,
   doc,
   updateDoc,
-  getDoc,
   setDoc
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-let ownerId=null;
+import { auth, db } from "./js/firebase.js";
+
+let ownerId = null;
 
 /* ================= AUTH ================= */
 
@@ -73,11 +74,10 @@ async function loadDashboard(){
 
   const today = new Date();
   today.setHours(0,0,0,0);
-
   const tomorrow = new Date(today);
   tomorrow.setDate(today.getDate()+1);
 
-  /* ================= AGENTS ================= */
+  /* ===== AGENTS ===== */
 
   const agentSnap = await getDocs(query(
     collection(db,"users"),
@@ -85,18 +85,17 @@ async function loadDashboard(){
     where("ownerId","==",ownerId)
   ));
 
+  const agentMap = {};
   totalAgents = agentSnap.size;
 
-  const agentMap={};
-
   agentSnap.forEach(d=>{
-    agentMap[d.id]=d.data();
+    agentMap[d.id] = d.data();
     if(d.data().status==="active"){
       activeAgents++;
     }
   });
 
-  /* ================= BORROWERS ================= */
+  /* ===== BORROWERS ===== */
 
   const borrowerSnap = await getDocs(collection(db,"borrowers"));
 
@@ -106,7 +105,7 @@ async function loadDashboard(){
     }
   });
 
-  /* ================= LOANS ================= */
+  /* ===== LOANS ===== */
 
   const loanSnap = await getDocs(collection(db,"loans"));
 
@@ -117,73 +116,75 @@ async function loadDashboard(){
     }
   });
 
-  /* ================= COLLECTION ================= */
+  /* ===== COLLECTION ===== */
 
   const colSnap = await getDocs(collection(db,"collections"));
 
   colSnap.forEach(d=>{
     const data=d.data();
     if(agentMap[data.agentId]){
-      const date=new Date(data.date);
+      const date = new Date(data.date);
       if(date>=today && date<tomorrow){
         todayCollection+=data.amount;
       }
     }
   });
 
-  /* ================= RENDER ================= */
+  /* ===== RENDER ===== */
 
-  content.innerHTML=`
+  content.innerHTML = `
 
-  <div class="card">
-    <h3>📊 Overview</h3>
+    <div class="card">
+      <h3>📊 Overview</h3>
 
-    <div class="card-row">
-      <div class="card-details">Total Agents</div>
-      <div><b>${totalAgents}</b></div>
+      <div class="card-row">
+        <div class="card-details">Total Agents</div>
+        <div><b>${totalAgents}</b></div>
+      </div>
+
+      <div class="card-row">
+        <div class="card-details">Active Agents</div>
+        <div><b>${activeAgents}</b></div>
+      </div>
+
+      <div class="card-row">
+        <div class="card-details">Total Borrowers</div>
+        <div><b>${totalBorrowers}</b></div>
+      </div>
+
+      <div class="card-row">
+        <div class="card-details">Active Loans</div>
+        <div><b>${activeLoans}</b></div>
+      </div>
+
+      <div class="card-row">
+        <div class="card-details">Today's Collection</div>
+        <div><b>₹${todayCollection}</b></div>
+      </div>
     </div>
 
-    <div class="card-row">
-      <div class="card-details">Active Agents</div>
-      <div><b>${activeAgents}</b></div>
+    <div class="card">
+      <h3>➕ Add Agent</h3>
+
+      <input id="agentName" placeholder="Agent Name">
+      <input id="agentPhone" placeholder="Phone Number">
+      <input id="agentEmail" placeholder="Email">
+      <input id="tempPassword" type="password"
+             placeholder="Temporary Password">
+
+      <button class="btn btn-primary"
+        onclick="addAgent()">
+        Create Agent
+      </button>
     </div>
 
-    <div class="card-row">
-      <div class="card-details">Total Borrowers</div>
-      <div><b>${totalBorrowers}</b></div>
+    <div class="card">
+      <h3>📈 Agent Performance</h3>
+      <div id="agentList"></div>
     </div>
-
-    <div class="card-row">
-      <div class="card-details">Active Loans</div>
-      <div><b>${activeLoans}</b></div>
-    </div>
-
-    <div class="card-row">
-      <div class="card-details">Today's Collection</div>
-      <div><b>₹${todayCollection}</b></div>
-    </div>
-
-  </div>
-
-  <div class="card">
-    <h3>➕ Add Agent</h3>
-
-    <input id="agentName" placeholder="Agent Name">
-    <input id="agentPhone" placeholder="Phone Number">
-    <input id="agentEmail" placeholder="Email">
-    <button class="btn btn-primary"
-      onclick="addAgent()">
-      Create Agent
-    </button>
-  </div>
-
-  <div class="card">
-    <h3>📈 Agent Performance</h3>
-    <div id="agentList"></div>
-  </div>
   `;
 
-  loadAgentPerformance(agentMap);
+  renderAgents(agentMap);
 }
 
 /* ================= ADD AGENT ================= */
@@ -193,82 +194,102 @@ window.addAgent = async ()=>{
   const name = agentName.value.trim();
   const phone = agentPhone.value.trim();
   const email = agentEmail.value.trim();
+  const password = tempPassword.value.trim();
 
-  if(!name || !phone || !email){
+  if(!name || !phone || !email || !password){
     alert("Fill all fields");
     return;
   }
 
-  const tempPassword="Temp12345";
+  if(password.length < 6){
+    alert("Password must be at least 6 characters");
+    return;
+  }
 
-  const secondary = auth.app;
-  const newUser = await createUserWithEmailAndPassword(auth,email,tempPassword);
+  try{
 
-  await setDoc(doc(db,"users",newUser.user.uid),{
-    name,
-    phone,
-    role:"agent",
-    ownerId,
-    mustChangePassword:true,
-    status:"active",
-    createdAt:Date.now()
-  });
+    /* 🔥 SECONDARY APP (PREVENT OWNER LOGOUT) */
 
-  alert("Agent created with temporary password");
+    const secondaryApp = initializeApp(
+      auth.app.options,
+      "SecondaryApp"
+    );
 
-  loadDashboard();
+    const secondaryAuth = getAuth(secondaryApp);
+
+    const userCred =
+      await createUserWithEmailAndPassword(
+        secondaryAuth,
+        email,
+        password
+      );
+
+    await setDoc(doc(db,"users",userCred.user.uid),{
+      name,
+      phone,
+      role:"agent",
+      ownerId,
+      status:"active",
+      mustChangePassword:true,
+      createdAt:Date.now()
+    });
+
+    await secondaryAuth.signOut();
+
+    alert("Agent Created Successfully");
+
+    agentName.value="";
+    agentPhone.value="";
+    agentEmail.value="";
+    tempPassword.value="";
+
+    loadDashboard();
+
+  }catch(err){
+    alert("Error: "+err.message);
+  }
 };
 
-/* ================= AGENT PERFORMANCE ================= */
+/* ================= AGENT LIST ================= */
 
-async function loadAgentPerformance(agentMap){
+function renderAgents(agentMap){
 
-  const agentListDiv = document.getElementById("agentList");
-  agentListDiv.innerHTML="";
+  const agentList = document.getElementById("agentList");
+  agentList.innerHTML="";
 
   for(const agentId in agentMap){
 
     const agent = agentMap[agentId];
 
-    let agentBorrowers=0;
-    let agentActiveLoans=0;
-
-    const borrowerSnap=await getDocs(query(
-      collection(db,"borrowers"),
-      where("agentId","==",agentId)
-    ));
-
-    agentBorrowers = borrowerSnap.size;
-
-    const loanSnap=await getDocs(query(
-      collection(db,"loans"),
-      where("agentId","==",agentId),
-      where("status","==","active")
-    ));
-
-    agentActiveLoans = loanSnap.size;
-
-    agentListDiv.innerHTML+=`
-    <div class="card">
-      <div class="card-row">
-        <div class="card-details">
-          <div class="card-title">
-            ${agent.name}
+    agentList.innerHTML+=`
+      <div class="card">
+        <div class="card-row">
+          <div class="card-details">
+            <div class="card-title">
+              ${agent.name}
+            </div>
+            <div class="card-sub">
+              ${agent.phone}
+            </div>
           </div>
-          <div class="card-sub">
-            Borrowers: ${agentBorrowers} |
-            Active Loans: ${agentActiveLoans}
-          </div>
-        </div>
 
-        <div class="card-actions">
-          <button class="btn btn-danger"
-            onclick="toggleAgent('${agentId}','${agent.status}')">
-            ${agent.status==="active"?"Freeze":"Unfreeze"}
-          </button>
+          <div class="card-actions">
+            <button class="btn ${
+              agent.status==="active"
+              ? "btn-danger"
+              : "btn-success"
+            }"
+            onclick="toggleAgent(
+              '${agentId}',
+              '${agent.status}'
+            )">
+              ${agent.status==="active"
+                ? "Freeze"
+                : "Unfreeze"}
+            </button>
+          </div>
         </div>
       </div>
-    </div>
     `;
   }
 }
@@ -278,11 +299,19 @@ async function loadAgentPerformance(agentMap){
 window.toggleAgent = async(agentId,status)=>{
 
   const newStatus =
-    status==="active" ? "frozen" : "active";
+    status==="active"
+    ? "frozen"
+    : "active";
 
   await updateDoc(doc(db,"users",agentId),{
     status:newStatus
   });
+
+  alert(
+    newStatus==="frozen"
+    ? "Agent Frozen"
+    : "Agent Activated"
+  );
 
   loadDashboard();
 };
