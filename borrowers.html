@@ -26,13 +26,19 @@
       <input id="searchInput"
              placeholder="Search by name or phone"
              style="flex:1;">
-      <button onclick="toggleAddForm()">+ Add</button>
+<button class="btn btn-primary"
+        onclick="toggleAddForm()">
+  + Add Borrower
+</button>
     </div>
 
-    <div id="addSection" class="hidden" style="margin-top:15px;">
+<div id="addSection" class="hidden add-box">
       <input id="nameInput" placeholder="Borrower Name">
       <input id="phoneInput" placeholder="Phone Number">
-      <button onclick="createBorrower()">Save Borrower</button>
+<button class="btn btn-success"
+        onclick="createBorrower()">
+  Save Borrower
+</button>
     </div>
   </div>
 
