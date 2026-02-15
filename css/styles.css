@@ -1,169 +1,54 @@
 body{
   margin:0;
-  font-family:system-ui;
-  background:#f1f5f9;
+  font-family:-apple-system,
+    BlinkMacSystemFont,
+    system-ui;
+  background:#f3f4f6;
 }
 
-.page-container{
-  max-width:100%;
-  min-height:100vh;
-}
-
-.section-content{
-  padding:14px;
-}
-
-.section-content{
-  animation:fadePage .3s ease-in-out;
-}
-
-@keyframes fadePage{
-  from{opacity:0; transform:translateY(10px);}
-  to{opacity:1; transform:translateY(0);}
-}
-
+/* HEADER */
 .header{
-  background:linear-gradient(135deg,#2563eb,#1e40af);
-  color:white;
-  padding:18px;
-  text-align:center;
-  font-weight:600;
+  background:#2563eb;
+  color:#fff;
+  padding:16px;
   font-size:18px;
-  letter-spacing:.5px;
-  position:sticky;
-  top:0;
-  box-shadow:0 4px 12px rgba(0,0,0,0.15);
+  font-weight:600;
+  text-align:center;
 }
 
+/* NAV */
 .nav{
   display:flex;
-  background:white;
-  box-shadow:0 2px 10px rgba(0,0,0,.05);
+  background:#fff;
+  border-bottom:1px solid #e5e7eb;
 }
 
 .nav div{
   flex:1;
   text-align:center;
-  padding:14px;
-  cursor:pointer;
-  transition:.25s;
+  padding:12px;
   font-weight:500;
-  color:#6b7280;
-}
-
-.nav div:hover{
-  background:#f3f4f6;
+  cursor:pointer;
 }
 
 .nav .active{
-  border-bottom:3px solid #2563eb;
   color:#2563eb;
-  font-weight:600;
+  border-bottom:3px solid #2563eb;
 }
 
-.card{
-  background:white;
-  margin:18px;
-  padding:18px;
-  border-radius:18px;
-  box-shadow:0 6px 20px rgba(0,0,0,.06);
-  transition:.3s ease;
-  animation:cardPop .3s ease;
-}
-
-@keyframes cardPop{
-  from{opacity:0; transform:scale(.98);}
-  to{opacity:1; transform:scale(1);}
-}
-
-.card:hover{
-  transform:translateY(-4px);
-  box-shadow:0 12px 24px rgba(0,0,0,.08);
-}
-
-button{
-  padding:10px 16px;
-  border:none;
-  border-radius:12px;
-  background:linear-gradient(135deg,#2563eb,#1e40af);
-  color:white;
-  font-weight:600;
-  cursor:pointer;
-  transition:.25s;
-  margin-top:10px;
-}
-
-button:hover{
-  transform:translateY(-2px);
-  box-shadow:0 6px 16px rgba(37,99,235,.3);
-}
-
-input{
-  width:100%;
-  padding:12px;
-  border-radius:12px;
-  border:1px solid #e5e7eb;
-  margin-top:10px;
-  font-size:14px;
-  transition:.25s;
-}
-
-input:focus{
-  outline:none;
-  border-color:#2563eb;
-  box-shadow:0 0 0 3px rgba(37,99,235,.2);
-}
-
-.list-item{
-  background:white;
+/* CONTAINER */
+.content{
   padding:16px;
-  border-radius:14px;
-  margin:10px 18px;
-  box-shadow:0 4px 14px rgba(0,0,0,.05);
-  cursor:pointer;
-  transition:.3s;
+  max-width:600px;
+  margin:auto;
 }
 
-.list-item:hover{
-  transform:translateY(-3px);
-  box-shadow:0 8px 20px rgba(0,0,0,.08);
-}
-
-/* ===== INSTALLMENT PROGRESS ===== */
-
-.progress{
-  height:8px;
-  background:#e5e7eb;
-  border-radius:10px;
-  overflow:hidden;
-  margin-top:8px;
-}
-
-.progress-bar{
-  height:100%;
-  background:#22c55e;
-  transition:0.5s ease;
-}
-
-/* Overdue highlight */
-.overdue{
-  border-left:4px solid #ef4444 !important;
-  background:#fef2f2 !important;
-}
-
-/* WhatsApp Button */
-.whatsapp-btn{
-  background:#25D366 !important;
-}
-
-.whatsapp-btn:hover{ 
-  box-shadow:0 6px 16px rgba(37,211,102,0.4);
-}
-.top-actions{
+/* ACTION ICONS */
+.actions{
   display:flex;
   justify-content:flex-end;
   gap:12px;
-  margin:14px;
+  margin-bottom:12px;
 }
 
 .icon-btn{
@@ -171,36 +56,151 @@ input:focus{
   height:42px;
   border-radius:50%;
   background:#2563eb;
-  color:#fff;
+  color:white;
   display:flex;
   align-items:center;
   justify-content:center;
-  font-size:18px;
+  font-size:20px;
   cursor:pointer;
-  box-shadow:0 4px 10px rgba(0,0,0,0.1);
-  transition:0.2s;
+  box-shadow:0 4px 10px rgba(0,0,0,.1);
+  transition:.2s ease;
 }
 
-.icon-btn:hover{
-  transform:scale(1.05);
+.icon-btn:active{
+  transform:scale(.95);
 }
 
-.action-panel{
+/* CARD */
+.card{
   background:white;
-  margin:0 14px 14px 14px;
+  padding:16px;
+  border-radius:14px;
+  margin-bottom:14px;
+  box-shadow:0 2px 8px rgba(0,0,0,.05);
+}
+
+/* PROFILE */
+.profile-card{
+  margin-bottom:20px;
+}
+
+.profile-top{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  margin-bottom:12px;
+}
+
+.profile-top img{
+  width:70px;
+  height:70px;
+  border-radius:50%;
+  object-fit:cover;
+}
+
+/* LOAN CARD */
+.loan-card{
+  border-left:4px solid #2563eb;
+}
+
+.loan-card.completed{
+  opacity:.6;
+  border-left:4px solid #6b7280;
+}
+
+/* BADGE */
+.badge{
+  display:inline-block;
+  padding:4px 10px;
+  border-radius:14px;
+  font-size:12px;
+  font-weight:600;
+  margin-top:6px;
+}
+
+.badge-active{
+  background:#16a34a;
+  color:white;
+}
+
+.badge-complete{
+  background:#6b7280;
+  color:white;
+}
+
+/* INSTALLMENTS */
+.inst{
+  margin-top:12px;
+}
+
+/* EMI CARD */
+.installment-card{
+  border-radius:12px;
+  padding:14px;
+  margin-bottom:10px;
+  border:1px solid #e5e7eb;
+}
+
+.installment-card.pending{
+  background:#ffffff;
+}
+
+.installment-card.overdue{
+  border-left:4px solid #dc2626;
+  background:#fef2f2;
+}
+
+.installment-card.completed{
+  background:#f3f4f6;
+  color:#6b7280;
+}
+
+/* BUTTON */
+button{
+  margin-top:10px;
+  padding:8px 14px;
+  border:none;
+  border-radius:8px;
+  background:#2563eb;
+  color:white;
+  font-weight:600;
+  cursor:pointer;
+}
+
+button.secondary{
+  background:#16a34a;
+}
+
+button:active{
+  transform:scale(.98);
+}
+
+/* INPUT */
+input, select{
+  width:100%;
+  padding:10px;
+  border-radius:8px;
+  border:1px solid #e5e7eb;
+  margin-bottom:10px;
+}
+
+/* LIST ITEM */
+.list-item{
+  background:white;
   padding:14px;
   border-radius:12px;
-  box-shadow:0 4px 15px rgba(0,0,0,0.06);
-  animation:slideDown .2s ease;
+  margin-bottom:8px;
+  box-shadow:0 2px 6px rgba(0,0,0,.04);
+  cursor:pointer;
 }
 
 .hidden{
   display:none;
 }
 
-@keyframes slideDown{
-  from{opacity:0;transform:translateY(-6px);}
-  to{opacity:1;transform:translateY(0);}
+/* SECTION TITLE */
+h3{
+  margin-top:20px;
+  margin-bottom:10px;
+  font-weight:600;
 }
-
-
