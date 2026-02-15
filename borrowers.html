@@ -12,7 +12,6 @@ body{
   background:#f5f7fb;
 }
 
-/* HEADER */
 .header{
   background:#2563eb;
   color:white;
@@ -21,7 +20,6 @@ body{
   font-size:18px;
 }
 
-/* NAV */
 .nav{
   display:flex;
   background:white;
@@ -34,18 +32,17 @@ body{
   cursor:pointer;
 }
 .nav .active{
-  font-weight:600;
   border-bottom:3px solid #2563eb;
+  font-weight:600;
 }
 
-/* LAYOUT */
-.app{
+.container{
   display:flex;
   height:calc(100vh - 108px);
 }
 
 .sidebar{
-  width:320px;
+  width:300px;
   background:white;
   border-right:1px solid #eee;
   overflow:auto;
@@ -53,22 +50,36 @@ body{
 
 .content{
   flex:1;
-  overflow:auto;
   padding:20px;
+  overflow:auto;
 }
 
-/* SEARCH */
-.search-box{
-  padding:12px;
+.card{
+  background:white;
+  padding:16px;
+  border-radius:10px;
+  margin-bottom:15px;
+  box-shadow:0 2px 8px rgba(0,0,0,.05);
 }
-.search-box input{
+
+input, select{
   width:100%;
   padding:10px;
-  border-radius:8px;
+  margin-bottom:10px;
+  border-radius:6px;
   border:1px solid #ddd;
 }
 
-/* LIST */
+button{
+  padding:8px 12px;
+  border:none;
+  border-radius:6px;
+  background:#2563eb;
+  color:white;
+  font-weight:600;
+  cursor:pointer;
+}
+
 .list-item{
   padding:14px;
   border-bottom:1px solid #eee;
@@ -78,75 +89,25 @@ body{
   background:#f3f4f6;
 }
 
-/* CARDS */
-.card{
-  background:white;
-  padding:18px;
-  border-radius:12px;
-  margin-bottom:16px;
-  box-shadow:0 2px 8px rgba(0,0,0,.05);
-}
-
-button{
-  padding:8px 14px;
-  border:none;
-  border-radius:8px;
-  background:#2563eb;
-  color:white;
-  font-weight:600;
-  cursor:pointer;
+.progress{
+  height:8px;
+  background:#e5e7eb;
+  border-radius:10px;
+  overflow:hidden;
   margin-top:8px;
 }
-
-.badge{
-  padding:4px 8px;
-  border-radius:10px;
-  font-size:12px;
-  font-weight:600;
-}
-
-.badge-active{
-  background:#dcfce7;
-  color:#166534;
-}
-
-.badge-completed{
-  background:#eee;
-  color:#666;
+.progress-bar{
+  height:100%;
+  background:#22c55e;
 }
 
 .gray{
   opacity:.6;
 }
 
-.progress{
-  height:10px;
-  background:#e5e7eb;
-  border-radius:10px;
-  overflow:hidden;
-  margin-top:10px;
-}
-
-.progress-bar{
-  height:100%;
-  background:#22c55e;
-}
-
-/* MOBILE */
-@media(max-width:900px){
-  .app{
-    flex-direction:column;
-  }
-  .sidebar{
-    width:100%;
-    height:100%;
-  }
-  .content{
-    display:none;
-  }
-}
 </style>
 </head>
+
 <body>
 
 <div class="header">Borrowers</div>
@@ -157,22 +118,18 @@ button{
   <div onclick="logoutUser()">Logout</div>
 </div>
 
-<div class="app">
+<div class="container">
 
   <div class="sidebar">
-    <div class="search-box">
-      <input id="searchBorrower"
-             placeholder="Search borrower..."
-             onkeyup="debouncedSearch()">
+    <div class="card">
+      <input id="searchBorrower" placeholder="Search..." onkeyup="searchBorrowers()">
       <button onclick="addBorrower()">➕ Add Borrower</button>
     </div>
     <div id="borrowerList"></div>
   </div>
 
   <div class="content" id="contentPanel">
-    <div style="color:#999;">
-      Select a borrower to view profile
-    </div>
+    <div style="color:#999;">Select borrower</div>
   </div>
 
 </div>
@@ -180,24 +137,21 @@ button{
 <script type="module">
 
 import { auth, db } from "./js/firebase.js";
+import { onAuthStateChanged, signOut }
+from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 import {
-  onAuthStateChanged,
-  signOut
-} from
-"https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-
-import {
-  collection, addDoc,
-  query, where, getDocs,
-  doc, getDoc, updateDoc
+  collection, addDoc, query, where,
+  getDocs, doc, getDoc, updateDoc
 } from
 "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 let currentUserId=null;
 let currentBorrowerId=null;
 let borrowerCache=[];
-let searchTimeout=null;
+
+const borrowerList = document.getElementById("borrowerList");
+const contentPanel = document.getElementById("contentPanel");
 
 /* AUTH */
 onAuthStateChanged(auth,user=>{
@@ -209,38 +163,25 @@ onAuthStateChanged(auth,user=>{
   loadBorrowers();
 });
 
-/* NAV */
-window.goDashboard=()=>location.href="agent-dashboard.html";
-window.logoutUser=()=>signOut(auth);
-
-/* ADD */
-window.addBorrower=async()=>{
-  const name=prompt("Borrower Name");
-  const phone=prompt("Phone");
-
-  if(!name||!phone)return;
-
-  await addDoc(collection(db,"borrowers"),{
-    name,
-    phone,
-    nameLower:name.toLowerCase(),
-    agentId:currentUserId,
-    createdAt:Date.now()
-  });
-
-  loadBorrowers();
+window.goDashboard=()=>{
+  location.href="agent-dashboard.html";
 };
 
-/* LOAD LIST */
+window.logoutUser=()=>{
+  signOut(auth);
+};
+
+/* LOAD BORROWERS */
 async function loadBorrowers(){
+
   borrowerCache=[];
 
-  const q=query(
+  const q = query(
     collection(db,"borrowers"),
     where("agentId","==",currentUserId)
   );
 
-  const snap=await getDocs(q);
+  const snap = await getDocs(q);
 
   snap.forEach(d=>{
     borrowerCache.push({id:d.id,...d.data()});
@@ -249,13 +190,12 @@ async function loadBorrowers(){
   renderBorrowers(borrowerCache);
 }
 
-/* RENDER */
 function renderBorrowers(list){
   borrowerList.innerHTML="";
   list.forEach(b=>{
     borrowerList.innerHTML+=`
       <div class="list-item"
-      onclick="viewBorrower('${b.id}')">
+        onclick="viewBorrower('${b.id}')">
         <b>${b.name}</b><br>
         ${b.phone}
       </div>`;
@@ -263,48 +203,53 @@ function renderBorrowers(list){
 }
 
 /* SEARCH */
-window.debouncedSearch=()=>{
-  const value=
-    searchBorrower.value.trim().toLowerCase();
-  clearTimeout(searchTimeout);
+window.searchBorrowers=()=>{
+  const val=
+    document.getElementById("searchBorrower")
+    .value.toLowerCase();
 
-  searchTimeout=setTimeout(()=>{
-    if(!value){
-      renderBorrowers(borrowerCache);
-      return;
-    }
-    const filtered=borrowerCache.filter(b=>
-      (b.name||"").toLowerCase().includes(value)||
-      (b.phone||"").includes(value)
+  const filtered=
+    borrowerCache.filter(b =>
+      b.name.toLowerCase().includes(val)
+      || b.phone.includes(val)
     );
-    renderBorrowers(filtered);
-  },300);
+
+  renderBorrowers(filtered);
 };
 
-/* PROFILE */
-window.viewBorrower=async(id)=>{
-  currentBorrowerId=id;
+/* VIEW BORROWER */
+window.viewBorrower = async(id)=>{
 
-  document.querySelector(".content")
-    .style.display="block";
+  currentBorrowerId=id;
 
   const snap=await getDoc(
     doc(db,"borrowers",id)
   );
+
+  if(!snap.exists()){
+    alert("Borrower not found");
+    return;
+  }
 
   const b=snap.data();
 
   contentPanel.innerHTML=`
     <div class="card">
       <h2>${b.name}</h2>
+
       📞 <a href="tel:${b.phone}">
       ${b.phone}</a><br>
+
       💬 <a href="https://wa.me/${b.phone}"
       target="_blank">WhatsApp</a>
+
       <br><br>
+
       <button onclick="toggleLoanForm()">
       ➕ Create Loan</button>
+
       <div id="loanFormSection"></div>
+
     </div>
 
     <div id="loanSection"></div>
@@ -314,24 +259,24 @@ window.viewBorrower=async(id)=>{
   loadLoans(id);
 };
 
-/* TOGGLE LOAN */
+/* TOGGLE LOAN FORM */
 window.toggleLoanForm=()=>{
-  const section=
-    document.getElementById("loanFormSection");
+  const form=document
+    .getElementById("loanFormSection");
 
-  if(section.innerHTML!==""){
-    section.innerHTML="";
+  if(form.innerHTML!==""){
+    form.innerHTML="";
     return;
   }
 
-  section.innerHTML=`
+  form.innerHTML=`
     <div class="card">
       <input id="principalInput"
-             placeholder="Principal">
+      placeholder="Principal">
       <input id="interestInput"
-             placeholder="Interest %">
+      placeholder="Interest %">
       <input id="countInput"
-             placeholder="Installments">
+      placeholder="Installments">
       <select id="intervalInput">
         <option value="7">7 Days</option>
         <option value="15">15 Days</option>
@@ -339,19 +284,23 @@ window.toggleLoanForm=()=>{
       </select>
       <input type="date" id="startInput">
       <button onclick="createLoan()">
-        Confirm Loan
-      </button>
+      Confirm Loan</button>
     </div>`;
 };
 
 /* CREATE LOAN */
 window.createLoan=async()=>{
 
-  const principal=parseFloat(principalInput.value);
-  const percent=parseFloat(interestInput.value);
-  const count=parseInt(countInput.value);
-  const interval=parseInt(intervalInput.value);
-  const startValue=startInput.value;
+  const principal=
+    parseFloat(principalInput.value);
+  const percent=
+    parseFloat(interestInput.value);
+  const count=
+    parseInt(countInput.value);
+  const interval=
+    parseInt(intervalInput.value);
+  const startValue=
+    startInput.value;
 
   if(!principal||isNaN(percent)
      ||!count||!startValue){
@@ -360,9 +309,6 @@ window.createLoan=async()=>{
   }
 
   const start=new Date(startValue).getTime();
-  const interestAmount=
-    (principal*percent)/100;
-
   const installmentAmount=
     principal/count;
 
@@ -372,7 +318,6 @@ window.createLoan=async()=>{
     agentId:currentUserId,
     principal,
     interestPercent:percent,
-    interestAmount,
     count,
     interval,
     startDate:start,
@@ -401,50 +346,27 @@ window.createLoan=async()=>{
 /* LOAD LOANS */
 async function loadLoans(id){
 
-  const q=query(
+  const snap=await getDocs(query(
     collection(db,"loans"),
     where("borrowerId","==",id)
-  );
+  ));
 
-  const snap=await getDocs(q);
+  loanSection.innerHTML="";
 
-  let activeHTML=
-    `<div class="card">
-      <h3>Active Loans</h3>`;
+  for(const d of snap.docs){
 
-  let completedHTML=
-    `<div class="card gray">
-      <h3>Completed Loans</h3>`;
-
-  snap.forEach(d=>{
     const loan=d.data();
-    const badge=
-      loan.status==="active"
-      ? `<span class="badge badge-active">
-         Active</span>`
-      : `<span class="badge badge-completed">
-         Completed</span>`;
 
-    const loanCard=`
-      <div class="card ${loan.status!=="active"?"gray":""}">
+    loanSection.innerHTML+=`
+      <div class="card ${
+        loan.status!=="active"?"gray":""
+      }">
       Loan ₹${loan.principal}<br>
-      ${badge}
       <button onclick=
       "viewInstallments('${d.id}')">
       Installments</button>
       </div>`;
-
-    if(loan.status==="active")
-      activeHTML+=loanCard;
-    else
-      completedHTML+=loanCard;
-  });
-
-  activeHTML+="</div>";
-  completedHTML+="</div>";
-
-  loanSection.innerHTML=
-    activeHTML+completedHTML;
+  }
 }
 
 /* INSTALLMENTS */
@@ -486,8 +408,9 @@ async(loanId)=>{
 
   list.forEach(i=>{
     installmentSection.innerHTML+=`
-    <div class="card
-    ${i.status!=="pending"?"gray":""}">
+    <div class="card ${
+      i.status!=="pending"?"gray":""
+    }">
       Installment ${i.number}<br>
       ₹${i.amount}<br>
       ${i.status}
@@ -503,7 +426,7 @@ async(loanId)=>{
   });
 };
 
-/* MARK */
+/* MARK PAID */
 window.markPaid=
 async(instId,loanId,amount)=>{
 
@@ -516,7 +439,6 @@ async(instId,loanId,amount)=>{
       loanId,
       agentId:currentUserId,
       amount,
-      type:"installment",
       date:Date.now()
     });
 
