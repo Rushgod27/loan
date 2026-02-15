@@ -262,69 +262,73 @@ async function loadLoans(borrowerId){
 }
 
 /* VIEW INSTALLMENTS */
-window.viewInstallments=async(loanId)=>{
+window.viewInstallments = async (loanId)=>{
 
-  borrowerList.innerHTML=
+  borrowerList.innerHTML =
   `<button onclick="loadBorrowers()">Back</button>`;
 
-  const q=query(
+  const snap = await getDocs(query(
     collection(db,"installments"),
     where("loanId","==",loanId)
-  );
-
-  const snap=await getDocs(q);
+  ));
 
   if(snap.empty){
-    borrowerList.innerHTML+=
-    `<div class="card">No installments</div>`;
+    borrowerList.innerHTML+=`
+    <div class="card">No Installments</div>`;
     return;
   }
 
-  let list=[];
+  let installments=[];
   snap.forEach(d=>{
-    list.push({id:d.id,...d.data()});
+    installments.push({id:d.id,...d.data()});
   });
 
-  list.sort((a,b)=>a.number-b.number);
+  installments.sort((a,b)=>a.number-b.number);
 
-  let total=0,paid=0;
-  list.forEach(i=>{
+  let total=0;
+  let paid=0;
+
+  installments.forEach(i=>{
     total+=i.amount;
-    if(i.status==="completed")
+    if(i.status==="completed"){
       paid+=i.amount;
+    }
   });
 
-  const percentPaid=
-    total ? Math.round((paid/total)*100):0;
+  const percent =
+    total ? Math.round((paid/total)*100) : 0;
 
   borrowerList.innerHTML+=`
   <div class="card">
-  Remaining ₹${total-paid}
-  <div class="progress">
-  <div class="progress-bar"
-  style="width:${percentPaid}%">
-  </div>
-  </div>
-  ${percentPaid}% paid
+    Progress: ${percent}%<br>
+    <div class="progress">
+      <div class="progress-bar"
+           style="width:${percent}%"></div>
+    </div>
   </div>`;
 
-  list.forEach(i=>{
+  installments.forEach(i=>{
+
+    const overdue =
+      i.status==="pending" &&
+      i.dueDate < Date.now();
+
     borrowerList.innerHTML+=`
-    <div class="card">
-    Installment ${i.number}<br>
-    ₹${i.amount}<br>
-    📅 ${new Date(i.dueDate)
+    <div class="card ${overdue ? "overdue":""}">
+      Installment ${i.number}<br>
+      ₹${i.amount}<br>
+      📅 ${new Date(i.dueDate)
       .toLocaleDateString("en-IN")}<br>
-    Status: ${i.status}<br>
-    ${
-      i.status==="pending"
-      ? `<button onclick="
-         markPaid('${i.id}',
-         '${loanId}',
-         ${i.amount})
-         ">Mark Paid</button>`
-      : ""
-    }
+      Status: ${i.status}
+      ${
+        i.status==="pending"
+        ? `<button onclick="
+           markPaid('${i.id}',
+           '${loanId}',
+           ${i.amount})">
+           Mark Paid</button>`
+        : ""
+      }
     </div>`;
   });
 };
