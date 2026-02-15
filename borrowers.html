@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <title>Borrowers</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="stylesheet" href="css/styles.css">
+<link rel="stylesheet" href="css/styles.css?v=15">
 </head>
 <body>
 
@@ -20,32 +20,60 @@
 
 <div class="container">
 
-  <!-- SEARCH & ADD BAR -->
-  <div class="card" style="margin-bottom:20px;">
-    <div style="display:flex; gap:10px;">
-      <input id="searchInput"
-             placeholder="Search by name or phone"
-             style="flex:1;">
-<button class="btn btn-primary"
-        onclick="toggleAddForm()">
-  + Add Borrower
-</button>
-    </div>
+  <!-- ADD BUTTON -->
+  <div class="card">
+    <button class="btn btn-primary"
+            onclick="toggleAddForm()">
+      + Add Borrower
+    </button>
 
-<div id="addSection" class="hidden add-box">
+    <div id="addSection" class="hidden" style="margin-top:15px;">
       <input id="nameInput" placeholder="Borrower Name">
       <input id="phoneInput" placeholder="Phone Number">
-<button class="btn btn-success"
-        onclick="createBorrower()">
-  Save Borrower
-</button>
+      <button class="btn btn-success"
+              onclick="createBorrower()">
+        Save Borrower
+      </button>
     </div>
   </div>
 
-  <!-- BORROWER LIST -->
+  <!-- SEARCH -->
+  <div class="card">
+    <input id="searchInput"
+           placeholder="Search by name or phone">
+  </div>
+
+  <!-- LIST -->
   <div id="borrowerList"></div>
 
 </div>
+
+
+<!-- ================= MODAL ================= -->
+<div id="warningModal" class="modal hidden">
+  <div class="modal-box">
+
+    <div class="modal-header">
+      ⚠ Borrower Exists
+    </div>
+
+    <div class="modal-body" id="modalMessage"></div>
+
+    <div class="modal-actions">
+      <button class="btn btn-danger"
+              onclick="closeModal()">
+        Cancel
+      </button>
+
+      <button class="btn btn-primary"
+              id="confirmAddBtn">
+        Add Anyway
+      </button>
+    </div>
+
+  </div>
+</div>
+
 
 <script type="module">
 
@@ -62,67 +90,177 @@ import {
   query,
   where,
   addDoc,
-  getDocs
+  getDocs,
+  doc,
+  getDoc
 } from
 "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 let currentUserId = null;
 let borrowerCache = [];
 
+
 /* ================= AUTH ================= */
 onAuthStateChanged(auth, user => {
+
   if(!user){
     window.location.href = "index.html";
     return;
   }
+
   currentUserId = user.uid;
   loadBorrowers();
 });
 
 /* ================= NAVIGATION ================= */
+
 window.goDashboard = () => {
-  window.location.href = "agent-dashboard.html";
+  location.href = "agent-dashboard.html";
 };
 
 window.logout = async () => {
   await signOut(auth);
-  window.location.href = "index.html";
+  location.href = "index.html";
 };
 
-/* ================= TOGGLE ADD ================= */
+/* ================= ADD TOGGLE ================= */
+
 window.toggleAddForm = () => {
-  document.getElementById("addSection")
-    .classList.toggle("hidden");
+  addSection.classList.toggle("hidden");
 };
 
 /* ================= CREATE BORROWER ================= */
+
 window.createBorrower = async () => {
 
   const name = nameInput.value.trim();
-  const phone = phoneInput.value.trim();
+  let phone = phoneInput.value.trim();
 
   if(!name || !phone){
     alert("Fill all fields");
     return;
   }
 
-  await addDoc(collection(db,"borrowers"),{
-    name,
-    phone,
-    nameLower: name.toLowerCase(),
-    agentId: currentUserId,
-    createdAt: Date.now()
-  });
+  phone = phone.replace(/\s+/g,"");
 
-  nameInput.value="";
-  phoneInput.value="";
-  document.getElementById("addSection")
-    .classList.add("hidden");
+  try{
 
-  loadBorrowers();
+    /* 1️⃣ SAME AGENT CHECK */
+    const sameQuery = query(
+      collection(db,"borrowers"),
+      where("agentId","==",currentUserId),
+      where("phone","==",phone)
+    );
+
+    const sameSnap = await getDocs(sameQuery);
+
+    if(!sameSnap.empty){
+      showModal(
+        "This borrower already exists under you.",
+        null
+      );
+      return;
+    }
+
+    /* 2️⃣ OTHER AGENTS CHECK */
+    const otherQuery = query(
+      collection(db,"borrowers"),
+      where("phone","==",phone)
+    );
+
+    const otherSnap = await getDocs(otherQuery);
+
+    let agentsList = [];
+    let activeLoanAgents = [];
+
+    for(const docSnap of otherSnap.docs){
+
+      const data = docSnap.data();
+
+      if(data.agentId === currentUserId) continue;
+
+      const agentSnap = await getDoc(
+        doc(db,"users",data.agentId)
+      );
+
+      let agentName = "Unknown Agent";
+
+      if(agentSnap.exists()){
+        agentName = agentSnap.data().name;
+      }
+
+      agentsList.push(agentName);
+
+      const loanQuery = query(
+        collection(db,"loans"),
+        where("borrowerId","==",docSnap.id),
+        where("status","==","active")
+      );
+
+      const loanSnap = await getDocs(loanQuery);
+
+      if(!loanSnap.empty){
+        activeLoanAgents.push(agentName);
+      }
+    }
+
+    if(agentsList.length > 0){
+
+      let message =
+        "<b>Borrower exists under:</b><br>" +
+        agentsList.join("<br>");
+
+      if(activeLoanAgents.length > 0){
+        message += "<br><br><b>Active loan under:</b><br>" +
+                   activeLoanAgents.join("<br>");
+      }
+
+      message += "<br><br>Do you want to add anyway?";
+
+      showModal(message, async () => {
+
+        await addDoc(collection(db,"borrowers"),{
+          name,
+          phone,
+          nameLower:name.toLowerCase(),
+          agentId: currentUserId,
+          createdAt: Date.now()
+        });
+
+        resetForm();
+      });
+
+      return;
+    }
+
+    /* 3️⃣ CREATE DIRECTLY */
+    await addDoc(collection(db,"borrowers"),{
+      name,
+      phone,
+      nameLower:name.toLowerCase(),
+      agentId: currentUserId,
+      createdAt: Date.now()
+    });
+
+    resetForm();
+
+  }catch(err){
+    alert("Error: "+err.message);
+  }
 };
 
+
+/* ================= RESET FORM ================= */
+
+function resetForm(){
+  nameInput.value="";
+  phoneInput.value="";
+  addSection.classList.add("hidden");
+  loadBorrowers();
+}
+
 /* ================= LOAD BORROWERS ================= */
+
 async function loadBorrowers(){
 
   borrowerCache = [];
@@ -135,17 +273,16 @@ async function loadBorrowers(){
   const snap = await getDocs(q);
 
   snap.forEach(d=>{
-    borrowerCache.push({id:d.id, ...d.data()});
+    borrowerCache.push({id:d.id,...d.data()});
   });
 
-  borrowerCache.sort((a,b)=>
-    a.name.localeCompare(b.name)
-  );
+  borrowerCache.sort((a,b)=>a.name.localeCompare(b.name));
 
   renderBorrowers(borrowerCache);
 }
 
 /* ================= RENDER ================= */
+
 function renderBorrowers(list){
 
   borrowerList.innerHTML="";
@@ -157,25 +294,20 @@ function renderBorrowers(list){
   }
 
   list.forEach(b=>{
-    borrowerList.innerHTML += `
+    borrowerList.innerHTML+=`
       <div class="card borrower-card"
-        onclick="openProfile('${b.id}')"
-        style="cursor:pointer; margin-bottom:15px;">
-        
-        <div style="font-weight:600; font-size:16px;">
-          ${b.name}
+           onclick="openProfile('${b.id}')">
+        <div class="borrower-info">
+          <b>${b.name}</b><br>
+          <span>${b.phone}</span>
         </div>
-
-        <div style="color:#6b7280; margin-top:4px;">
-          ${b.phone}
-        </div>
-
       </div>
     `;
   });
 }
 
 /* ================= SEARCH ================= */
+
 searchInput.addEventListener("input", e => {
 
   const value = e.target.value.toLowerCase();
@@ -193,10 +325,38 @@ searchInput.addEventListener("input", e => {
   renderBorrowers(filtered);
 });
 
-/* ================= OPEN PROFILE ================= */
+/* ================= PROFILE ================= */
+
 window.openProfile = (id) => {
-  window.location.href = "borrower-profile.html?id="+id;
+  location.href = "borrower-profile.html?id="+id;
 };
+
+
+/* ================= MODAL ================= */
+
+window.closeModal = () => {
+  warningModal.classList.add("hidden");
+};
+
+function showModal(message, onConfirm){
+
+  modalMessage.innerHTML = message;
+  warningModal.classList.remove("hidden");
+
+  const btn = confirmAddBtn;
+
+  if(!onConfirm){
+    btn.style.display = "none";
+    return;
+  }
+
+  btn.style.display = "inline-flex";
+
+  btn.onclick = () => {
+    warningModal.classList.add("hidden");
+    onConfirm();
+  };
+}
 
 </script>
 </body>
