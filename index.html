@@ -2,47 +2,37 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Loan Management Login</title>
-
-<meta name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-
-<link rel="stylesheet" href="css/styles.css">
+<title>Login</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="css/styles.css?v=25">
 </head>
 <body>
 
 <div class="login-wrapper">
-
   <div class="login-card">
 
     <div class="login-title">
       Loan Management System
     </div>
 
-    <div class="input-group">
-      <input id="loginEmail"
-             type="email"
-             placeholder="Email"
-             autocomplete="username">
-    </div>
+    <input id="loginEmail"
+           type="email"
+           placeholder="Enter Email">
 
-    <div class="input-group">
-      <input id="loginPassword"
-             type="password"
-             placeholder="Password"
-             autocomplete="current-password">
-    </div>
+    <input id="loginPassword"
+           type="password"
+           placeholder="Enter Password">
 
-    <button class="login-btn" onclick="loginUser()">
+    <button class="login-btn"
+            onclick="loginUser()">
       Login
     </button>
 
     <div class="login-footer">
-      Secure Role Based Access
+      Secure Access Portal
     </div>
 
   </div>
-
 </div>
 
 <script type="module">
@@ -51,7 +41,8 @@ import { auth, db } from "./js/firebase.js";
 
 import {
   signInWithEmailAndPassword,
-  onAuthStateChanged
+  onAuthStateChanged,
+  signOut
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 import {
@@ -59,7 +50,9 @@ import {
   getDoc
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-window.loginUser = async () => {
+/* ================= LOGIN FUNCTION ================= */
+
+window.loginUser = async ()=>{
 
   const email = document.getElementById("loginEmail").value.trim();
   const password = document.getElementById("loginPassword").value.trim();
@@ -72,9 +65,11 @@ window.loginUser = async () => {
   try{
     await signInWithEmailAndPassword(auth,email,password);
   }catch(err){
-    alert("Login Failed: "+err.message);
+    alert("Login Failed: " + err.message);
   }
 };
+
+/* ================= ROLE BASED REDIRECT ================= */
 
 onAuthStateChanged(auth, async(user)=>{
 
@@ -82,23 +77,34 @@ onAuthStateChanged(auth, async(user)=>{
 
   try{
 
-    const snap = await getDoc(doc(db,"users",user.uid));
+    const snap = await getDoc(
+      doc(db,"users",user.uid)
+    );
 
     if(!snap.exists()){
       alert("User role not assigned.");
+      await signOut(auth);
       return;
     }
 
     const data = snap.data();
     const role = (data.role || "").toLowerCase();
 
-    /* 🔥 FORCE PASSWORD CHANGE CHECK */
+    /* 🔥 FREEZE CHECK */
+    if(data.status === "frozen"){
+      alert("Your account has been frozen. Contact Owner.");
+      await signOut(auth);
+      return;
+    }
+
+    /* 🔥 FORCE PASSWORD CHANGE */
     if(data.mustChangePassword){
       window.location.href = "change-password.html";
       return;
     }
 
-    /* ROLE BASED REDIRECT */
+    /* 🔥 ROLE REDIRECTION */
+
     if(role === "boss"){
       window.location.href = "boss-dashboard.html";
     }
@@ -109,11 +115,13 @@ onAuthStateChanged(auth, async(user)=>{
       window.location.href = "agent-dashboard.html";
     }
     else{
-      alert("Invalid role.");
+      alert("Invalid role detected.");
+      await signOut(auth);
     }
 
   }catch(err){
-    alert("Error loading role: " + err.message);
+    alert("System Error: " + err.message);
+    await signOut(auth);
   }
 
 });
