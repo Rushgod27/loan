@@ -1,26 +1,15 @@
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<title>Agent Login</title>
-<link rel="stylesheet" href="css/styles.css">
-</head>
-<body>
+import { auth, db } from "./js/firebase.js";
 
-<div class="card">
-<h3>Agent Login</h3>
-<input id="loginEmail" placeholder="Email">
-<input id="loginPassword" type="password" placeholder="Password">
-<button onclick="loginUser()">Login</button>
-</div>
-
-<script type="module">
-
-import { auth } from "./js/firebase.js";
 import {
   signInWithEmailAndPassword,
   onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+import {
+  doc,
+  getDoc
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
 
 window.loginUser = async ()=>{
   try{
@@ -34,12 +23,36 @@ window.loginUser = async ()=>{
   }
 };
 
-onAuthStateChanged(auth,user=>{
-  if(user){
-    window.location.href="dashboard.html";
+onAuthStateChanged(auth, async(user)=>{
+  if(!user) return;
+
+  try{
+    const snap = await getDoc(
+      doc(db,"users",user.uid)
+    );
+
+    if(!snap.exists()){
+      alert("User role not assigned.");
+      return;
+    }
+
+    const role = snap.data().role;
+
+    // 🔥 ROLE BASED REDIRECT
+    if(role === "boss"){
+      location.href = "boss-dashboard.html";
+    }
+    else if(role === "owner"){
+      location.href = "owner-dashboard.html";
+    }
+    else if(role === "agent"){
+      location.href = "dashboard.html";
+    }
+    else{
+      alert("Unknown role");
+    }
+
+  }catch(err){
+    alert("Error loading role: " + err.message);
   }
 });
-
-</script>
-</body>
-</html>
