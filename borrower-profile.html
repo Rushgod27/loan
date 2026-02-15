@@ -314,14 +314,26 @@ window.toggleInstallments=async(loanId)=>{
 /* PAY */
 window.pay = async(id,loanId,amt)=>{
 
-  if(!confirm("Mark this EMI as Paid?"))
-    return;
+  if(!confirm("Mark this EMI as Paid?")) return;
 
-  await updateDoc(doc(db,
-    "installments",id),
-    {status:"completed"});
+  // 1️⃣ Mark installment completed
+  await updateDoc(
+    doc(db,"installments",id),
+    {status:"completed"}
+  );
 
-  const snap=await getDocs(query(
+  // 2️⃣ CREATE COLLECTION ENTRY
+  await addDoc(collection(db,"collections"),{
+    loanId:loanId,
+    borrowerId:borrowerId,
+    agentId:currentUserId,
+    amount:amt,
+    type:"installment",
+    date:Date.now()
+  });
+
+  // 3️⃣ Check if loan fully completed
+  const snap = await getDocs(query(
     collection(db,"installments"),
     where("loanId","==",loanId)
   ));
