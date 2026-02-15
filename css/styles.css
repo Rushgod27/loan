@@ -1,207 +1,159 @@
-/* ===== GLOBAL ===== */
-
+/* GLOBAL */
 body{
   margin:0;
-  font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
-  background:#f3f4f6;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto;
+  background:#f4f6fb;
   color:#1f2937;
 }
 
-.hidden{ display:none; }
-
-.section-title{
-  font-weight:700;
-  font-size:18px;
-  margin:20px 16px 12px;
-  color:#111827;
-}
-
-/* ===== HEADER ===== */
-
 .header{
-  position:sticky;
-  top:0;
-  background:white;
-  padding:14px 16px;
+  padding:18px;
+  text-align:center;
   font-weight:600;
   font-size:18px;
-  border-bottom:1px solid #e5e7eb;
-  display:flex;
-  align-items:center;
-  gap:10px;
-  z-index:10;
-}
-
-.back-btn{
-  background:#f3f4f6;
-  border:none;
-  padding:6px 10px;
-  border-radius:8px;
-  cursor:pointer;
-}
-
-/* ===== CARDS ===== */
-
-.profile-card{
-  background:white;
-  margin:16px;
-  padding:18px;
-  border-radius:18px;
-  box-shadow:0 8px 20px rgba(0,0,0,0.05);
-}
-
-.profile-name{
-  font-size:22px;
-  font-weight:700;
-  margin-bottom:8px;
-}
-
-.profile-phone a{
-  text-decoration:none;
-  color:#2563eb;
-  font-weight:500;
-}
-
-.profile-whatsapp a{
-  text-decoration:none;
-  color:#16a34a;
-  font-weight:500;
-}
-
-.create-loan-btn{
-  margin-top:14px;
-  padding:10px 14px;
-  border-radius:10px;
-  border:none;
-  background:#2563eb;
   color:white;
-  font-weight:600;
-  cursor:pointer;
+  background:linear-gradient(135deg,#2563eb,#1e3a8a);
 }
 
-/* ===== LOAN CARD ===== */
-
-.loan-card{
+.nav{
+  display:flex;
+  justify-content:space-around;
   background:white;
-  margin:14px 16px;
-  padding:18px;
-  border-radius:18px;
-  box-shadow:0 6px 18px rgba(0,0,0,0.05);
-  transition:0.3s;
+  border-bottom:1px solid #e5e7eb;
 }
 
-.loan-card.completed{
-  opacity:0.6;
+.nav div{
+  flex:1;
+  padding:14px;
+  text-align:center;
+  cursor:pointer;
+  font-weight:500;
 }
 
-.loan-header{
+.nav .active{
+  color:#2563eb;
+  border-bottom:3px solid #2563eb;
+}
+
+/* LAYOUT */
+.section-content{
+  padding:15px;
+}
+
+/* CARD */
+.card{
+  background:white;
+  border-radius:14px;
+  padding:16px;
+  margin-bottom:14px;
+  box-shadow:0 4px 15px rgba(0,0,0,.05);
+  transition:transform .2s ease;
+}
+
+.card:hover{
+  transform:translateY(-2px);
+}
+
+/* BORROWER CARD */
+.borrower-card{
   display:flex;
   justify-content:space-between;
   align-items:center;
 }
 
-.loan-title{
-  font-size:18px;
-  font-weight:700;
+.borrower-info b{
+  font-size:16px;
 }
 
-.loan-sub{
+.borrower-info span{
   font-size:13px;
   color:#6b7280;
 }
 
-.view-btn{
+/* BADGES */
+.badge{
+  padding:4px 10px;
+  border-radius:20px;
+  font-size:12px;
+  font-weight:600;
+}
+
+.active-badge{
+  background:#d1fae5;
+  color:#065f46;
+}
+
+.completed-badge{
+  background:#e5e7eb;
+  color:#374151;
+}
+
+/* BUTTONS */
+.btn{
   padding:8px 14px;
   border:none;
+  border-radius:8px;
+  font-weight:600;
+  cursor:pointer;
+  font-size:13px;
+}
+
+.btn-primary{
   background:#2563eb;
   color:white;
-  border-radius:10px;
-  cursor:pointer;
 }
 
-.loan-card.completed .view-btn{
-  background:#9ca3af;
+.btn-success{
+  background:#16a34a;
+  color:white;
 }
 
-/* ===== PROGRESS BAR ===== */
+.btn-danger{
+  background:#dc2626;
+  color:white;
+}
 
-.progress-wrap{
-  width:100%;
+.btn-right{
+  float:right;
+}
+
+/* EMI STATES */
+.emi-row{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:12px 14px;
+  border-radius:12px;
+  margin-bottom:8px;
+  font-size:14px;
+}
+
+.emi-pending{
+  background:#fff7ed;
+  border-left:4px solid #f59e0b;
+}
+
+.emi-paid{
+  background:#ecfdf5;
+  border-left:4px solid #16a34a;
+  opacity:.65;
+}
+
+.emi-overdue{
+  background:#fef2f2;
+  border-left:4px solid #dc2626;
+}
+
+/* PROGRESS */
+.progress-container{
+  margin-top:10px;
   height:8px;
   background:#e5e7eb;
-  border-radius:10px;
-  margin-top:14px;
+  border-radius:8px;
   overflow:hidden;
 }
 
 .progress-bar{
   height:100%;
-  background:#22c55e;
-  border-radius:10px;
-  transition:0.3s;
-}
-
-/* ===== INSTALLMENTS ===== */
-
-.inst{
-  margin-top:14px;
-}
-
-.emi-row{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  background:#f9fafb;
-  padding:12px 14px;
-  margin-bottom:8px;
-  border-radius:12px;
-  font-size:14px;
-}
-
-.emi-row.paid{
-  background:#dcfce7;
-}
-
-.emi-row.overdue{
-  background:#fee2e2;
-}
-
-.emi-row button{
   background:#16a34a;
-  border:none;
-  color:white;
-  padding:6px 12px;
-  border-radius:8px;
-  cursor:pointer;
-}
-
-.badge{
-  font-size:12px;
-  padding:5px 10px;
-  border-radius:20px;
-  background:#dcfce7;
-  color:#166534;
-}
-
-/* ===== FORM ===== */
-
-.card{
-  background:white;
-  margin:16px;
-  padding:16px;
-  border-radius:16px;
-  box-shadow:0 4px 14px rgba(0,0,0,0.04);
-}
-
-input, select{
-  width:100%;
-  padding:10px;
-  margin-bottom:10px;
-  border-radius:10px;
-  border:1px solid #e5e7eb;
-  font-size:14px;
-}
-
-button{
-  cursor:pointer;
 }
