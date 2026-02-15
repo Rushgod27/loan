@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <title>Owner Dashboard</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="stylesheet" href="css/styles.css">
+<link rel="stylesheet" href="css/styles.css?v=15">
 </head>
 <body>
 
@@ -14,360 +14,279 @@
 
 <div class="nav">
   <div class="active">Dashboard</div>
-  <div onclick="logoutUser()">Logout</div>
+  <div onclick="logout()">Logout</div>
 </div>
 
-<div class="container">
+<div class="container" id="content"></div>
 
-  <!-- ADD AGENT SECTION -->
+<script type="module">
+
+import { auth, db } from "./js/firebase.js";
+
+import {
+  signOut,
+  onAuthStateChanged,
+  createUserWithEmailAndPassword
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+  addDoc,
+  doc,
+  updateDoc,
+  getDoc,
+  setDoc
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+let ownerId=null;
+
+/* ================= AUTH ================= */
+
+onAuthStateChanged(auth,user=>{
+  if(!user){
+    location.href="index.html";
+    return;
+  }
+  ownerId=user.uid;
+  loadDashboard();
+});
+
+/* ================= LOGOUT ================= */
+
+window.logout = async()=>{
+  await signOut(auth);
+  location.href="index.html";
+};
+
+/* ================= LOAD DASHBOARD ================= */
+
+async function loadDashboard(){
+
+  let totalAgents=0;
+  let activeAgents=0;
+  let totalBorrowers=0;
+  let activeLoans=0;
+  let todayCollection=0;
+
+  const today = new Date();
+  today.setHours(0,0,0,0);
+
+  const tomorrow = new Date(today);
+  tomorrow.setDate(today.getDate()+1);
+
+  /* ================= AGENTS ================= */
+
+  const agentSnap = await getDocs(query(
+    collection(db,"users"),
+    where("role","==","agent"),
+    where("ownerId","==",ownerId)
+  ));
+
+  totalAgents = agentSnap.size;
+
+  const agentMap={};
+
+  agentSnap.forEach(d=>{
+    agentMap[d.id]=d.data();
+    if(d.data().status==="active"){
+      activeAgents++;
+    }
+  });
+
+  /* ================= BORROWERS ================= */
+
+  const borrowerSnap = await getDocs(collection(db,"borrowers"));
+
+  borrowerSnap.forEach(d=>{
+    if(agentMap[d.data().agentId]){
+      totalBorrowers++;
+    }
+  });
+
+  /* ================= LOANS ================= */
+
+  const loanSnap = await getDocs(collection(db,"loans"));
+
+  loanSnap.forEach(d=>{
+    const data=d.data();
+    if(agentMap[data.agentId] && data.status==="active"){
+      activeLoans++;
+    }
+  });
+
+  /* ================= COLLECTION ================= */
+
+  const colSnap = await getDocs(collection(db,"collections"));
+
+  colSnap.forEach(d=>{
+    const data=d.data();
+    if(agentMap[data.agentId]){
+      const date=new Date(data.date);
+      if(date>=today && date<tomorrow){
+        todayCollection+=data.amount;
+      }
+    }
+  });
+
+  /* ================= RENDER ================= */
+
+  content.innerHTML=`
+
   <div class="card">
+    <h3>📊 Overview</h3>
 
     <div class="card-row">
-      <div class="card-title">Add New Agent</div>
-      <button class="btn btn-primary"
-        onclick="toggleAddAgent()">+ Add</button>
+      <div class="card-details">Total Agents</div>
+      <div><b>${totalAgents}</b></div>
     </div>
 
-    <div id="addAgentSection"
-         class="hidden"
-         style="margin-top:15px;">
+    <div class="card-row">
+      <div class="card-details">Active Agents</div>
+      <div><b>${activeAgents}</b></div>
+    </div>
 
-      <input id="agentName"
-        placeholder="Agent Name">
+    <div class="card-row">
+      <div class="card-details">Total Borrowers</div>
+      <div><b>${totalBorrowers}</b></div>
+    </div>
 
-      <input id="agentEmail"
-        placeholder="Agent Email">
+    <div class="card-row">
+      <div class="card-details">Active Loans</div>
+      <div><b>${activeLoans}</b></div>
+    </div>
 
-      <input id="tempPassword"
-        placeholder="Temporary Password"
-        type="password">
-
-      <button class="btn btn-success"
-        onclick="createAgent()">
-        Create Agent
-      </button>
-
+    <div class="card-row">
+      <div class="card-details">Today's Collection</div>
+      <div><b>₹${todayCollection}</b></div>
     </div>
 
   </div>
 
-  <!-- AGENT LIST -->
-  <div id="agentList"></div>
+  <div class="card">
+    <h3>➕ Add Agent</h3>
 
-</div>
+    <input id="agentName" placeholder="Agent Name">
+    <input id="agentPhone" placeholder="Phone Number">
+    <input id="agentEmail" placeholder="Email">
+    <button class="btn btn-primary"
+      onclick="addAgent()">
+      Create Agent
+    </button>
+  </div>
 
-<script type="module">
+  <div class="card">
+    <h3>📈 Agent Performance</h3>
+    <div id="agentList"></div>
+  </div>
+  `;
 
-import { auth, db } from "./js/firebase.js";
+  loadAgentPerformance(agentMap);
+}
 
-import {
-  onAuthStateChanged,
-  signOut,
-  createUserWithEmailAndPassword,
-  getAuth
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+/* ================= ADD AGENT ================= */
 
-import {
-  collection,
-  doc,
-  setDoc,
-  getDocs,
-  query,
-  where
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-
-import {
-  initializeApp,
-  deleteApp
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-
-let currentOwner=null;
-
-/* ================= AUTH CHECK ================= */
-
-onAuthStateChanged(auth,user=>{
-  if(!user){
-    location.href="index.html";
-    return;
-  }
-  currentOwner=user.uid;
-  loadAgents();
-});
-
-/* ================= LOGOUT ================= */
-
-window.logoutUser = async ()=>{
-  await signOut(auth);
-  location.href="index.html";
-};
-
-/* ================= TOGGLE FORM ================= */
-
-window.toggleAddAgent = ()=>{
-  addAgentSection.classList.toggle("hidden");
-};
-
-/* ================= CREATE AGENT (PRO MODE) ================= */
-
-window.createAgent = async ()=>{
+window.addAgent = async ()=>{
 
   const name = agentName.value.trim();
+  const phone = agentPhone.value.trim();
   const email = agentEmail.value.trim();
-  const password = tempPassword.value.trim();
 
-  if(!name || !email || !password){
+  if(!name || !phone || !email){
     alert("Fill all fields");
     return;
   }
 
-  if(password.length < 6){
-    alert("Password minimum 6 characters");
-    return;
-  }
+  const tempPassword="Temp12345";
 
-  try{
+  const secondary = auth.app;
+  const newUser = await createUserWithEmailAndPassword(auth,email,tempPassword);
 
-    /* ===== Secondary App ===== */
-    const secondaryApp = initializeApp({
-      apiKey: auth.app.options.apiKey,
-      authDomain: auth.app.options.authDomain,
-      projectId: auth.app.options.projectId
-    }, "Secondary");
+  await setDoc(doc(db,"users",newUser.user.uid),{
+    name,
+    phone,
+    role:"agent",
+    ownerId,
+    mustChangePassword:true,
+    status:"active",
+    createdAt:Date.now()
+  });
 
-    const secondaryAuth = getAuth(secondaryApp);
+  alert("Agent created with temporary password");
 
-    /* ===== Create Auth User ===== */
-    const userCredential =
-      await createUserWithEmailAndPassword(
-        secondaryAuth,
-        email,
-        password
-      );
-
-    const newUser = userCredential.user;
-
-    /* ===== Firestore Role ===== */
-    await setDoc(doc(db,"users",newUser.uid),{
-      name: name,
-      email: email,
-      role: "agent",
-      ownerId: currentOwner,
-      mustChangePassword: true,
-      createdAt: Date.now()
-    });
-
-    /* ===== Delete Secondary App ===== */
-    await deleteApp(secondaryApp);
-
-    alert("Agent created successfully");
-
-    agentName.value="";
-    agentEmail.value="";
-    tempPassword.value="";
-    addAgentSection.classList.add("hidden");
-
-    loadAgents();
-
-  }catch(err){
-    alert("Error: " + err.message);
-  }
-
+  loadDashboard();
 };
 
-/* ================= LOAD AGENTS ================= */
+/* ================= AGENT PERFORMANCE ================= */
 
-async function loadAgents(){
+async function loadAgentPerformance(agentMap){
 
-  const snap = await getDocs(query(
-    collection(db,"users"),
-    where("ownerId","==",currentOwner)
-  ));
+  const agentListDiv = document.getElementById("agentList");
+  agentListDiv.innerHTML="";
 
-  agentList.innerHTML="";
+  for(const agentId in agentMap){
 
-  if(snap.empty){
-    agentList.innerHTML =
-      "<div class='card'>No agents found</div>";
-    return;
-  }
+    const agent = agentMap[agentId];
 
-  snap.forEach(docData=>{
-    const data = docData.data();
+    let agentBorrowers=0;
+    let agentActiveLoans=0;
 
-    agentList.innerHTML+=`
-      <div class="card">
-        <div class="card-row">
-          <div class="card-details">
-            <div class="card-title">${data.name}</div>
-            <div class="card-sub">${data.email}</div>
+    const borrowerSnap=await getDocs(query(
+      collection(db,"borrowers"),
+      where("agentId","==",agentId)
+    ));
+
+    agentBorrowers = borrowerSnap.size;
+
+    const loanSnap=await getDocs(query(
+      collection(db,"loans"),
+      where("agentId","==",agentId),
+      where("status","==","active")
+    ));
+
+    agentActiveLoans = loanSnap.size;
+
+    agentListDiv.innerHTML+=`
+    <div class="card">
+      <div class="card-row">
+        <div class="card-details">
+          <div class="card-title">
+            ${agent.name}
           </div>
-          <div class="badge active-badge">
-            Agent
+          <div class="card-sub">
+            Borrowers: ${agentBorrowers} |
+            Active Loans: ${agentActiveLoans}
           </div>
         </div>
-      </div>
-    `;
-  });
-}
 
-<script type="module">
-
-import { auth, db } from "./js/firebase.js";
-
-import {
-  onAuthStateChanged,
-  signOut,
-  createUserWithEmailAndPassword,
-  getAuth
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-
-import {
-  collection,
-  doc,
-  setDoc,
-  getDocs,
-  query,
-  where
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-
-import {
-  initializeApp,
-  deleteApp
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-
-let currentOwner=null;
-
-/* ================= AUTH CHECK ================= */
-
-onAuthStateChanged(auth,user=>{
-  if(!user){
-    location.href="index.html";
-    return;
-  }
-  currentOwner=user.uid;
-  loadAgents();
-});
-
-/* ================= LOGOUT ================= */
-
-window.logoutUser = async ()=>{
-  await signOut(auth);
-  location.href="index.html";
-};
-
-/* ================= TOGGLE FORM ================= */
-
-window.toggleAddAgent = ()=>{
-  addAgentSection.classList.toggle("hidden");
-};
-
-/* ================= CREATE AGENT (PRO MODE) ================= */
-
-window.createAgent = async ()=>{
-
-  const name = agentName.value.trim();
-  const email = agentEmail.value.trim();
-  const password = tempPassword.value.trim();
-
-  if(!name || !email || !password){
-    alert("Fill all fields");
-    return;
-  }
-
-  if(password.length < 6){
-    alert("Password minimum 6 characters");
-    return;
-  }
-
-  try{
-
-    /* ===== Secondary App ===== */
-    const secondaryApp = initializeApp({
-      apiKey: auth.app.options.apiKey,
-      authDomain: auth.app.options.authDomain,
-      projectId: auth.app.options.projectId
-    }, "Secondary");
-
-    const secondaryAuth = getAuth(secondaryApp);
-
-    /* ===== Create Auth User ===== */
-    const userCredential =
-      await createUserWithEmailAndPassword(
-        secondaryAuth,
-        email,
-        password
-      );
-
-    const newUser = userCredential.user;
-
-    /* ===== Firestore Role ===== */
-    await setDoc(doc(db,"users",newUser.uid),{
-      name: name,
-      email: email,
-      role: "agent",
-      ownerId: currentOwner,
-      mustChangePassword: true,
-      createdAt: Date.now()
-    });
-
-    /* ===== Delete Secondary App ===== */
-    await deleteApp(secondaryApp);
-
-    alert("Agent created successfully");
-
-    agentName.value="";
-    agentEmail.value="";
-    tempPassword.value="";
-    addAgentSection.classList.add("hidden");
-
-    loadAgents();
-
-  }catch(err){
-    alert("Error: " + err.message);
-  }
-
-};
-
-/* ================= LOAD AGENTS ================= */
-
-async function loadAgents(){
-
-  const snap = await getDocs(query(
-    collection(db,"users"),
-    where("ownerId","==",currentOwner)
-  ));
-
-  agentList.innerHTML="";
-
-  if(snap.empty){
-    agentList.innerHTML =
-      "<div class='card'>No agents found</div>";
-    return;
-  }
-
-  snap.forEach(docData=>{
-    const data = docData.data();
-
-    agentList.innerHTML+=`
-      <div class="card">
-        <div class="card-row">
-          <div class="card-details">
-            <div class="card-title">${data.name}</div>
-            <div class="card-sub">${data.email}</div>
-          </div>
-          <div class="badge active-badge">
-            Agent
-          </div>
+        <div class="card-actions">
+          <button class="btn btn-danger"
+            onclick="toggleAgent('${agentId}','${agent.status}')">
+            ${agent.status==="active"?"Freeze":"Unfreeze"}
+          </button>
         </div>
       </div>
+    </div>
     `;
-  });
+  }
 }
+
+/* ================= FREEZE / UNFREEZE ================= */
+
+window.toggleAgent = async(agentId,status)=>{
+
+  const newStatus =
+    status==="active" ? "frozen" : "active";
+
+  await updateDoc(doc(db,"users",agentId),{
+    status:newStatus
+  });
+
+  loadDashboard();
+};
 
 </script>
-
-
-  
-
 </body>
 </html>
