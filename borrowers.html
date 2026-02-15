@@ -344,22 +344,21 @@ async function loadLoans(id){
 }
 
 /* INSTALLMENTS */
-window.toggleInstallments=
-async(loanId)=>{
+window.toggleInstallments = async (loanId) => {
 
+  /* CLOSE OTHER OPEN LOANS */
   document.querySelectorAll(".inst")
   .forEach(el=>{
-    if(el.id!==
-      `inst-${loanId}`){
+    if(el.id !== `inst-${loanId}`){
       el.classList.add("hidden");
       el.innerHTML="";
     }
   });
 
-  const box=
-    document.getElementById(
-      `inst-${loanId}`);
+  const box =
+    document.getElementById(`inst-${loanId}`);
 
+  /* CLOSE IF SAME LOAN CLICKED AGAIN */
   if(!box.classList.contains("hidden")){
     box.classList.add("hidden");
     box.innerHTML="";
@@ -367,73 +366,124 @@ async(loanId)=>{
   }
 
   box.classList.remove("hidden");
+  box.innerHTML="Loading...";
 
-  const snap=await getDocs(query(
+  const snap = await getDocs(query(
     collection(db,"installments"),
     where("loanId","==",loanId)
   ));
 
-  const list=[];
+  if(snap.empty){
+    box.innerHTML=
+      `<div class="card">
+       No Installments</div>`;
+    return;
+  }
+
+  let list=[];
   snap.forEach(d=>{
     list.push({id:d.id,...d.data()});
   });
 
-  list.sort((a,b)=>a.number-b.number);
+  /* SORT BY EMI NUMBER */
+  list.sort((a,b)=>a.number - b.number);
+
+  const pending=[];
+  const completed=[];
 
   list.forEach(i=>{
-
-    box.innerHTML+=`
-      <div class="card ${
-        i.status==="completed"
-        ? "completed":""
-      }">
-
-        EMI ${i.number}<br>
-        ₹${i.amount}<br>
-        ${new Date(
-          i.dueDate
-        ).toLocaleDateString()}<br>
-
-        ${
-          i.status==="pending"
-          ? `<button onclick="
-             pay('${i.id}',
-             '${loanId}',
-             ${i.amount})">
-             Mark Paid</button>`
-          : "Paid"
-        }
-      </div>`;
+    if(i.status==="completed")
+      completed.push(i);
+    else
+      pending.push(i);
   });
+
+  box.innerHTML="";
+
+  /* ----- PENDING SECTION ----- */
+  if(pending.length>0){
+    box.innerHTML+=
+      `<h4>Pending Installments</h4>`;
+
+    pending.forEach(i=>{
+
+      let className="installment-card pending";
+
+      if(i.dueDate < Date.now())
+        className="installment-card overdue";
+
+      box.innerHTML+=`
+        <div class="${className}">
+          <b>EMI ${i.number}</b><br>
+          ₹${i.amount}<br>
+          📅 ${new Date(i.dueDate)
+              .toLocaleDateString("en-IN")}
+          <br><br>
+
+          <button class="secondary"
+            onclick="
+            pay('${i.id}',
+            '${loanId}',
+            ${i.amount})">
+            Mark Paid
+          </button>
+        </div>
+      `;
+    });
+  }
+
+  /* ----- COMPLETED SECTION ----- */
+  if(completed.length>0){
+    box.innerHTML+=
+      `<h4 style="margin-top:16px;">
+       Completed Installments
+       </h4>`;
+
+    completed.forEach(i=>{
+      box.innerHTML+=`
+        <div class="installment-card completed">
+          <b>EMI ${i.number}</b><br>
+          ₹${i.amount}<br>
+          📅 ${new Date(i.dueDate)
+              .toLocaleDateString("en-IN")}
+          <br><br>
+
+          <span class="badge badge-complete">
+          Paid
+          </span>
+        </div>
+      `;
+    });
+  }
 };
 
-/* PAY */
-window.pay=
-async(id,loanId,amt)=>{
+window.pay = async(id, loanId, amt) => {
 
   await updateDoc(
     doc(db,"installments",id),
     {status:"completed"}
   );
 
-  const snap=await getDocs(query(
+  const snap = await getDocs(query(
     collection(db,"installments"),
     where("loanId","==",loanId)
   ));
 
-  let done=true;
+  let allPaid=true;
+
   snap.forEach(d=>{
     if(d.data().status!=="completed")
-      done=false;
+      allPaid=false;
   });
 
-  if(done){
+  if(allPaid){
     await updateDoc(
       doc(db,"loans",loanId),
       {status:"completed"}
     );
   }
 
+  /* REFRESH UI */
   toggleInstallments(loanId);
 };
 
