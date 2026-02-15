@@ -121,3 +121,66 @@ button.gray{
 .gray-out{
   opacity:.5;
 }
+.profile-top{
+  display:flex;
+  align-items:center;
+  gap:14px;
+}
+
+.profile-pic{
+  width:80px;
+  height:80px;
+  border-radius:50%;
+  object-fit:cover;
+}
+
+.section-title{
+  margin:20px 14px 10px;
+  font-size:16px;
+  font-weight:600;
+}
+
+.sub-title{
+  margin-top:12px;
+  font-size:14px;
+}
+
+.loan-card{
+  margin-bottom:14px;
+}
+
+.completed-loan{
+  opacity:0.6;
+}
+
+.installments{
+  transition:all .3s ease;
+}
+
+.installments.hidden{
+  display:none;
+}
+
+.gray-out{
+  opacity:0.5;
+}
+
+.overdue{
+  border-left:4px solid #ef4444;
+}
+
+.badge{
+  padding:2px 8px;
+  border-radius:12px;
+  font-size:12px;
+}
+
+.badge-active{
+  background:#22c55e;
+  color:white;
+}
+
+.badge-complete{
+  background:#6b7280;
+  color:white;
+}
