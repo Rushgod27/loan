@@ -7,22 +7,30 @@
 </head>
 <body>
 
-<div class="header">Borrowers</div>
+<body>
+
+<div class="header">Agent Panel</div>
 
 <div class="nav">
-<div onclick="goDashboard()">Dashboard</div>
-<div class="active">Borrowers</div>
-<div onclick="logoutUser()">Logout</div>
+  <div onclick="goDashboard()">Dashboard</div>
+  <div class="active">Borrowers</div>
+  <div onclick="logoutUser()">Logout</div>
 </div>
 
-<div class="card">
-<input id="searchBorrower"
-placeholder="Search borrower..."
-onkeyup="debouncedSearch()">
-<button onclick="addBorrower()">Add Borrower</button>
+<div class="section-content">
+
+  <div class="card">
+    <input id="searchBorrower"
+           placeholder="Search borrower..."
+           onkeyup="debouncedSearch()">
+    <button onclick="addBorrower()">Add Borrower</button>
+  </div>
+
+  <div id="borrowerList"></div>
+
 </div>
 
-<div id="borrowerList"></div>
+</body>
 
 <script type="module">
 
