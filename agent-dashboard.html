@@ -139,10 +139,10 @@ async function loadDashboard(){
         <b>${borrower.name}</b><br>
         ₹${data.amount}<br>
         🔴 ${daysLate} days overdue<br>
-        <button class="whatsapp-btn"
-          onclick="window.open('${waLink}','_blank')">
-          Send Reminder
-        </button>
+<button class="btn btn-warning"
+  onclick="window.open('${waLink}','_blank')">
+  📩 Send Reminder
+</button>
       </div>`;
     }
 
