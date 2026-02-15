@@ -244,19 +244,18 @@ async function loadLoans(){
 }
 
 /* TOGGLE INSTALLMENTS */
-window.toggleInstallments=
-async(loanId)=>{
+window.toggleInstallments = async (loanId)=>{
 
-  // collapse others
+  // collapse other open installments
   document.querySelectorAll(".inst")
   .forEach(el=>{
-    if(el.id!==`inst-${loanId}`){
+    if(el.id !== `inst-${loanId}`){
       el.classList.add("hidden");
-      el.innerHTML="";
+      el.innerHTML = "";
     }
   });
 
-  const box=document.getElementById(`inst-${loanId}`);
+  const box = document.getElementById(`inst-${loanId}`);
 
   if(!box.classList.contains("hidden")){
     box.classList.add("hidden");
@@ -266,14 +265,14 @@ async(loanId)=>{
 
   box.classList.remove("hidden");
 
-  const snap=await getDocs(query(
+  const snap = await getDocs(query(
     collection(db,"installments"),
     where("loanId","==",loanId)
   ));
 
-  const list=[];
+  const list = [];
   snap.forEach(d=>{
-    list.push({id:d.id,...d.data()});
+    list.push({id:d.id, ...d.data()});
   });
 
   list.sort((a,b)=>a.number-b.number);
@@ -286,58 +285,55 @@ async(loanId)=>{
 
     const overdue =
       i.status==="pending" &&
-      i.dueDate<Date.now();
+      i.dueDate < Date.now();
 
     let emiClass="emi-pending";
     if(overdue) emiClass="emi-overdue";
     if(i.status==="completed")
       emiClass="emi-paid";
 
-    const card=`
+    if(i.status==="pending") allCompleted=false;
+
+    const card = `
       <div class="card ${emiClass}">
         EMI ${i.number}<br>
         ₹${i.amount}<br>
         ${new Date(i.dueDate)
-        .toLocaleDateString("en-IN")}<br>
+          .toLocaleDateString("en-IN")}<br>
 
         ${
           i.status==="pending"
-          ? `<button onclick="
-             pay('${i.id}',
-             '${loanId}',
-             ${i.amount})">
-             Mark Paid</button>`
-          : "Paid"
+          ? `<button onclick="pay('${i.id}','${loanId}',${i.amount})">
+               Mark Paid
+             </button>`
+          : `<span class="badge green">Paid</span>`
         }
       </div>
     `;
 
     if(i.status==="pending"){
       pendingHTML+=card;
-      allCompleted=false;
     }else{
       paidHTML+=card;
     }
   });
 
-  // Auto complete loan
-  if(allCompleted){
+  // 🔥 FIX: only update loan if needed, DO NOT reload UI
+  const loanSnap = await getDoc(doc(db,"loans",loanId));
+  const loanData = loanSnap.data();
+
+  if(allCompleted && loanData.status !== "completed"){
     await updateDoc(
       doc(db,"loans",loanId),
       {status:"completed"}
     );
-    loadLoans();
   }
 
-  box.innerHTML=`
-    <div class="section-title">
-      Pending EMIs
-    </div>
+  box.innerHTML = `
+    <div class="section-title">Pending EMIs</div>
     ${pendingHTML || "None"}
 
-    <div class="section-title">
-      Paid EMIs
-    </div>
+    <div class="section-title">Paid EMIs</div>
     ${paidHTML || "None"}
   `;
 };
