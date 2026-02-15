@@ -104,3 +104,20 @@ button.gray{
 .gray-out{
   opacity:.5;
 }
+.installments{
+  overflow:hidden;
+  transition:all .3s ease;
+}
+
+.installments.hidden{
+  max-height:0;
+  padding:0;
+}
+
+.overdue{
+  border-left:4px solid #ef4444;
+}
+
+.gray-out{
+  opacity:.5;
+}
