@@ -1,0 +1,106 @@
+body{
+  margin:0;
+  font-family:-apple-system,BlinkMacSystemFont,system-ui;
+  background:#f5f7fb;
+  color:#1f2937;
+}
+
+.hidden{
+  display:none;
+}
+
+/* HEADER */
+.header{
+  background:#2563eb;
+  color:#fff;
+  padding:16px;
+  font-size:18px;
+  font-weight:600;
+  display:flex;
+  align-items:center;
+}
+
+.back{
+  margin-right:12px;
+  cursor:pointer;
+}
+
+/* SEARCH BAR */
+.top-bar{
+  display:flex;
+  gap:10px;
+  padding:14px;
+}
+
+.top-bar input{
+  flex:1;
+  padding:10px;
+  border-radius:8px;
+  border:1px solid #ddd;
+}
+
+.top-bar button{
+  padding:10px 14px;
+  border:none;
+  border-radius:8px;
+  background:#2563eb;
+  color:white;
+  font-weight:600;
+}
+
+/* LIST ITEM */
+.list-item{
+  background:#fff;
+  margin:0 14px 12px;
+  padding:16px;
+  border-radius:12px;
+  box-shadow:0 2px 8px rgba(0,0,0,.05);
+  cursor:pointer;
+}
+
+/* CARD */
+.card{
+  background:#fff;
+  margin:14px;
+  padding:18px;
+  border-radius:14px;
+  box-shadow:0 4px 12px rgba(0,0,0,.05);
+}
+
+button{
+  padding:8px 12px;
+  border:none;
+  border-radius:8px;
+  background:#2563eb;
+  color:white;
+  font-weight:600;
+  cursor:pointer;
+  margin-top:10px;
+}
+
+button.gray{
+  background:#9ca3af;
+}
+
+.section-title{
+  margin:10px 14px 0;
+  font-weight:600;
+}
+
+/* PROGRESS */
+.progress{
+  height:8px;
+  background:#e5e7eb;
+  border-radius:8px;
+  overflow:hidden;
+  margin-top:8px;
+}
+
+.progress-bar{
+  height:100%;
+  background:#22c55e;
+}
+
+.gray-out{
+  opacity:.5;
+}
