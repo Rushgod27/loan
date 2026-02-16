@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <title>Boss Dashboard</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="stylesheet" href="css/styles.css?v=40">
+<link rel="stylesheet" href="css/styles.css?v=20">
 </head>
 <body>
 
@@ -13,25 +13,28 @@
 </div>
 
 <div class="nav">
-  <div class="active">Dashboard</div>
+  <div class="active">Owners</div>
   <div onclick="logoutUser()">Logout</div>
 </div>
 
-<div class="container" id="content">
+<div class="container">
 
-  <!-- ADD OWNER -->
+  <!-- ADD OWNER CARD -->
   <div class="card">
-    <h3>Add New Owner</h3>
+    <h3>Add Owner</h3>
+
     <input id="ownerName" placeholder="Owner Name">
     <input id="ownerEmail" placeholder="Owner Email">
-    <button class="btn btn-primary" onclick="addOwner()">
-      Add Owner
+
+    <button class="btn btn-primary"
+      onclick="addOwner()">
+      + Add Owner
     </button>
   </div>
 
   <!-- OWNER LIST -->
   <div class="card">
-    <h3>Owners</h3>
+    <h3>All Owners</h3>
     <div id="ownerList"></div>
   </div>
 
@@ -42,24 +45,23 @@
 import { auth, db } from "./js/firebase.js";
 
 import {
-  signOut,
-  onAuthStateChanged
+  onAuthStateChanged,
+  signOut
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 import {
   collection,
-  addDoc,
   query,
   where,
-  getDocs
+  getDocs,
+  addDoc
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 let bossId = null;
 
 /* ================= AUTH ================= */
 
-onAuthStateChanged(auth, user => {
-
+onAuthStateChanged(auth, async(user)=>{
   if(!user){
     location.href="index.html";
     return;
@@ -71,14 +73,14 @@ onAuthStateChanged(auth, user => {
 
 /* ================= LOGOUT ================= */
 
-window.logoutUser = async () => {
+window.logoutUser = async()=>{
   await signOut(auth);
   location.href="index.html";
 };
 
 /* ================= ADD OWNER ================= */
 
-window.addOwner = async () => {
+window.addOwner = async()=>{
 
   const name = ownerName.value.trim();
   const email = ownerEmail.value.trim().toLowerCase();
@@ -88,37 +90,29 @@ window.addOwner = async () => {
     return;
   }
 
-  const emailPattern =
-    /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-  if(!emailPattern.test(email)){
-    alert("Enter valid email");
-    return;
-  }
-
-  /* ==== Check duplicate ==== */
-
-  const duplicateSnap = await getDocs(query(
+  // Check if already exists
+  const q = query(
     collection(db,"users"),
     where("email","==",email)
-  ));
+  );
 
-  if(!duplicateSnap.empty){
-    alert("Email already registered.");
+  const snap = await getDocs(q);
+
+  if(!snap.empty){
+    alert("Owner already exists");
     return;
   }
 
-  /* ==== Add Owner ==== */
-
+  // Create owner document
   await addDoc(collection(db,"users"),{
     name,
     email,
     role:"owner",
-    createdBy: bossId,
-    createdAt: Date.now()
+    createdBy:bossId,
+    createdAt:Date.now()
   });
 
-  alert("Owner added successfully!");
+  alert("Owner Added Successfully");
 
   ownerName.value="";
   ownerEmail.value="";
@@ -130,32 +124,32 @@ window.addOwner = async () => {
 
 async function loadOwners(){
 
-  const snap = await getDocs(query(
+  const q = query(
     collection(db,"users"),
     where("role","==","owner")
-  ));
+  );
 
-  if(snap.empty){
-    ownerList.innerHTML="No owners found";
-    return;
-  }
+  const snap = await getDocs(q);
 
   ownerList.innerHTML="";
 
-  snap.forEach(d=>{
+  if(snap.empty){
+    ownerList.innerHTML="<p>No owners yet</p>";
+    return;
+  }
 
-    const owner = d.data();
+  snap.forEach(d=>{
+    const data = d.data();
 
     ownerList.innerHTML += `
-      <div class="card">
-        <div class="card-row">
-          <div class="card-details">
-            <div class="card-title">
-              ${owner.name}
-            </div>
-            <div class="card-sub">
-              ${owner.email}
-            </div>
+      <div class="card-row"
+        style="margin-bottom:12px;">
+        <div class="card-details">
+          <div class="card-title">
+            ${data.name}
+          </div>
+          <div class="card-sub">
+            ${data.email}
           </div>
         </div>
       </div>
