@@ -143,35 +143,44 @@ window.toggleCreateLoan = () => {
 
 window.createLoan = async () => {
 
-  const principal = parseFloat(principal.value);
-  const interest = parseFloat(interest.value);
-  const count = parseInt(count.value);
-  const interval = parseInt(interval.value);
-  const startDate = startDate.value;
+  const principalValue =
+    parseFloat(document.getElementById("principal").value);
 
-  if(!principal || !count || !startDate){
+  const interestValue =
+    parseFloat(document.getElementById("interest").value);
+
+  const countValue =
+    parseInt(document.getElementById("count").value);
+
+  const intervalValue =
+    parseInt(document.getElementById("interval").value);
+
+  const startValue =
+    document.getElementById("startDate").value;
+
+  if(!principalValue || !countValue || !startValue){
     alert("Fill properly");
     return;
   }
 
-  const startTime = new Date(startDate).getTime();
-  const installment = principal / count;
+  const startTime = new Date(startValue).getTime();
+  const installment = principalValue / countValue;
 
   const loanRef = await addDoc(collection(db,"loans"),{
     borrowerId,
     agentId: currentUserId,
     ownerId,
-    principal,
-    interestPercent: interest || 0,
-    interestAmount: (principal*(interest||0))/100,
-    count,
-    interval,
+    principal: principalValue,
+    interestPercent: interestValue || 0,
+    interestAmount: (principalValue*(interestValue||0))/100,
+    count: countValue,
+    interval: intervalValue,
     startDate: startTime,
     status:"active",
     createdAt:Date.now()
   });
 
-  for(let i=0;i<count;i++){
+  for(let i=0;i<countValue;i++){
     await addDoc(collection(db,"installments"),{
       loanId:loanRef.id,
       borrowerId,
@@ -179,10 +188,12 @@ window.createLoan = async () => {
       ownerId,
       number:i+1,
       amount:installment,
-      dueDate:startTime+((i+1)*interval*86400000),
+      dueDate:startTime+((i+1)*intervalValue*86400000),
       status:"pending"
     });
   }
+
+  alert("Loan Created Successfully");
 
   createLoanSection.innerHTML="";
   loadLoans();
