@@ -4,7 +4,27 @@
 <meta charset="UTF-8">
 <title>Agent Dashboard</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="stylesheet" href="css/styles.css?v=12">
+<link rel="stylesheet" href="css/styles.css?v=13">
+
+<style>
+
+/* Safe Logout Button */
+.logout-btn{
+  background:transparent;
+  border:1px solid #ef4444;
+  color:#ef4444;
+  padding:6px 14px;
+  border-radius:8px;
+  cursor:pointer;
+  font-weight:600;
+}
+
+.logout-btn:hover{
+  background:#fee2e2;
+}
+
+</style>
+
 </head>
 <body>
 
@@ -13,7 +33,7 @@
 <div class="nav">
   <div class="active">Dashboard</div>
   <div onclick="goBorrowers()">Borrowers</div>
-  <div onclick="logoutUser()">Logout</div>
+  <button class="logout-btn" onclick="confirmLogout()">Logout</button>
 </div>
 
 <div class="container" id="content"></div>
@@ -40,15 +60,28 @@ import {
 
 let uid = null;
 
+/* ================= SAFE LOGOUT ================= */
+
+window.confirmLogout = () => {
+
+  const confirmBox = confirm(
+    "Are you sure you want to logout?\n\nYou will need to login again."
+  );
+
+  if(!confirmBox) return;
+
+  performLogout();
+};
+
+async function performLogout(){
+  await signOut(auth);
+  location.href="index.html";
+}
+
 /* ================= NAVIGATION ================= */
 
 window.goBorrowers = () => {
   location.href = "borrowers.html";
-};
-
-window.logoutUser = async () => {
-  await signOut(auth);
-  location.href = "index.html";
 };
 
 /* ================= AUTH ================= */
@@ -72,7 +105,7 @@ onAuthStateChanged(auth, async user => {
   loadDashboard();
 });
 
-/* ================= MARK PAID FUNCTION ================= */
+/* ================= MARK PAID ================= */
 
 window.markPaid = async (instId, loanId, borrowerId, amount) => {
 
@@ -91,9 +124,7 @@ window.markPaid = async (instId, loanId, borrowerId, amount) => {
     date:Date.now()
   });
 
-  alert("Payment recorded successfully");
-
-  loadDashboard(); // refresh dashboard instantly
+  loadDashboard();
 };
 
 /* ================= DASHBOARD ================= */
@@ -159,7 +190,6 @@ async function loadDashboard(){
   instSnap.forEach(d=>{
 
     const data = d.data();
-
     const borrower = borrowerMap[data.borrowerId];
     if(!borrower) return;
 
