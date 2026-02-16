@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <title>Borrowers</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="stylesheet" href="css/styles.css?v=20">
+<link rel="stylesheet" href="css/styles.css?v=21">
 </head>
 <body>
 
@@ -13,7 +13,6 @@
 <div class="nav">
   <div onclick="goDashboard()">Dashboard</div>
   <div class="active">Borrowers</div>
-  <div onclick="logout()">Logout</div>
 </div>
 
 <div class="section-content">
@@ -82,7 +81,6 @@ onAuthStateChanged(auth, async user => {
 
   currentUserId = user.uid;
 
-  // ✅ UID-based fetch
   const userRef = doc(db,"users", user.uid);
   const userSnap = await getDoc(userRef);
 
@@ -112,11 +110,6 @@ window.goDashboard = () => {
   location.href = "agent-dashboard.html";
 };
 
-window.logout = async () => {
-  await signOut(auth);
-  location.href = "index.html";
-};
-
 /* ================= TOGGLE ADD ================= */
 
 window.toggleAdd = () => {
@@ -144,7 +137,6 @@ window.createBorrower = async () => {
       return;
     }
 
-    /* ===== CHECK SAME AGENT ===== */
     const sameQuery = query(
       collection(db,"borrowers"),
       where("agentId","==",currentUserId),
@@ -157,8 +149,6 @@ window.createBorrower = async () => {
       alert("Borrower already exists under you.");
       return;
     }
-
-    /* ===== CREATE BORROWER ===== */
 
     await addDoc(collection(db,"borrowers"),{
       name,
@@ -251,5 +241,6 @@ window.openProfile = (id)=>{
   location.href = "borrower-profile.html?id="+id;
 };
 
-</script></body>
+</script>
+</body>
 </html>
