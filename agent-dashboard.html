@@ -4,13 +4,11 @@
 <meta charset="UTF-8">
 <title>Agent Dashboard</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="stylesheet" href="css/styles.css?v=11">
+<link rel="stylesheet" href="css/styles.css?v=12">
 </head>
 <body>
 
-<div class="header">
-  Agent Panel
-</div>
+<div class="header">Agent Panel</div>
 
 <div class="nav">
   <div class="active">Dashboard</div>
@@ -35,7 +33,9 @@ import {
   where,
   getDocs,
   doc,
-  getDoc
+  getDoc,
+  updateDoc,
+  addDoc
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 let uid = null;
@@ -51,7 +51,7 @@ window.logoutUser = async () => {
   location.href = "index.html";
 };
 
-/* ================= AUTH + ROLE CHECK ================= */
+/* ================= AUTH ================= */
 
 onAuthStateChanged(auth, async user => {
 
@@ -60,18 +60,41 @@ onAuthStateChanged(auth, async user => {
     return;
   }
 
-  const userRef = doc(db,"users", user.uid);
-  const userSnap = await getDoc(userRef);
+  const userSnap = await getDoc(doc(db,"users",user.uid));
 
   if(!userSnap.exists() || userSnap.data().role !== "agent"){
     await signOut(auth);
-    location.href = "index.html";
+    location.href="index.html";
     return;
   }
 
   uid = user.uid;
   loadDashboard();
 });
+
+/* ================= MARK PAID FUNCTION ================= */
+
+window.markPaid = async (instId, loanId, borrowerId, amount) => {
+
+  if(!confirm("Mark this installment as paid?")) return;
+
+  await updateDoc(doc(db,"installments",instId),{
+    status:"completed"
+  });
+
+  await addDoc(collection(db,"collections"),{
+    loanId,
+    borrowerId,
+    agentId:uid,
+    amount,
+    type:"installment",
+    date:Date.now()
+  });
+
+  alert("Payment recorded successfully");
+
+  loadDashboard(); // refresh dashboard instantly
+};
 
 /* ================= DASHBOARD ================= */
 
@@ -93,7 +116,7 @@ async function loadDashboard(){
   let activeBorrowers=0;
   let activeLoans=0;
 
-  /* ================= BORROWERS ================= */
+  /* BORROWERS */
 
   const borrowerSnap = await getDocs(query(
     collection(db,"borrowers"),
@@ -109,7 +132,7 @@ async function loadDashboard(){
     borrowerMap[d.id]=d.data();
   });
 
-  /* ================= LOANS ================= */
+  /* ACTIVE LOANS */
 
   const loanSnap = await getDocs(query(
     collection(db,"loans"),
@@ -125,19 +148,21 @@ async function loadDashboard(){
 
   activeBorrowers = activeBorrowerSet.size;
 
-  /* ================= INSTALLMENTS ================= */
+  /* INSTALLMENTS */
 
   const instSnap = await getDocs(query(
     collection(db,"installments"),
+    where("agentId","==",uid),
     where("status","==","pending")
   ));
 
   instSnap.forEach(d=>{
 
     const data = d.data();
-    if(!borrowerMap[data.borrowerId]) return;
 
     const borrower = borrowerMap[data.borrowerId];
+    if(!borrower) return;
+
     const dueDate = new Date(data.dueDate);
     const phone = borrower.phone;
 
@@ -147,7 +172,19 @@ async function loadDashboard(){
     const waLink =
       `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
 
-    /* Due Today */
+    const markPaidBtn = `
+      <button class="btn btn-success"
+        onclick="markPaid(
+          '${d.id}',
+          '${data.loanId}',
+          '${data.borrowerId}',
+          ${data.amount})">
+        ✔
+      </button>
+    `;
+
+    /* DUE TODAY */
+
     if(dueDate>=today && dueDate<tomorrow){
 
       dueCount++;
@@ -160,23 +197,20 @@ async function loadDashboard(){
             <div class="card-sub">
               ₹${data.amount} • Due Today
             </div>
-            <div class="card-sub">
-              📞 <a href="tel:${phone}" style="color:#2563eb;text-decoration:none;">
-              ${phone}
-              </a>
-            </div>
           </div>
           <div class="card-actions">
             <button class="btn btn-success"
               onclick="window.location.href='tel:${phone}'">📞</button>
             <button class="btn btn-warning"
               onclick="window.open('${waLink}','_blank')">💬</button>
+            ${markPaidBtn}
           </div>
         </div>
       </div>`;
     }
 
-    /* Overdue */
+    /* OVERDUE */
+
     if(dueDate < today){
 
       overdueCount++;
@@ -192,17 +226,13 @@ async function loadDashboard(){
             <div class="card-sub">
               ₹${data.amount} • ${daysLate} days overdue
             </div>
-            <div class="card-sub">
-              📞 <a href="tel:${phone}" style="color:#2563eb;text-decoration:none;">
-              ${phone}
-              </a>
-            </div>
           </div>
           <div class="card-actions">
             <button class="btn btn-success"
               onclick="window.location.href='tel:${phone}'">📞</button>
             <button class="btn btn-danger"
               onclick="window.open('${waLink}','_blank')">💬</button>
+            ${markPaidBtn}
           </div>
         </div>
       </div>`;
@@ -210,7 +240,7 @@ async function loadDashboard(){
 
   });
 
-  /* ================= COLLECTION ================= */
+  /* TODAY COLLECTION */
 
   const colSnap = await getDocs(query(
     collection(db,"collections"),
@@ -218,55 +248,23 @@ async function loadDashboard(){
   ));
 
   colSnap.forEach(d=>{
-
-    let rawDate = d.data().date;
-
-    let dateObj =
-      rawDate?.toDate ? rawDate.toDate()
-      : new Date(rawDate);
-
+    const dateObj=new Date(d.data().date);
     if(dateObj>=today && dateObj<tomorrow){
-      todayCollection += d.data().amount;
+      todayCollection+=d.data().amount;
     }
   });
 
-  /* ================= RENDER ================= */
+  /* RENDER */
 
   content.innerHTML = `
-
     <div class="card">
       <h3>📊 Overview</h3>
-
-      <div class="card-row">
-        <div class="card-details">Total Borrowers</div>
-        <div><b>${totalBorrowers}</b></div>
-      </div>
-
-      <div class="card-row">
-        <div class="card-details">Active Borrowers</div>
-        <div><b>${activeBorrowers}</b></div>
-      </div>
-
-      <div class="card-row">
-        <div class="card-details">Active Loans</div>
-        <div><b>${activeLoans}</b></div>
-      </div>
-
-      <div class="card-row">
-        <div class="card-details">Today's Collection</div>
-        <div><b>₹${todayCollection}</b></div>
-      </div>
-
-      <div class="card-row">
-        <div class="card-details">Due Today</div>
-        <div><b>${dueCount}</b></div>
-      </div>
-
-      <div class="card-row">
-        <div class="card-details">Overdue</div>
-        <div><b>${overdueCount}</b></div>
-      </div>
-
+      <div class="card-row"><div>Total Borrowers</div><b>${totalBorrowers}</b></div>
+      <div class="card-row"><div>Active Borrowers</div><b>${activeBorrowers}</b></div>
+      <div class="card-row"><div>Active Loans</div><b>${activeLoans}</b></div>
+      <div class="card-row"><div>Today's Collection</div><b>₹${todayCollection}</b></div>
+      <div class="card-row"><div>Due Today</div><b>${dueCount}</b></div>
+      <div class="card-row"><div>Overdue</div><b>${overdueCount}</b></div>
     </div>
 
     <div class="card">
@@ -278,7 +276,6 @@ async function loadDashboard(){
       <h3>🔴 Overdue</h3>
       ${overdueHTML || "No overdue payments"}
     </div>
-
   `;
 }
 
