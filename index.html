@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <title>Login</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <style>
 body{
   margin:0;
@@ -15,7 +14,6 @@ body{
   align-items:center;
   height:100vh;
 }
-
 .card{
   background:#fff;
   padding:30px;
@@ -24,7 +22,6 @@ body{
   text-align:center;
   width:300px;
 }
-
 button{
   width:100%;
   padding:12px;
@@ -32,12 +29,12 @@ button{
   border-radius:8px;
   background:#2563eb;
   color:#fff;
-  font-size:15px;
   font-weight:600;
   cursor:pointer;
 }
 </style>
 </head>
+
 <body>
 
 <div class="card">
@@ -71,14 +68,10 @@ window.googleLogin = async()=>{
 onAuthStateChanged(auth, async(user)=>{
   if(!user) return;
 
-  const q = query(
-    collection(db,"users"),
-    where("email","==",user.email)
-  );
-
+  const q = query(collection(db,"users"),where("email","==",user.email));
   const snap = await getDocs(q);
 
-  // First time login → create pending
+  // First login → create pending
   if(snap.empty){
     await addDoc(collection(db,"users"),{
       name:user.displayName,
@@ -100,15 +93,20 @@ onAuthStateChanged(auth, async(user)=>{
     return;
   }
 
-  if(data.role === "owner"){
-    location.href="owner.html";
-  }
-
   if(data.role === "boss"){
-    location.href="boss.html";
+    location.href="boss-dashboard.html";
   }
-});
 
+  if(data.role === "owner"){
+    location.href="owner-dashboard.html";
+  }
+
+  if(data.role === "agent"){
+    location.href="agent-dashboard.html";
+  }
+
+});
 </script>
+
 </body>
 </html>
