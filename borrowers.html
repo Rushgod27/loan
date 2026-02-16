@@ -62,7 +62,9 @@ import {
   query,
   where,
   getDocs,
-  addDoc
+  addDoc,
+  doc,
+  getDoc
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 let currentUserId = null;
@@ -80,26 +82,25 @@ onAuthStateChanged(auth, async user => {
 
   currentUserId = user.uid;
 
-  // 🔥 FIXED: Fetch user using email (not doc ID)
-  const userQuery = query(
-    collection(db,"users"),
-    where("email","==", user.email)
-  );
+  // ✅ UID-based fetch
+  const userRef = doc(db,"users", user.uid);
+  const userSnap = await getDoc(userRef);
 
-  const userSnap = await getDocs(userQuery);
+  if(!userSnap.exists()){
+    alert("User record not found");
+    await signOut(auth);
+    location.href="index.html";
+    return;
+  }
 
-  if(!userSnap.empty){
-    const userData = userSnap.docs[0].data();
+  const userData = userSnap.data();
 
-    // If logged-in user is agent → approvedBy = ownerId
-    if(userData.role === "agent"){
-      ownerId = userData.approvedBy || null;
-    }
+  if(userData.role === "agent"){
+    ownerId = userData.approvedBy || null;
+  }
 
-    // If logged-in user is owner → ownerId = self
-    if(userData.role === "owner"){
-      ownerId = user.uid;
-    }
+  if(userData.role === "owner"){
+    ownerId = user.uid;
   }
 
   loadBorrowers();
@@ -138,9 +139,8 @@ window.createBorrower = async () => {
 
   try{
 
-    // 🚨 Safety check
     if(!ownerId){
-      alert("Owner not linked properly. Contact admin.");
+      alert("Owner not linked properly.");
       return;
     }
 
@@ -158,54 +158,14 @@ window.createBorrower = async () => {
       return;
     }
 
-    /* ===== CHECK OTHER AGENTS ===== */
-    const otherQuery = query(
-      collection(db,"borrowers"),
-      where("phone","==",phone)
-    );
-
-    const otherSnap = await getDocs(otherQuery);
-
-    let otherAgents = [];
-
-    for(const b of otherSnap.docs){
-
-      const data = b.data();
-
-      if(data.agentId === currentUserId) continue;
-
-      const agentQuery = query(
-        collection(db,"users"),
-        where("email","==",data.agentEmail)
-      );
-
-      const agentSnap = await getDocs(agentQuery);
-
-      if(!agentSnap.empty){
-        otherAgents.push(agentSnap.docs[0].data().name);
-      }
-    }
-
-    if(otherAgents.length > 0){
-      const confirmAdd = confirm(
-        "Borrower exists under:\n" +
-        otherAgents.join(", ") +
-        "\n\nAdd anyway?"
-      );
-
-      if(!confirmAdd) return;
-    }
-
-    /* ===== CREATE BORROWER WITH OWNERID ===== */
+    /* ===== CREATE BORROWER ===== */
 
     await addDoc(collection(db,"borrowers"),{
       name,
       phone,
       nameLower: name.toLowerCase(),
-
       agentId: currentUserId,
       ownerId: ownerId,
-
       createdAt: Date.now()
     });
 
@@ -291,6 +251,5 @@ window.openProfile = (id)=>{
   location.href = "borrower-profile.html?id="+id;
 };
 
-</script>
-</body>
+</script></body>
 </html>
