@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Login</title>
+<title>Finance Portal Login</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
@@ -15,68 +15,65 @@ body{
   align-items:center;
   height:100vh;
 }
-
 .card{
   background:#fff;
   padding:30px;
   border-radius:14px;
-  box-shadow:0 8px 25px rgba(0,0,0,0.2);
-  width:320px;
+  width:340px;
   text-align:center;
+  box-shadow:0 10px 25px rgba(0,0,0,0.2);
 }
-
-h2{
-  margin-bottom:20px;
+select,input{
+  width:100%;
+  padding:10px;
+  margin-top:10px;
+  border-radius:8px;
+  border:1px solid #ddd;
 }
-
 button{
   width:100%;
   padding:12px;
+  margin-top:12px;
   border:none;
   border-radius:8px;
   background:#2563eb;
   color:#fff;
   font-weight:600;
   cursor:pointer;
-  font-size:14px;
 }
-
-select{
-  width:100%;
-  padding:10px;
-  margin-top:15px;
-  border-radius:8px;
-  border:1px solid #ddd;
-}
-.note{
-  font-size:12px;
-  color:#666;
-  margin-top:10px;
-}
+.note{font-size:12px;color:#666;margin-top:8px}
 </style>
 </head>
 
 <body>
 
 <div class="card">
-  <h2>Finance Portal Login</h2>
 
-  <button onclick="googleLogin()">Sign in with Google</button>
+<h2>Finance Portal</h2>
 
-  <select id="roleSelect" style="display:none;">
-    <option value="">Apply As</option>
-    <option value="agent">Agent</option>
-    <option value="owner">Owner</option>
-    <option value="boss">Boss</option>
-  </select>
+<button onclick="googleLogin()">
+Sign in with Google
+</button>
 
-  <button id="submitRoleBtn" style="display:none;margin-top:10px;">
-    Submit Application
-  </button>
+<select id="roleSelect" style="display:none;">
+  <option value="">Apply As</option>
+  <option value="agent">Agent</option>
+  <option value="owner">Owner</option>
+</select>
 
-  <div class="note">
-    New users must apply and wait for approval.
-  </div>
+<input id="codeInput"
+       placeholder="Enter Approval Code"
+       style="display:none;">
+
+<button id="submitBtn"
+        style="display:none;">
+Submit Application
+</button>
+
+<div class="note">
+New users must apply and wait for approval.
+</div>
+
 </div>
 
 <script type="module">
@@ -91,100 +88,122 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 import {
+  doc,
+  setDoc,
+  getDoc,
   collection,
   query,
   where,
-  getDocs,
-  doc,
-  setDoc,
-  getDoc
+  getDocs
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-let currentUser = null;
+let currentUser=null;
 
-/* ================= GOOGLE LOGIN ================= */
+/* GOOGLE LOGIN */
 
 window.googleLogin = async()=>{
   const provider = new GoogleAuthProvider();
   await signInWithPopup(auth, provider);
 };
 
-/* ================= AUTH CHECK ================= */
+/* AUTH STATE */
 
 onAuthStateChanged(auth, async(user)=>{
 
   if(!user) return;
 
-  currentUser = user;
+  currentUser=user;
 
-  // 🔥 DIRECTLY check document using UID
-  const userRef = doc(db,"users", user.uid);
-  const userSnap = await getDoc(userRef);
+  const userSnap = await getDoc(doc(db,"users",user.uid));
 
-  // -----------------------------
-  // NEW USER → SHOW ROLE SELECT
-  // -----------------------------
-  if(!userSnap.exists()){
+  // EXISTING USER
+  if(userSnap.exists()){
+    const data=userSnap.data();
 
-    document.getElementById("roleSelect").style.display="block";
-    document.getElementById("submitRoleBtn").style.display="block";
+    if(data.role==="pending"){
+      alert("Waiting for approval.");
+      await signOut(auth);
+      return;
+    }
+
+    if(data.role==="boss")
+      location.href="boss-dashboard.html";
+
+    if(data.role==="owner")
+      location.href="owner-dashboard.html";
+
+    if(data.role==="agent")
+      location.href="agent-dashboard.html";
+
     return;
   }
 
-  const data = userSnap.data();
+  // NEW USER
+  document.getElementById("roleSelect").style.display="block";
+  document.getElementById("submitBtn").style.display="block";
+});
 
-  // -----------------------------
-  // PENDING
-  // -----------------------------
-  if(data.role === "pending"){
-    alert("Your application is waiting for approval.");
-    await signOut(auth);
-    return;
+/* ROLE SELECTION */
+
+document.getElementById("roleSelect")
+.addEventListener("change",(e)=>{
+
+  const role=e.target.value;
+  const codeInput=document.getElementById("codeInput");
+
+  if(role==="agent"){
+    codeInput.placeholder="Enter Owner Code";
+    codeInput.style.display="block";
   }
 
-  // -----------------------------
-  // REDIRECT BASED ON ROLE
-  // -----------------------------
-  if(data.role === "boss"){
-    location.href="boss-dashboard.html";
-  }
-
-  if(data.role === "owner"){
-    location.href="owner-dashboard.html";
-  }
-
-  if(data.role === "agent"){
-    location.href="agent-dashboard.html";
+  if(role==="owner"){
+    codeInput.placeholder="Enter Boss Code";
+    codeInput.style.display="block";
   }
 
 });
 
-/* ================= SUBMIT ROLE ================= */
+/* SUBMIT APPLICATION */
 
-document.getElementById("submitRoleBtn")
-.addEventListener("click", async()=>{
+document.getElementById("submitBtn")
+.addEventListener("click",async()=>{
 
-  const selectedRole =
-    document.getElementById("roleSelect").value;
+  const role=document.getElementById("roleSelect").value;
+  const code=document.getElementById("codeInput").value.trim();
 
-  if(!selectedRole){
-    alert("Please select a role");
+  if(!role || !code){
+    alert("Fill all fields");
     return;
   }
 
-  // 🔥 IMPORTANT CHANGE
-  await setDoc(doc(db,"users", currentUser.uid),{
-    name: currentUser.displayName,
-    email: currentUser.email,
-    role: "pending",
-    requestedRole: selectedRole,
-    createdAt: Date.now()
+  let queryField = role === "agent" ? "ownerCode" : "bossCode";
+
+  const q=query(
+    collection(db,"users"),
+    where(queryField,"==",code)
+  );
+
+  const snap=await getDocs(q);
+
+  if(snap.empty){
+    alert("Invalid Code");
+    return;
+  }
+
+  const approverUID=snap.docs[0].id;
+
+  await setDoc(doc(db,"users",currentUser.uid),{
+    name:currentUser.displayName,
+    email:currentUser.email,
+    role:"pending",
+    requestedRole:role,
+    requestedTo:approverUID,
+    createdAt:Date.now()
   });
 
-  alert("Application submitted successfully. Wait for approval.");
+  alert("Application submitted. Wait for approval.");
 
   await signOut(auth);
-
 });
 
 </script>
