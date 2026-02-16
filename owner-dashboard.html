@@ -4,318 +4,184 @@
 <meta charset="UTF-8">
 <title>Owner Dashboard</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="stylesheet" href="css/styles.css?v=20">
+<link rel="stylesheet" href="css/styles.css?v=30">
 </head>
 <body>
 
-<div class="header">
-  Owner Panel
-</div>
+<div class="header">Owner Panel</div>
 
 <div class="nav">
   <div class="active">Dashboard</div>
-  <div onclick="logout()">Logout</div>
+  <div onclick="logoutUser()">Logout</div>
 </div>
 
-<div class="container" id="content"></div>
+<div class="container">
+
+  <!-- ADD AGENT -->
+  <div class="card">
+    <h3>Add New Agent</h3>
+
+    <input id="agentName" placeholder="Agent Name">
+    <input id="agentEmail" type="email" placeholder="Agent Email">
+
+    <button class="btn btn-primary"
+            onclick="addAgent()">
+      Add Agent
+    </button>
+  </div>
+
+  <!-- AGENT LIST -->
+  <div class="card">
+    <h3>Your Agents</h3>
+    <div id="agentList"></div>
+  </div>
+
+</div>
 
 <script type="module">
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { auth, db } from "./js/firebase.js";
+
 import {
-  getAuth,
+  createUserWithEmailAndPassword,
+  sendPasswordResetEmail,
   signOut,
-  onAuthStateChanged,
-  createUserWithEmailAndPassword
+  signInWithEmailAndPassword,
+  onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 import {
-  getFirestore,
+  doc,
+  setDoc,
   collection,
   query,
   where,
-  getDocs,
-  doc,
-  updateDoc,
-  setDoc
+  getDocs
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-import { auth, db } from "./js/firebase.js";
+let ownerUID = null;
+let ownerEmail = null;
 
-let ownerId = null;
+/* ================= AUTH CHECK ================= */
 
-/* ================= AUTH ================= */
-
-onAuthStateChanged(auth,user=>{
+onAuthStateChanged(auth, user=>{
   if(!user){
     location.href="index.html";
     return;
   }
-  ownerId=user.uid;
-  loadDashboard();
+
+  ownerUID = user.uid;
+  ownerEmail = user.email;
+
+  loadAgents();
 });
 
 /* ================= LOGOUT ================= */
 
-window.logout = async()=>{
+window.logoutUser = async ()=>{
   await signOut(auth);
   location.href="index.html";
 };
-
-/* ================= LOAD DASHBOARD ================= */
-
-async function loadDashboard(){
-
-  let totalAgents=0;
-  let activeAgents=0;
-  let totalBorrowers=0;
-  let activeLoans=0;
-  let todayCollection=0;
-
-  const today = new Date();
-  today.setHours(0,0,0,0);
-  const tomorrow = new Date(today);
-  tomorrow.setDate(today.getDate()+1);
-
-  /* ===== AGENTS ===== */
-
-  const agentSnap = await getDocs(query(
-    collection(db,"users"),
-    where("role","==","agent"),
-    where("ownerId","==",ownerId)
-  ));
-
-  const agentMap = {};
-  totalAgents = agentSnap.size;
-
-  agentSnap.forEach(d=>{
-    agentMap[d.id] = d.data();
-    if(d.data().status==="active"){
-      activeAgents++;
-    }
-  });
-
-  /* ===== BORROWERS ===== */
-
-  const borrowerSnap = await getDocs(collection(db,"borrowers"));
-
-  borrowerSnap.forEach(d=>{
-    if(agentMap[d.data().agentId]){
-      totalBorrowers++;
-    }
-  });
-
-  /* ===== LOANS ===== */
-
-  const loanSnap = await getDocs(collection(db,"loans"));
-
-  loanSnap.forEach(d=>{
-    const data=d.data();
-    if(agentMap[data.agentId] && data.status==="active"){
-      activeLoans++;
-    }
-  });
-
-  /* ===== COLLECTION ===== */
-
-  const colSnap = await getDocs(collection(db,"collections"));
-
-  colSnap.forEach(d=>{
-    const data=d.data();
-    if(agentMap[data.agentId]){
-      const date = new Date(data.date);
-      if(date>=today && date<tomorrow){
-        todayCollection+=data.amount;
-      }
-    }
-  });
-
-  /* ===== RENDER ===== */
-
-  content.innerHTML = `
-
-    <div class="card">
-      <h3>📊 Overview</h3>
-
-      <div class="card-row">
-        <div class="card-details">Total Agents</div>
-        <div><b>${totalAgents}</b></div>
-      </div>
-
-      <div class="card-row">
-        <div class="card-details">Active Agents</div>
-        <div><b>${activeAgents}</b></div>
-      </div>
-
-      <div class="card-row">
-        <div class="card-details">Total Borrowers</div>
-        <div><b>${totalBorrowers}</b></div>
-      </div>
-
-      <div class="card-row">
-        <div class="card-details">Active Loans</div>
-        <div><b>${activeLoans}</b></div>
-      </div>
-
-      <div class="card-row">
-        <div class="card-details">Today's Collection</div>
-        <div><b>₹${todayCollection}</b></div>
-      </div>
-    </div>
-
-    <div class="card">
-      <h3>➕ Add Agent</h3>
-
-      <input id="agentName" placeholder="Agent Name">
-      <input id="agentPhone" placeholder="Phone Number">
-      <input id="agentEmail" placeholder="Email">
-      <input id="tempPassword" type="password"
-             placeholder="Temporary Password">
-
-      <button class="btn btn-primary"
-        onclick="addAgent()">
-        Create Agent
-      </button>
-    </div>
-
-    <div class="card">
-      <h3>📈 Agent Performance</h3>
-      <div id="agentList"></div>
-    </div>
-  `;
-
-  renderAgents(agentMap);
-}
 
 /* ================= ADD AGENT ================= */
 
 window.addAgent = async ()=>{
 
-  const name = agentName.value.trim();
-  const phone = agentPhone.value.trim();
+  const name  = agentName.value.trim();
   const email = agentEmail.value.trim();
-  const password = tempPassword.value.trim();
 
-  if(!name || !phone || !email || !password){
+  if(!name || !email){
     alert("Fill all fields");
-    return;
-  }
-
-  if(password.length < 6){
-    alert("Password must be at least 6 characters");
     return;
   }
 
   try{
 
-    /* 🔥 SECONDARY APP (PREVENT OWNER LOGOUT) */
+    const ownerPass = prompt("Enter your password to confirm:");
 
-    const secondaryApp = initializeApp(
-      auth.app.options,
-      "SecondaryApp"
+    if(!ownerPass){
+      alert("Owner password required");
+      return;
+    }
+
+    const randomPassword = "Temp" + Date.now();
+
+    // Create Auth user (this logs in as agent temporarily)
+    const userCred = await createUserWithEmailAndPassword(
+      auth,
+      email,
+      randomPassword
     );
 
-    const secondaryAuth = getAuth(secondaryApp);
+    const newUser = userCred.user;
 
-    const userCred =
-      await createUserWithEmailAndPassword(
-        secondaryAuth,
-        email,
-        password
-      );
-
-    await setDoc(doc(db,"users",userCred.user.uid),{
+    // Create Firestore user document
+    await setDoc(doc(db,"users",newUser.uid),{
       name,
-      phone,
+      email,
       role:"agent",
-      ownerId,
+      ownerId: ownerUID,
       status:"active",
-      mustChangePassword:true,
       createdAt:Date.now()
     });
 
-    await secondaryAuth.signOut();
+    // Send reset password email
+    await sendPasswordResetEmail(auth,email);
 
-    alert("Agent Created Successfully");
+    alert("Agent created. Reset password email sent.");
+
+    // Sign out agent
+    await signOut(auth);
+
+    // Log owner back in
+    await signInWithEmailAndPassword(
+      auth,
+      ownerEmail,
+      ownerPass
+    );
 
     agentName.value="";
-    agentPhone.value="";
     agentEmail.value="";
-    tempPassword.value="";
 
-    loadDashboard();
+    loadAgents();
 
   }catch(err){
-    alert("Error: "+err.message);
+    alert(err.message);
   }
 };
 
-/* ================= AGENT LIST ================= */
+/* ================= LOAD AGENTS ================= */
 
-function renderAgents(agentMap){
+async function loadAgents(){
 
-  const agentList = document.getElementById("agentList");
-  agentList.innerHTML="";
-
-  for(const agentId in agentMap){
-
-    const agent = agentMap[agentId];
-
-    agentList.innerHTML+=`
-      <div class="card">
-        <div class="card-row">
-          <div class="card-details">
-            <div class="card-title">
-              ${agent.name}
-            </div>
-            <div class="card-sub">
-              ${agent.phone}
-            </div>
-          </div>
-
-          <div class="card-actions">
-            <button class="btn ${
-              agent.status==="active"
-              ? "btn-danger"
-              : "btn-success"
-            }"
-            onclick="toggleAgent(
-              '${agentId}',
-              '${agent.status}'
-            )">
-              ${agent.status==="active"
-                ? "Freeze"
-                : "Unfreeze"}
-            </button>
-          </div>
-        </div>
-      </div>
-    `;
-  }
-}
-
-/* ================= FREEZE / UNFREEZE ================= */
-
-window.toggleAgent = async(agentId,status)=>{
-
-  const newStatus =
-    status==="active"
-    ? "frozen"
-    : "active";
-
-  await updateDoc(doc(db,"users",agentId),{
-    status:newStatus
-  });
-
-  alert(
-    newStatus==="frozen"
-    ? "Agent Frozen"
-    : "Agent Activated"
+  const q = query(
+    collection(db,"users"),
+    where("ownerId","==",ownerUID),
+    where("role","==","agent")
   );
 
-  loadDashboard();
-};
+  const snap = await getDocs(q);
+
+  agentList.innerHTML="";
+
+  if(snap.empty){
+    agentList.innerHTML="<p>No agents added.</p>";
+    return;
+  }
+
+  snap.forEach(d=>{
+    const data = d.data();
+
+    agentList.innerHTML += `
+      <div class="card" style="margin-top:10px;">
+        <b>${data.name}</b><br>
+        ${data.email}
+      </div>
+    `;
+  });
+}
 
 </script>
+
 </body>
 </html>
