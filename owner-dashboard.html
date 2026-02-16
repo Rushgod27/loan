@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Owner Analytics Dashboard</title>
+<title>Owner Dashboard</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -12,22 +12,31 @@ body{margin:0;font-family:system-ui;background:#f3f4f6}
 .header{background:#2563eb;color:#fff;padding:16px;text-align:center;font-weight:600;font-size:18px}
 .container{padding:16px}
 .card{background:#fff;padding:16px;border-radius:12px;margin-bottom:16px;box-shadow:0 3px 8px rgba(0,0,0,0.08)}
+.card-row{background:#f9fafb;padding:10px;border-radius:8px;margin-bottom:10px}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}
 .stat{font-size:20px;font-weight:bold}
 select,input{padding:8px;border-radius:6px;border:1px solid #ddd}
 .alert-box{background:#fee2e2;padding:10px;border-radius:8px;margin-bottom:8px}
 .success-box{background:#dcfce7;padding:10px;border-radius:8px;margin-bottom:8px}
 button{padding:8px 14px;border:none;border-radius:6px;background:#111827;color:#fff;cursor:pointer}
+.approve{background:#16a34a}
+.logout{width:100%;margin-top:10px;background:#ef4444}
 </style>
 </head>
 
 <body>
 
-<div class="header">Owner Performance Dashboard</div>
+<div class="header">Owner Dashboard</div>
 
 <div class="container">
 
-<!-- FILTER -->
+<!-- AGENT REQUEST APPROVAL -->
+<div class="card">
+  <h3>Agent Requests</h3>
+  <div id="agentRequests"></div>
+</div>
+
+<!-- FILTERS -->
 <div class="card">
   <h3>Filters</h3>
   <div class="grid">
@@ -65,7 +74,7 @@ button{padding:8px 14px;border:none;border-radius:6px;background:#111827;color:#
   <div id="overdue"></div>
 </div>
 
-<button onclick="logoutUser()">Logout</button>
+<button class="logout" onclick="logoutUser()">Logout</button>
 
 </div>
 
@@ -73,140 +82,224 @@ button{padding:8px 14px;border:none;border-radius:6px;background:#111827;color:#
 
 import { auth, db } from "./js/firebase.js";
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { collection, query, where, getDocs, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { collection, query, where, getDocs, onSnapshot, updateDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-let ownerId = null;
-let borrowersData = [];
-let agentsMap = {};
+let ownerId=null;
+let borrowersData=[];
+let agentsMap={};
+let chart;
 
 onAuthStateChanged(auth, async(user)=>{
   if(!user){ location.href="index.html"; return; }
 
-  const snap = await getDocs(query(collection(db,"users"),where("email","==",user.email)));
-  if(snap.empty || snap.docs[0].data().role !== "owner"){
+  const snap=await getDocs(query(collection(db,"users"),where("email","==",user.email)));
+
+  if(snap.empty || snap.docs[0].data().role!=="owner"){
     await signOut(auth);
     location.href="index.html";
     return;
   }
 
-  ownerId = user.uid;
+  ownerId=user.uid;
+
+  listenAgentRequests();
   loadAgents();
   listenBorrowers();
 });
 
-window.logoutUser = async()=>{
+window.logoutUser=async()=>{
   await signOut(auth);
   location.href="index.html";
 };
 
+/* ========= AGENT REQUEST SECTION ========= */
+
+function listenAgentRequests(){
+
+  const q=query(
+    collection(db,"users"),
+    where("role","==","pending"),
+    where("requestedRole","==","agent")
+  );
+
+  onSnapshot(q,(snapshot)=>{
+    const container=document.getElementById("agentRequests");
+    container.innerHTML="";
+
+    if(snapshot.empty){
+      container.innerHTML="<p>No agent requests</p>";
+      return;
+    }
+
+    snapshot.forEach(docSnap=>{
+      const data=docSnap.data();
+      container.innerHTML+=`
+        <div class="card-row">
+          <strong>${data.name}</strong><br>
+          ${data.email}
+          <br><br>
+          <button class="approve" onclick="approveAgent('${docSnap.id}')">
+            Approve
+          </button>
+        </div>`;
+    });
+  });
+}
+
+window.approveAgent=async(id)=>{
+  await updateDoc(doc(db,"users",id),{
+    role:"agent",
+    approvedBy:ownerId
+  });
+  alert("Agent Approved");
+};
+
+/* ========= LOAD AGENTS ========= */
+
 async function loadAgents(){
-  const snap = await getDocs(query(
+  const snap=await getDocs(query(
     collection(db,"users"),
     where("role","==","agent"),
     where("approvedBy","==",ownerId)
   ));
 
-  const select = document.getElementById("agentFilter");
+  const select=document.getElementById("agentFilter");
   select.innerHTML=`<option value="all">All Agents</option>`;
 
-  snap.forEach(doc=>{
-    agentsMap[doc.id] = doc.data().name;
-    select.innerHTML += `<option value="${doc.id}">${doc.data().name}</option>`;
+  agentsMap={};
+
+  snap.forEach(docSnap=>{
+    agentsMap[docSnap.id]=docSnap.data().name;
+    select.innerHTML+=`
+      <option value="${docSnap.id}">
+        ${docSnap.data().name}
+      </option>`;
   });
 }
+
+/* ========= REALTIME BORROWERS ========= */
 
 function listenBorrowers(){
   onSnapshot(query(
     collection(db,"borrowers"),
     where("ownerId","==",ownerId)
-  ), snap=>{
+  ),snap=>{
+
     borrowersData=[];
     snap.forEach(doc=>{
       borrowersData.push(doc.data());
     });
+
     processData();
   });
 }
 
-window.applyFilter = ()=>{
+window.applyFilter=()=>{
   processData();
 };
 
-let chart;
+/* ========= PROCESS DATA ========= */
 
 function processData(){
 
-  const startDate = document.getElementById("startDate").value;
-  const endDate = document.getElementById("endDate").value;
-  const agentFilter = document.getElementById("agentFilter").value;
+  const start=document.getElementById("startDate").value;
+  const end=document.getElementById("endDate").value;
+  const agentFilter=document.getElementById("agentFilter").value||"all";
 
-  let filtered = borrowersData.filter(b=>{
+  const startDate=start?new Date(start):null;
+  const endDate=end?new Date(end):null;
 
-    if(agentFilter !== "all" && b.agentId !== agentFilter) return false;
+  if(startDate) startDate.setHours(0,0,0,0);
+  if(endDate) endDate.setHours(23,59,59,999);
 
-    if(startDate && new Date(b.createdAt.seconds*1000) < new Date(startDate)) return false;
-    if(endDate && new Date(b.createdAt.seconds*1000) > new Date(endDate)) return false;
+  let filtered=borrowersData.filter(b=>{
+
+    if(agentFilter!=="all"&&b.agentId!==agentFilter)return false;
+
+    if(b.createdAt?.seconds){
+      const created=new Date(b.createdAt.seconds*1000);
+      if(startDate&&created<startDate)return false;
+      if(endDate&&created>endDate)return false;
+    }
 
     return true;
   });
 
-  let totalLoan=0, totalCollection=0;
+  let totalLoan=0,totalCollection=0;
   let agentPerformance={};
 
-  const today = new Date();
+  const today=new Date();
   today.setHours(0,0,0,0);
 
-  const dueToday = document.getElementById("dueToday");
-  const overdue = document.getElementById("overdue");
-  dueToday.innerHTML="";
-  overdue.innerHTML="";
+  const dueDiv=document.getElementById("dueToday");
+  const overdueDiv=document.getElementById("overdue");
+
+  dueDiv.innerHTML="";
+  overdueDiv.innerHTML="";
 
   filtered.forEach(b=>{
-    totalLoan += b.loanAmount || 0;
-    totalCollection += b.paidAmount || 0;
 
-    if(!agentPerformance[b.agentId]) agentPerformance[b.agentId]=0;
-    agentPerformance[b.agentId]+= b.paidAmount || 0;
+    const loan=b.loanAmount||0;
+    const paid=b.paidAmount||0;
+    totalLoan+=loan;
+    totalCollection+=paid;
 
-    if(b.dueDate){
-      const due = new Date(b.dueDate.seconds*1000);
+    if(!agentPerformance[b.agentId])agentPerformance[b.agentId]=0;
+    agentPerformance[b.agentId]+=paid;
+
+    if(b.dueDate?.seconds){
+      const due=new Date(b.dueDate.seconds*1000);
       due.setHours(0,0,0,0);
 
+      const balance=loan-paid;
+      if(balance<=0)return;
+
       if(due.getTime()===today.getTime()){
-        dueToday.innerHTML += `<div class="success-box">${b.name} - ₹${b.loanAmount-b.paidAmount}</div>`;
+        dueDiv.innerHTML+=`
+          <div class="success-box">
+            ${b.name} (₹${balance})
+          </div>`;
       }
       else if(due<today){
-        overdue.innerHTML += `<div class="alert-box">${b.name} - ₹${b.loanAmount-b.paidAmount}</div>`;
+        overdueDiv.innerHTML+=`
+          <div class="alert-box">
+            ${b.name} (₹${balance})
+          </div>`;
       }
     }
+
   });
 
   document.getElementById("totalLoan").innerText=totalLoan;
   document.getElementById("totalCollection").innerText=totalCollection;
   document.getElementById("outstanding").innerText=totalLoan-totalCollection;
 
-  // Top Agent
-  let topAgent="-", max=0;
+  let top="-",max=0;
   Object.keys(agentPerformance).forEach(a=>{
     if(agentPerformance[a]>max){
       max=agentPerformance[a];
-      topAgent=agentsMap[a] || "-";
+      top=agentsMap[a]||"-";
     }
   });
-  document.getElementById("topAgent").innerText=topAgent;
 
-  // Chart
-  const labels=Object.keys(agentPerformance).map(a=>agentsMap[a]);
+  document.getElementById("topAgent").innerText=top;
+
+  const labels=Object.keys(agentPerformance).map(a=>agentsMap[a]||"Agent");
   const data=Object.values(agentPerformance);
 
-  if(chart) chart.destroy();
+  if(chart)chart.destroy();
 
-  chart = new Chart(document.getElementById("agentChart"),{
+  chart=new Chart(document.getElementById("agentChart"),{
     type:"bar",
-    data:{ labels:labels, datasets:[{label:"Collection",data:data}] }
+    data:{
+      labels:labels,
+      datasets:[{label:"Collection",data:data}]
+    },
+    options:{responsive:true,plugins:{legend:{display:false}}}
   });
 }
 
 </script>
+
 </body>
 </html>
