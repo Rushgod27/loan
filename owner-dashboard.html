@@ -4,36 +4,27 @@
 <meta charset="UTF-8">
 <title>Owner Dashboard</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="stylesheet" href="css/styles.css?v=30">
+<link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
 
 <div class="header">Owner Panel</div>
 
-<div class="nav">
-  <div class="active">Dashboard</div>
-  <div onclick="logoutUser()">Logout</div>
-</div>
-
 <div class="container">
 
-  <!-- ADD AGENT -->
   <div class="card">
     <h3>Add New Agent</h3>
 
-    <input id="agentName" placeholder="Agent Name">
-    <input id="agentEmail" type="email" placeholder="Agent Email">
+    <input id="agentName"
+      placeholder="Agent Name">
+
+    <input id="agentEmail"
+      placeholder="Agent Email">
 
     <button class="btn btn-primary"
-            onclick="addAgent()">
+      onclick="addAgent()">
       Add Agent
     </button>
-  </div>
-
-  <!-- AGENT LIST -->
-  <div class="card">
-    <h3>Your Agents</h3>
-    <div id="agentList"></div>
   </div>
 
 </div>
@@ -43,145 +34,73 @@
 import { auth, db } from "./js/firebase.js";
 
 import {
-  createUserWithEmailAndPassword,
-  sendPasswordResetEmail,
-  signOut,
-  signInWithEmailAndPassword,
   onAuthStateChanged
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+} from
+"https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 import {
-  doc,
-  setDoc,
   collection,
+  addDoc,
   query,
   where,
   getDocs
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+} from
+"https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-let ownerUID = null;
-let ownerEmail = null;
+let currentOwnerUid = null;
 
-/* ================= AUTH CHECK ================= */
-
-onAuthStateChanged(auth, user=>{
+onAuthStateChanged(auth,user=>{
   if(!user){
     location.href="index.html";
     return;
   }
-
-  ownerUID = user.uid;
-  ownerEmail = user.email;
-
-  loadAgents();
+  currentOwnerUid = user.uid;
 });
 
-/* ================= LOGOUT ================= */
+window.addAgent = async () => {
 
-window.logoutUser = async ()=>{
-  await signOut(auth);
-  location.href="index.html";
-};
+  const name  =
+    document.getElementById("agentName")
+    .value.trim();
 
-/* ================= ADD AGENT ================= */
-
-window.addAgent = async ()=>{
-
-  const name  = agentName.value.trim();
-  const email = agentEmail.value.trim();
+  const email =
+    document.getElementById("agentEmail")
+    .value.trim()
+    .toLowerCase();
 
   if(!name || !email){
-    alert("Fill all fields");
+    alert("Enter name and email");
     return;
   }
 
-  try{
-
-    const ownerPass = prompt("Enter your password to confirm:");
-
-    if(!ownerPass){
-      alert("Owner password required");
-      return;
-    }
-
-    const randomPassword = "Temp" + Date.now();
-
-    // Create Auth user (this logs in as agent temporarily)
-    const userCred = await createUserWithEmailAndPassword(
-      auth,
-      email,
-      randomPassword
-    );
-
-    const newUser = userCred.user;
-
-    // Create Firestore user document
-    await setDoc(doc(db,"users",newUser.uid),{
-      name,
-      email,
-      role:"agent",
-      ownerId: ownerUID,
-      status:"active",
-      createdAt:Date.now()
-    });
-
-    // Send reset password email
-    await sendPasswordResetEmail(auth,email);
-
-    alert("Agent created. Reset password email sent.");
-
-    // Sign out agent
-    await signOut(auth);
-
-    // Log owner back in
-    await signInWithEmailAndPassword(
-      auth,
-      ownerEmail,
-      ownerPass
-    );
-
-    agentName.value="";
-    agentEmail.value="";
-
-    loadAgents();
-
-  }catch(err){
-    alert(err.message);
-  }
-};
-
-/* ================= LOAD AGENTS ================= */
-
-async function loadAgents(){
-
   const q = query(
     collection(db,"users"),
-    where("ownerId","==",ownerUID),
-    where("role","==","agent")
+    where("email","==",email)
   );
 
   const snap = await getDocs(q);
 
-  agentList.innerHTML="";
-
-  if(snap.empty){
-    agentList.innerHTML="<p>No agents added.</p>";
+  if(!snap.empty){
+    alert("Agent already registered.");
     return;
   }
 
-  snap.forEach(d=>{
-    const data = d.data();
-
-    agentList.innerHTML += `
-      <div class="card" style="margin-top:10px;">
-        <b>${data.name}</b><br>
-        ${data.email}
-      </div>
-    `;
+  await addDoc(collection(db,"users"),{
+    name,
+    email,
+    role:"agent",
+    ownerId: currentOwnerUid,
+    status:"active",
+    uid:null,
+    createdAt: Date.now()
   });
-}
+
+  alert("Agent added. Agent must login using email link.");
+
+  document.getElementById("agentName").value="";
+  document.getElementById("agentEmail").value="";
+};
 
 </script>
-
 </body>
 </html>
