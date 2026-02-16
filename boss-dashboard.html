@@ -3,39 +3,166 @@
 <head>
 <meta charset="UTF-8">
 <title>Boss Dashboard</title>
-<link rel="stylesheet" href="css/styles.css">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="css/styles.css?v=40">
 </head>
 <body>
 
-<div class="header">Boss Panel</div>
-
-<div class="nav">
-<div class="active">Boss Dashboard</div>
-<div onclick="logoutUser()">Logout</div>
+<div class="header">
+  Boss Panel
 </div>
 
-<div class="card">
-<h3>Welcome Boss 👑</h3>
-<p>This is Boss level dashboard.</p>
+<div class="nav">
+  <div class="active">Dashboard</div>
+  <div onclick="logoutUser()">Logout</div>
+</div>
+
+<div class="container" id="content">
+
+  <!-- ADD OWNER -->
+  <div class="card">
+    <h3>Add New Owner</h3>
+    <input id="ownerName" placeholder="Owner Name">
+    <input id="ownerEmail" placeholder="Owner Email">
+    <button class="btn btn-primary" onclick="addOwner()">
+      Add Owner
+    </button>
+  </div>
+
+  <!-- OWNER LIST -->
+  <div class="card">
+    <h3>Owners</h3>
+    <div id="ownerList"></div>
+  </div>
+
 </div>
 
 <script type="module">
 
-import { auth } from "./js/firebase.js";
+import { auth, db } from "./js/firebase.js";
+
 import {
   signOut,
   onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
-window.logoutUser=()=>signOut(auth);
+import {
+  collection,
+  addDoc,
+  query,
+  where,
+  getDocs
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-onAuthStateChanged(auth,user=>{
+let bossId = null;
+
+/* ================= AUTH ================= */
+
+onAuthStateChanged(auth, user => {
+
   if(!user){
     location.href="index.html";
+    return;
   }
+
+  bossId = user.uid;
+  loadOwners();
 });
+
+/* ================= LOGOUT ================= */
+
+window.logoutUser = async () => {
+  await signOut(auth);
+  location.href="index.html";
+};
+
+/* ================= ADD OWNER ================= */
+
+window.addOwner = async () => {
+
+  const name = ownerName.value.trim();
+  const email = ownerEmail.value.trim().toLowerCase();
+
+  if(!name || !email){
+    alert("Enter name and email");
+    return;
+  }
+
+  const emailPattern =
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  if(!emailPattern.test(email)){
+    alert("Enter valid email");
+    return;
+  }
+
+  /* ==== Check duplicate ==== */
+
+  const duplicateSnap = await getDocs(query(
+    collection(db,"users"),
+    where("email","==",email)
+  ));
+
+  if(!duplicateSnap.empty){
+    alert("Email already registered.");
+    return;
+  }
+
+  /* ==== Add Owner ==== */
+
+  await addDoc(collection(db,"users"),{
+    name,
+    email,
+    role:"owner",
+    createdBy: bossId,
+    createdAt: Date.now()
+  });
+
+  alert("Owner added successfully!");
+
+  ownerName.value="";
+  ownerEmail.value="";
+
+  loadOwners();
+};
+
+/* ================= LOAD OWNERS ================= */
+
+async function loadOwners(){
+
+  const snap = await getDocs(query(
+    collection(db,"users"),
+    where("role","==","owner")
+  ));
+
+  if(snap.empty){
+    ownerList.innerHTML="No owners found";
+    return;
+  }
+
+  ownerList.innerHTML="";
+
+  snap.forEach(d=>{
+
+    const owner = d.data();
+
+    ownerList.innerHTML += `
+      <div class="card">
+        <div class="card-row">
+          <div class="card-details">
+            <div class="card-title">
+              ${owner.name}
+            </div>
+            <div class="card-sub">
+              ${owner.email}
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  });
+}
 
 </script>
 </body>
 </html>
-
