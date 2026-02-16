@@ -4,157 +4,111 @@
 <meta charset="UTF-8">
 <title>Login</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="stylesheet" href="css/styles.css">
+
+<style>
+body{
+  margin:0;
+  font-family:system-ui;
+  background:#f3f4f6;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  height:100vh;
+}
+
+.card{
+  background:#fff;
+  padding:30px;
+  border-radius:12px;
+  box-shadow:0 4px 10px rgba(0,0,0,0.1);
+  text-align:center;
+  width:300px;
+}
+
+button{
+  width:100%;
+  padding:12px;
+  border:none;
+  border-radius:8px;
+  background:#2563eb;
+  color:#fff;
+  font-size:15px;
+  font-weight:600;
+  cursor:pointer;
+}
+</style>
 </head>
 <body>
 
-<div class="login-wrapper">
-  <div class="login-card">
-
-    <div class="login-title">
-      Loan Management System
-    </div>
-
-    <input id="emailInput" type="email" placeholder="Enter your email">
-
-    <button id="loginBtn" class="login-btn" onclick="sendLoginLink()">
-      Send Login Link
-    </button>
-
-    <div class="login-footer">
-      Secure passwordless login
-    </div>
-
-  </div>
+<div class="card">
+  <h2>Login</h2>
+  <button onclick="googleLogin()">Sign in with Google</button>
 </div>
 
 <script type="module">
 
 import { auth, db } from "./js/firebase.js";
-
 import {
-  sendSignInLinkToEmail,
-  isSignInWithEmailLink,
-  signInWithEmailLink,
-  onAuthStateChanged
+  GoogleAuthProvider,
+  signInWithPopup,
+  onAuthStateChanged,
+  signOut
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 import {
-  doc,
-  getDoc,
-  setDoc
+  collection,
+  query,
+  where,
+  getDocs,
+  addDoc
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
+window.googleLogin = async()=>{
+  const provider = new GoogleAuthProvider();
+  await signInWithPopup(auth, provider);
+};
 
-/* ================= SEND LOGIN LINK ================= */
+onAuthStateChanged(auth, async(user)=>{
+  if(!user) return;
 
-window.sendLoginLink = async () => {
+  const q = query(
+    collection(db,"users"),
+    where("email","==",user.email)
+  );
 
-  const btn = document.getElementById("loginBtn");
-  let email = document.getElementById("emailInput").value.trim().toLowerCase();
+  const snap = await getDocs(q);
 
-  if(!email){
-    alert("Enter email");
+  // First time login → create pending
+  if(snap.empty){
+    await addDoc(collection(db,"users"),{
+      name:user.displayName,
+      email:user.email,
+      role:"pending",
+      createdAt:Date.now()
+    });
+
+    alert("Account created. Waiting for approval.");
+    await signOut(auth);
     return;
   }
 
-  btn.disabled = true;
-  btn.innerText = "Sending...";
+  const data = snap.docs[0].data();
 
-  const actionCodeSettings = {
-    url: "https://rushgod27.github.io/loan/",
-    handleCodeInApp: true
-  };
-
-  try{
-
-    await sendSignInLinkToEmail(auth, email, actionCodeSettings);
-
-    localStorage.setItem("emailForSignIn", email);
-
-    alert("Login link sent. Check your email.");
-
-    /* Cooldown 60 sec */
-    let seconds = 60;
-    const interval = setInterval(()=>{
-      btn.innerText = `Wait ${seconds}s`;
-      seconds--;
-
-      if(seconds < 0){
-        clearInterval(interval);
-        btn.disabled = false;
-        btn.innerText = "Send Login Link";
-      }
-    },1000);
-
-  } catch(err){
-    alert("Error: " + err.message);
-    btn.disabled = false;
-    btn.innerText = "Send Login Link";
-  }
-};
-
-
-/* ================= HANDLE EMAIL LOGIN ================= */
-
-if (isSignInWithEmailLink(auth, window.location.href)) {
-
-  let email = localStorage.getItem("emailForSignIn");
-
-  if (!email) {
-    email = prompt("Confirm your email:");
-    if(email) email = email.trim().toLowerCase();
+  if(data.role === "pending"){
+    alert("Waiting for Boss approval.");
+    await signOut(auth);
+    return;
   }
 
-  signInWithEmailLink(auth, email, window.location.href)
-    .then(() => {
-      localStorage.removeItem("emailForSignIn");
-    })
-    .catch(err => {
-      alert("Login error: " + err.message);
-    });
-}
-
-
-/* ================= ROLE BASED REDIRECT ================= */
-
-onAuthStateChanged(auth, async (user) => {
-
-  if(!user) return;
-
-  try{
-
-    const snap = await getDoc(doc(db, "users", user.uid));
-
-    if(!snap.exists()){
-      alert("User not registered by admin. Contact Boss/Owner.");
-      await auth.signOut();
-      return;
-    }
-
-    const role = (snap.data().role || "").toLowerCase();
-
-    if(role === "boss"){
-      location.href="boss-dashboard.html";
-    }
-    else if(role === "owner"){
-      location.href="owner-dashboard.html";
-    }
-    else if(role === "agent"){
-      location.href="agent-dashboard.html";
-    }
-    else{
-      alert("Invalid role.");
-      await auth.signOut();
-    }
-
-  } catch(err){
-    alert("Role check failed: " + err.message);
+  if(data.role === "owner"){
+    location.href="owner.html";
   }
 
+  if(data.role === "boss"){
+    location.href="boss.html";
+  }
 });
 
 </script>
-
 </body>
 </html>
