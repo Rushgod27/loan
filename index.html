@@ -14,12 +14,12 @@
 
     <input id="loginEmail" placeholder="Enter your email">
 
-    <button class="login-btn" onclick="sendLoginLink()">
+    <button class="login-btn" onclick="sendLink()">
       Send Login Link
     </button>
 
     <div class="login-footer">
-      You will receive a secure login link in your email.
+      Magic link will be sent to your email
     </div>
   </div>
 </div>
@@ -36,148 +36,81 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 import {
-  collection,
-  query,
-  where,
-  getDocs,
   doc,
-  updateDoc
+  getDoc
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-
-/* ================= CONFIG ================= */
-
-const actionCodeSettings = {
-  url: window.location.origin + window.location.pathname,
-  handleCodeInApp: true
-};
 
 /* ================= SEND LOGIN LINK ================= */
 
-window.sendLoginLink = async () => {
+window.sendLink = async () => {
 
-  const email = document
-    .getElementById("loginEmail")
-    .value
-    .trim()
-    .toLowerCase();
+  let email = document.getElementById("loginEmail").value.trim().toLowerCase();
 
   if(!email){
-    alert("Enter your email");
+    alert("Enter email");
     return;
   }
 
+  const actionCodeSettings = {
+    url: window.location.origin, // VERY IMPORTANT
+    handleCodeInApp: true
+  };
+
   try{
-
-    // 🔍 Check if user registered in Firestore
-    const q = query(
-      collection(db,"users"),
-      where("email","==",email)
-    );
-
-    const snap = await getDocs(q);
-
-    if(snap.empty){
-      alert("Email not registered with the system.");
-      return;
-    }
-
-    await sendSignInLinkToEmail(auth,email,actionCodeSettings);
-
+    await sendSignInLinkToEmail(auth, email, actionCodeSettings);
     localStorage.setItem("emailForSignIn", email);
-
-    alert("Login link sent. Check your email.");
-
+    alert("Login link sent. Check email.");
   }catch(err){
-    alert("Error: " + err.message);
+    alert(err.message);
   }
 };
 
-/* ================= HANDLE EMAIL LINK ================= */
+
+/* ================= COMPLETE LOGIN ================= */
 
 if (isSignInWithEmailLink(auth, window.location.href)) {
 
   let email = localStorage.getItem("emailForSignIn");
 
   if (!email) {
-    email = prompt("Enter your email to confirm");
+    email = prompt("Confirm your email");
   }
 
   signInWithEmailLink(auth, email, window.location.href)
-    .then(async (result) => {
-
+    .then(() => {
       localStorage.removeItem("emailForSignIn");
-
-      const user = result.user;
-
-      // 🔍 Get role from Firestore
-      const q = query(
-        collection(db,"users"),
-        where("email","==",user.email.toLowerCase())
-      );
-
-      const snap = await getDocs(q);
-
-      if(snap.empty){
-        alert("User role not assigned.");
-        return;
-      }
-
-      const docData = snap.docs[0];
-      const role = docData.data().role;
-
-      // Save UID if not saved
-      if(!docData.data().uid){
-        await updateDoc(
-          doc(db,"users",docData.id),
-          { uid: user.uid }
-        );
-      }
-
-      // 🔀 ROLE BASED REDIRECT
-      if(role === "boss"){
-        window.location.href = "boss-dashboard.html";
-      }
-      else if(role === "owner"){
-        window.location.href = "owner-dashboard.html";
-      }
-      else if(role === "agent"){
-        window.location.href = "agent-dashboard.html";
-      }
-      else{
-        alert("Invalid role.");
-      }
-
     })
-    .catch(err=>{
-      alert("Login failed: " + err.message);
+    .catch((error) => {
+      alert(error.message);
     });
 }
 
-/* ================= AUTO REDIRECT IF LOGGED ================= */
 
-onAuthStateChanged(auth, async user => {
+/* ================= ROLE REDIRECT ================= */
 
+onAuthStateChanged(auth, async(user)=>{
   if(!user) return;
 
-  const q = query(
-    collection(db,"users"),
-    where("email","==",user.email.toLowerCase())
-  );
+  const snap = await getDoc(doc(db,"users",user.uid));
 
-  const snap = await getDocs(q);
-
-  if(snap.empty) return;
-
-  const role = snap.docs[0].data().role;
-
-  if(role === "boss"){
-    window.location.href="boss-dashboard.html";
+  if(!snap.exists()){
+    alert("User not registered in system");
+    return;
   }
-  else if(role === "owner"){
-    window.location.href="owner-dashboard.html";
+
+  const role = snap.data().role;
+
+  if(role==="boss"){
+    location.href="boss-dashboard.html";
   }
-  else if(role === "agent"){
-    window.location.href="agent-dashboard.html";
+  else if(role==="owner"){
+    location.href="owner-dashboard.html";
+  }
+  else if(role==="agent"){
+    location.href="agent-dashboard.html";
+  }
+  else{
+    alert("Invalid role");
   }
 
 });
