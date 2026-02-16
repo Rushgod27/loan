@@ -17,7 +17,7 @@
 
     <input id="emailInput" type="email" placeholder="Enter your email">
 
-    <button class="login-btn" onclick="sendLoginLink()">
+    <button id="loginBtn" class="login-btn" onclick="sendLoginLink()">
       Send Login Link
     </button>
 
@@ -41,7 +41,8 @@ import {
 
 import {
   doc,
-  getDoc
+  getDoc,
+  setDoc
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 
@@ -49,6 +50,7 @@ import {
 
 window.sendLoginLink = async () => {
 
+  const btn = document.getElementById("loginBtn");
   let email = document.getElementById("emailInput").value.trim().toLowerCase();
 
   if(!email){
@@ -56,22 +58,44 @@ window.sendLoginLink = async () => {
     return;
   }
 
+  btn.disabled = true;
+  btn.innerText = "Sending...";
+
   const actionCodeSettings = {
     url: "https://rushgod27.github.io/loan/",
     handleCodeInApp: true
   };
 
   try{
+
     await sendSignInLinkToEmail(auth, email, actionCodeSettings);
+
     localStorage.setItem("emailForSignIn", email);
+
     alert("Login link sent. Check your email.");
+
+    /* Cooldown 60 sec */
+    let seconds = 60;
+    const interval = setInterval(()=>{
+      btn.innerText = `Wait ${seconds}s`;
+      seconds--;
+
+      if(seconds < 0){
+        clearInterval(interval);
+        btn.disabled = false;
+        btn.innerText = "Send Login Link";
+      }
+    },1000);
+
   } catch(err){
     alert("Error: " + err.message);
+    btn.disabled = false;
+    btn.innerText = "Send Login Link";
   }
 };
 
 
-/* ================= AUTO LOGIN FROM EMAIL LINK ================= */
+/* ================= HANDLE EMAIL LOGIN ================= */
 
 if (isSignInWithEmailLink(auth, window.location.href)) {
 
@@ -79,6 +103,7 @@ if (isSignInWithEmailLink(auth, window.location.href)) {
 
   if (!email) {
     email = prompt("Confirm your email:");
+    if(email) email = email.trim().toLowerCase();
   }
 
   signInWithEmailLink(auth, email, window.location.href)
@@ -97,26 +122,34 @@ onAuthStateChanged(auth, async (user) => {
 
   if(!user) return;
 
-  const snap = await getDoc(doc(db, "users", user.uid));
+  try{
 
-  if(!snap.exists()){
-    alert("User not registered by admin.");
-    return;
-  }
+    const snap = await getDoc(doc(db, "users", user.uid));
 
-  const role = (snap.data().role || "").toLowerCase();
+    if(!snap.exists()){
+      alert("User not registered by admin. Contact Boss/Owner.");
+      await auth.signOut();
+      return;
+    }
 
-  if(role === "boss"){
-    location.href="boss-dashboard.html";
-  }
-  else if(role === "owner"){
-    location.href="owner-dashboard.html";
-  }
-  else if(role === "agent"){
-    location.href="agent-dashboard.html";
-  }
-  else{
-    alert("Invalid role.");
+    const role = (snap.data().role || "").toLowerCase();
+
+    if(role === "boss"){
+      location.href="boss-dashboard.html";
+    }
+    else if(role === "owner"){
+      location.href="owner-dashboard.html";
+    }
+    else if(role === "agent"){
+      location.href="agent-dashboard.html";
+    }
+    else{
+      alert("Invalid role.");
+      await auth.signOut();
+    }
+
+  } catch(err){
+    alert("Role check failed: " + err.message);
   }
 
 });
