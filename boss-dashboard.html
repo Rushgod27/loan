@@ -26,12 +26,12 @@ button{padding:8px 14px;border:none;border-radius:6px;color:#fff;cursor:pointer}
 <div class="container">
 
 <div class="card">
-  <h3>Pending Owner / Boss Requests</h3>
+  <h3>Pending Requests</h3>
   <div id="pendingList"></div>
 </div>
 
 <div class="card">
-  <h3>Approved Users</h3>
+  <h3>Approved Users Under You</h3>
   <div id="approvedList"></div>
 </div>
 
@@ -60,7 +60,7 @@ import {
 
 let bossUid=null;
 
-/* ================= AUTH CHECK ================= */
+/* ================= AUTH ================= */
 
 onAuthStateChanged(auth, async(user)=>{
 
@@ -69,8 +69,7 @@ onAuthStateChanged(auth, async(user)=>{
     return;
   }
 
-  const userRef = doc(db,"users",user.uid);
-  const userSnap = await getDoc(userRef);
+  const userSnap = await getDoc(doc(db,"users",user.uid));
 
   if(!userSnap.exists() || userSnap.data().role!=="boss"){
     await signOut(auth);
@@ -91,17 +90,18 @@ window.logoutUser = async()=>{
   location.href="index.html";
 };
 
-/* ================= REALTIME PENDING ================= */
+/* ================= PENDING REQUESTS ================= */
 
 function listenPending(){
 
   const q = query(
     collection(db,"users"),
     where("role","==","pending"),
-    where("requestedRole","in",["owner","boss"])
+    where("requestedTo","==",bossUid)   // 🔥 FIXED
   );
 
   onSnapshot(q,(snap)=>{
+
     const container=document.getElementById("pendingList");
     container.innerHTML="";
 
@@ -131,16 +131,17 @@ function listenPending(){
   });
 }
 
-/* ================= REALTIME APPROVED ================= */
+/* ================= APPROVED USERS ================= */
 
 function listenApproved(){
 
   const q=query(
     collection(db,"users"),
-    where("role","in",["owner","boss"])
+    where("approvedBy","==",bossUid)
   );
 
   onSnapshot(q,(snap)=>{
+
     const container=document.getElementById("approvedList");
     container.innerHTML="";
 
@@ -173,21 +174,19 @@ window.approveUser = async(id)=>{
     role: requestedRole,
     approvedBy: bossUid,
     approvedAt: serverTimestamp(),
-    requestedRole: deleteField()
+    requestedRole: deleteField(),
+    requestedTo: deleteField()  // 🔥 remove routing after approval
   });
 };
 
 /* ================= REJECT ================= */
 
 window.rejectUser = async(id)=>{
-
   if(!confirm("Reject this request?")) return;
-
   await deleteDoc(doc(db,"users",id));
 };
 
 </script>
-
 
 </body>
 </html>
