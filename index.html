@@ -62,7 +62,7 @@ Sign in with Google
 </select>
 
 <input id="codeInput"
-       placeholder="Enter Approval Code"
+       placeholder="Enter Invite Code"
        style="display:none;">
 
 <button id="submitBtn"
@@ -116,8 +116,10 @@ onAuthStateChanged(auth, async(user)=>{
 
   const userSnap = await getDoc(doc(db,"users",user.uid));
 
-  // EXISTING USER
+  /* ===== EXISTING USER ===== */
+
   if(userSnap.exists()){
+
     const data=userSnap.data();
 
     if(data.role==="pending"){
@@ -138,12 +140,13 @@ onAuthStateChanged(auth, async(user)=>{
     return;
   }
 
-  // NEW USER
+  /* ===== NEW USER ===== */
+
   document.getElementById("roleSelect").style.display="block";
   document.getElementById("submitBtn").style.display="block";
 });
 
-/* ROLE SELECTION */
+/* ROLE CHANGE */
 
 document.getElementById("roleSelect")
 .addEventListener("change",(e)=>{
@@ -152,12 +155,12 @@ document.getElementById("roleSelect")
   const codeInput=document.getElementById("codeInput");
 
   if(role==="agent"){
-    codeInput.placeholder="Enter Owner Code";
+    codeInput.placeholder="Enter Owner Invite Code";
     codeInput.style.display="block";
   }
 
   if(role==="owner"){
-    codeInput.placeholder="Enter Boss Code";
+    codeInput.placeholder="Enter Boss Invite Code";
     codeInput.style.display="block";
   }
 
@@ -176,21 +179,38 @@ document.getElementById("submitBtn")
     return;
   }
 
-  let queryField = role === "agent" ? "ownerCode" : "bossCode";
+  /* ===== VERIFY INVITE CODE ===== */
 
   const q=query(
     collection(db,"users"),
-    where(queryField,"==",code)
+    where("inviteCode","==",code)
   );
 
   const snap=await getDocs(q);
 
   if(snap.empty){
-    alert("Invalid Code");
+    alert("Invalid Invite Code");
     return;
   }
 
-  const approverUID=snap.docs[0].id;
+  const approverDoc = snap.docs[0];
+  const approverData = approverDoc.data();
+
+  /* ===== ROLE VALIDATION ===== */
+
+  if(role==="owner" && approverData.role!=="boss"){
+    alert("Owner must use Boss invite code");
+    return;
+  }
+
+  if(role==="agent" && approverData.role!=="owner"){
+    alert("Agent must use Owner invite code");
+    return;
+  }
+
+  const approverUID = approverDoc.id;
+
+  /* ===== CREATE PENDING USER ===== */
 
   await setDoc(doc(db,"users",currentUser.uid),{
     name:currentUser.displayName,
