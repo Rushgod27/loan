@@ -6,72 +6,16 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
-body{
-  margin:0;
-  font-family:system-ui;
-  background:#f3f4f6;
-}
-
-.header{
-  background:#111827;
-  color:#fff;
-  padding:16px;
-  text-align:center;
-  font-weight:600;
-  font-size:18px;
-}
-
-.container{
-  padding:16px;
-}
-
-.card{
-  background:#fff;
-  padding:16px;
-  border-radius:12px;
-  margin-bottom:16px;
-  box-shadow:0 4px 10px rgba(0,0,0,0.08);
-}
-
-.card-row{
-  background:#f9fafb;
-  padding:10px;
-  border-radius:8px;
-  margin-bottom:8px;
-}
-
-select{
-  padding:6px;
-  border-radius:6px;
-  margin-top:6px;
-}
-
-button{
-  padding:8px 14px;
-  border:none;
-  border-radius:6px;
-  background:#2563eb;
-  color:#fff;
-  cursor:pointer;
-}
-
-.reject{
-  background:#ef4444;
-  margin-left:6px;
-}
-
-.logout{
-  width:100%;
-  margin-top:10px;
-  background:#111827;
-}
-.role-badge{
-  background:#e5e7eb;
-  font-size:12px;
-  padding:3px 8px;
-  border-radius:12px;
-  margin-left:6px;
-}
+body{margin:0;font-family:system-ui;background:#f3f4f6}
+.header{background:#111827;color:#fff;padding:16px;text-align:center;font-weight:600;font-size:18px}
+.container{padding:16px}
+.card{background:#fff;padding:16px;border-radius:12px;margin-bottom:16px;box-shadow:0 4px 10px rgba(0,0,0,0.08)}
+.card-row{background:#f9fafb;padding:10px;border-radius:8px;margin-bottom:8px}
+button{padding:8px 14px;border:none;border-radius:6px;color:#fff;cursor:pointer}
+.approve{background:#16a34a}
+.reject{background:#ef4444;margin-left:6px}
+.logout{width:100%;margin-top:10px;background:#111827}
+.badge{background:#e5e7eb;padding:2px 8px;border-radius:12px;font-size:12px;margin-left:6px}
 </style>
 </head>
 
@@ -81,15 +25,13 @@ button{
 
 <div class="container">
 
-<!-- PENDING REQUESTS -->
 <div class="card">
-  <h3>Pending Requests (Owner / Boss)</h3>
+  <h3>Pending Owner / Boss Requests</h3>
   <div id="pendingList"></div>
 </div>
 
-<!-- APPROVED USERS -->
 <div class="card">
-  <h3>Approved Bosses & Owners</h3>
+  <h3>Approved Users</h3>
   <div id="approvedList"></div>
 </div>
 
@@ -100,191 +42,120 @@ button{
 <script type="module">
 
 import { auth, db } from "./js/firebase.js";
+import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { collection, query, where, onSnapshot, getDocs, updateDoc, deleteDoc, doc, getDoc, serverTimestamp, deleteField } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-import {
-  onAuthStateChanged,
-  signOut
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+let bossUid=null;
 
-import {
-  collection,
-  query,
-  where,
-  onSnapshot,
-  getDocs,
-  updateDoc,
-  deleteDoc,
-  doc
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-
-let bossUid = null;
-
-/* ================= AUTH CHECK ================= */
-
+/* AUTH CHECK */
 onAuthStateChanged(auth, async(user)=>{
-  if(!user){
-    location.href="index.html";
-    return;
-  }
+  if(!user){ location.href="index.html"; return; }
 
-  const q = query(
-    collection(db,"users"),
-    where("email","==",user.email)
-  );
+  const snap=await getDocs(query(collection(db,"users"),where("email","==",user.email)));
 
-  const snap = await getDocs(q);
-
-  if(snap.empty || snap.docs[0].data().role !== "boss"){
-    alert("Access Denied");
+  if(snap.empty || snap.docs[0].data().role!=="boss"){
     await signOut(auth);
     location.href="index.html";
     return;
   }
 
-  bossUid = user.uid;
+  bossUid=user.uid;
 
   listenPending();
   listenApproved();
 });
 
-/* ================= LOGOUT ================= */
-
-window.logoutUser = async()=>{
+window.logoutUser=async()=>{
   await signOut(auth);
   location.href="index.html";
 };
 
-/* ================= REAL-TIME PENDING ================= */
-
+/* REALTIME PENDING */
 function listenPending(){
 
-  const q = query(
+  const q=query(
     collection(db,"users"),
     where("role","==","pending"),
     where("requestedRole","in",["owner","boss"])
   );
 
-  onSnapshot(q,(snapshot)=>{
-
-    const container = document.getElementById("pendingList");
+  onSnapshot(q,(snap)=>{
+    const container=document.getElementById("pendingList");
     container.innerHTML="";
 
-    if(snapshot.empty){
-      container.innerHTML="<p>No pending owner/boss requests</p>";
+    if(snap.empty){
+      container.innerHTML="<p>No pending requests</p>";
       return;
     }
 
-    snapshot.forEach(docSnap=>{
-      const data = docSnap.data();
+    snap.forEach(d=>{
+      const data=d.data();
 
-      container.innerHTML += `
+      container.innerHTML+=`
         <div class="card-row">
-          <strong>${data.name}</strong><br>
-          ${data.email}<br>
-          Applying for: <span class="role-badge">${data.requestedRole}</span>
+          <strong>${data.name}</strong>
+          <span class="badge">${data.requestedRole}</span>
+          <br>${data.email}
           <br><br>
-
-          <button onclick="approveUser('${docSnap.id}')">
+          <button class="approve" onclick="approveUser('${d.id}')">
             Approve
           </button>
-
-          <button class="reject" onclick="rejectUser('${docSnap.id}')">
+          <button class="reject" onclick="rejectUser('${d.id}')">
             Reject
           </button>
         </div>
       `;
     });
-
   });
 }
 
-/* ================= APPROVED LIST ================= */
-
+/* REALTIME APPROVED LIST */
 function listenApproved(){
 
-  const q = query(
+  const q=query(
     collection(db,"users"),
     where("role","in",["owner","boss"])
   );
 
-  onSnapshot(q,(snapshot)=>{
-
-    const container = document.getElementById("approvedList");
+  onSnapshot(q,(snap)=>{
+    const container=document.getElementById("approvedList");
     container.innerHTML="";
 
-    snapshot.forEach(docSnap=>{
-      const data = docSnap.data();
+    snap.forEach(d=>{
+      const data=d.data();
 
-      container.innerHTML += `
+      container.innerHTML+=`
         <div class="card-row">
           <strong>${data.name}</strong>
-          <span class="role-badge">${data.role}</span>
+          <span class="badge">${data.role}</span>
           <br>${data.email}
         </div>
       `;
     });
-
   });
 }
 
-/* ================= APPROVE ================= */
+/* APPROVE */
+window.approveUser=async(id)=>{
 
-window.approveUser = async(id)=>{
+  const ref=doc(db,"users",id);
+  const snap=await getDoc(ref);
+  const requestedRole=snap.data().requestedRole;
 
-  await updateDoc(doc(db,"users",id),{
-    role: (await getDocs(query(collection(db,"users")))) // dummy to keep function scope clean
+  await updateDoc(ref,{
+    role:requestedRole,
+    approvedBy:bossUid,
+    approvedAt:serverTimestamp(),
+    requestedRole:deleteField()
   });
-
-  // Properly update role from requestedRole
-
-  const snap = await getDocs(query(collection(db,"users")));
-  
 };
 
-window.approveUser = async(id)=>{
-
-  const userRef = doc(db,"users",id);
-  const userSnap = await getDocs(query(collection(db,"users")));
-  
-  const single = await getDocs(query(collection(db,"users")));
-};
-
-/* FIXED APPROVE FUNCTION */
-
-window.approveUser = async(id)=>{
-
-  const ref = doc(db,"users",id);
-
-  const snap = await getDocs(query(collection(db,"users")));
-
-  const userSnap = await getDocs(query(collection(db,"users")));
-
-};
-
-/* FINAL CORRECT APPROVE FUNCTION */
-
-window.approveUser = async(id)=>{
-
-  const userDoc = await (await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js"))
-    .getDoc(doc(db,"users",id));
-
-  const requestedRole = userDoc.data().requestedRole;
-
-  await updateDoc(doc(db,"users",id),{
-    role: requestedRole
-  });
-
-  alert("Approved as " + requestedRole);
-};
-
-/* ================= REJECT ================= */
-
-window.rejectUser = async(id)=>{
+/* REJECT */
+window.rejectUser=async(id)=>{
+  if(!confirm("Reject this request?"))return;
   await deleteDoc(doc(db,"users",id));
-  alert("User Rejected");
 };
 
 </script>
-
 </body>
 </html>
