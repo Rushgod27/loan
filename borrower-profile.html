@@ -400,13 +400,13 @@ window.toggleInstallments = async (loanId)=>{
           <div>${status}</div>
         </div>
 
-        ${i.status!=="completed"?
-        `<button class="pay-btn"
-         onclick="pay('${i.id}','${loanId}',${i.amount}')">
-         Mark Paid
-         </button>`:""}
-      </div>
-    `;
+${i.status!=="completed"?
+`<button class="pay-btn"
+ onclick="pay('${i.id}','${loanId}',${Number(i.amount)})">
+ Mark Paid
+ </button>`:""}
+</div>
+`;
   });
 
   box.innerHTML=html;
