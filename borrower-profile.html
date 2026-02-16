@@ -8,19 +8,40 @@
 
 <style>
 
+/* ---------- PROFILE ACTIONS ---------- */
+
+.contact-btn{
+  display:inline-block;
+  padding:6px 12px;
+  border-radius:8px;
+  text-decoration:none;
+  font-size:13px;
+  font-weight:600;
+  margin-right:6px;
+}
+
+.call-btn{
+  background:#2563eb;
+  color:#fff;
+}
+
+.wa-btn{
+  background:#16a34a;
+  color:#fff;
+}
+
 /* ---------- LOAN CARD ---------- */
 
 .loan-card{
   padding:15px;
   border-radius:14px;
   margin-bottom:15px;
-  position:relative;
   background:#fff;
+  position:relative;
 }
 
 .completed{
   opacity:0.55;
-  filter:blur(1px);
 }
 
 .badge{
@@ -123,11 +144,6 @@ getDocs,addDoc,updateDoc
 
 const borrowerId=new URLSearchParams(window.location.search).get("id");
 
-if(!borrowerId){
-alert("Invalid borrower");
-location.href="borrowers.html";
-}
-
 window.goBack=()=>location.href="borrowers.html";
 
 let currentUserId=null;
@@ -169,10 +185,12 @@ profileCard.innerHTML=`
 <div style="display:flex;justify-content:space-between">
 <div>
 <h3>${b.name}</h3>
-<a href="tel:${b.phone}">📞 ${b.phone}</a><br>
-<a target="_blank" 
-href="https://wa.me/91${b.phone}?text=Hello%20${b.name}">
-💬 WhatsApp</a>
+<a class="contact-btn call-btn" href="tel:${b.phone}">📞 Call</a>
+<a class="contact-btn wa-btn" 
+   target="_blank"
+   href="https://wa.me/91${b.phone}?text=Hello%20${b.name}">
+   💬 WhatsApp
+</a>
 </div>
 <button class="view-btn"
 onclick="toggleCreateLoan()">+ Loan</button>
@@ -181,7 +199,7 @@ onclick="toggleCreateLoan()">+ Loan</button>
 loadLoans();
 }
 
-/* ================= CREATE LOAN ================= */
+/* ================= CREATE LOAN FORM ================= */
 
 window.toggleCreateLoan=()=>{
 if(createLoanSection.innerHTML){
@@ -191,11 +209,9 @@ return;
 
 createLoanSection.innerHTML=`
 <div class="card">
-<h4>Create Loan</h4>
-
-<input id="principal" placeholder="Principal" type="number">
-<input id="interest" placeholder="Interest %" type="number">
-<input id="count" placeholder="Installments Count" type="number">
+<input id="principal" type="number" placeholder="Principal">
+<input id="interest" type="number" placeholder="Interest %">
+<input id="count" type="number" placeholder="Installments Count">
 
 <select id="interval">
 <option value="">Select Interval</option>
@@ -206,21 +222,24 @@ createLoanSection.innerHTML=`
 
 <input type="date" id="startDate">
 
-<button class="view-btn"
-onclick="createLoan()">Create Loan</button>
+<button class="view-btn" onclick="createLoan()">
+Create Loan
+</button>
 </div>`;
 };
 
+/* ================= CREATE LOAN ================= */
+
 window.createLoan=async()=>{
 
-const principal=parseFloat(principal.value);
-const interest=parseFloat(interest.value)||0;
-const count=parseInt(count.value);
-const interval=parseInt(interval.value);
-const startValue=startDate.value;
+const principalValue=parseFloat(document.getElementById("principal").value);
+const interestValue=parseFloat(document.getElementById("interest").value)||0;
+const countValue=parseInt(document.getElementById("count").value);
+const intervalValue=parseInt(document.getElementById("interval").value);
+const startValue=document.getElementById("startDate").value;
 
-if(!principal||!count||!interval||!startValue){
-alert("All fields mandatory");
+if(!principalValue||!countValue||!intervalValue||!startValue){
+alert("All fields required");
 return;
 }
 
@@ -228,28 +247,36 @@ if(!confirm("Are you sure you want to create this loan?"))
 return;
 
 const startTime=new Date(startValue).getTime();
-const installment=principal/count;
+const installment=principalValue/countValue;
 
 const loanRef=await addDoc(collection(db,"loans"),{
-borrowerId,agentId:currentUserId,ownerId,
-principal,interestPercent:interest,
-interestAmount:(principal*interest)/100,
-count,interval,startDate:startTime,
-status:"active",createdAt:Date.now()
+borrowerId,
+agentId:currentUserId,
+ownerId,
+principal:principalValue,
+interestPercent:interestValue,
+interestAmount:(principalValue*interestValue)/100,
+count:countValue,
+interval:intervalValue,
+startDate:startTime,
+status:"active",
+createdAt:Date.now()
 });
 
-for(let i=0;i<count;i++){
+for(let i=0;i<countValue;i++){
 await addDoc(collection(db,"installments"),{
 loanId:loanRef.id,
-borrowerId,agentId:currentUserId,ownerId,
-number:i+1,interval,
+borrowerId,
+agentId:currentUserId,
+ownerId,
+number:i+1,
+interval:intervalValue,
 amount:installment,
-dueDate:startTime+((i+1)*interval*86400000),
+dueDate:startTime+((i+1)*intervalValue*86400000),
 status:"pending"
 });
 }
 
-alert("Loan Created");
 createLoanSection.innerHTML="";
 loadLoans();
 };
@@ -268,11 +295,17 @@ let loans=[];
 loanSnap.forEach(d=>loans.push({id:d.id,...d.data()}));
 
 loanContainer.innerHTML="";
-
 if(!loans.length){
 loanContainer.innerHTML="<div class='card'>No loans</div>";
 return;
 }
+
+/* 🔥 ACTIVE FIRST */
+loans.sort((a,b)=>{
+if(a.status==="active" && b.status==="completed") return -1;
+if(a.status==="completed" && b.status==="active") return 1;
+return b.createdAt-a.createdAt;
+});
 
 for(const loan of loans){
 
@@ -287,17 +320,14 @@ colSnap.forEach(d=>paid+=d.data().amount||0);
 let outstanding=loan.principal-paid;
 let progress=(paid/loan.principal)*100;
 if(progress>100)progress=100;
-
 let completed=outstanding<=0;
 
 loanContainer.innerHTML+=`
 <div class="loan-card ${completed?'completed':''}">
 ${completed?'<div class="badge">Completed</div>':''}
-
 <b>₹${loan.principal}</b><br>
 Started: ${new Date(loan.startDate).toLocaleDateString()}<br>
-Paid: ₹${paid}<br>
-Outstanding: ₹${outstanding}
+Paid: ₹${paid} | Outstanding: ₹${outstanding}
 
 <div class="progress">
 <div class="progress-bar" style="width:${progress}%"></div>
@@ -313,61 +343,10 @@ View Installments
 }
 }
 
-/* ================= INSTALLMENTS ================= */
-
-window.toggleInstallments=async(loanId)=>{
-
-const box=document.getElementById("inst-"+loanId);
-box.innerHTML="";
-
-const snap=await getDocs(query(
-collection(db,"installments"),
-where("loanId","==",loanId)
-));
-
-let list=[];
-snap.forEach(d=>list.push({id:d.id,...d.data()}));
-list.sort((a,b)=>a.number-b.number);
-
-const today=new Date();
-today.setHours(0,0,0,0);
-
-list.forEach(i=>{
-
-let due=new Date(i.dueDate);
-due.setHours(0,0,0,0);
-
-let type="pending";
-if(i.status==="completed")type="paid";
-else if(due<today)type="overdue";
-else if(due.getTime()===today.getTime())type="due";
-
-let label="";
-if(i.interval==7)label=`Week ${i.number}`;
-if(i.interval==15)label=`Half-Month ${i.number}`;
-if(i.interval==30)label=`Month ${i.number}`;
-
-box.innerHTML+=`
-<div class="inst-card ${type}">
-<div>
-<div>${label}</div>
-<div class="inst-amount">₹${i.amount}</div>
-<div>${new Date(i.dueDate).toLocaleDateString()}</div>
-</div>
-${type!=="paid"?
-`<button class="pay-btn"
-onclick="pay('${i.id}','${i.loanId}',${i.amount})">
-Mark Paid
-</button>`:""}
-</div>`;
-});
-};
-
 /* ================= PAY ================= */
 
 window.pay=async(id,loanId,amt)=>{
-
-if(!confirm("Mark this installment as paid?"))return;
+if(!confirm("Mark installment as paid?"))return;
 
 await updateDoc(doc(db,"installments",id),
 {status:"completed"});
@@ -385,6 +364,5 @@ loadLoans();
 };
 
 </script>
-
 </body>
 </html>
