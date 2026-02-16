@@ -228,17 +228,20 @@ function renderLoans(loans){
 
   loans.forEach(loan=>{
 
-    loanContainer.innerHTML+=`
-      <div class="card">
-        <b>₹${loan.principal}</b>
-        <small> | ${loan.status}</small>
-        <br>
-        <button class="btn btn-primary"
-          onclick="toggleInstallments('${loan.id}')">
-          View Installments
-        </button>
-        <div id="inst-${loan.id}" class="hidden"></div>
-      </div>`;
+loanContainer.innerHTML += `
+  <div class="card">
+    <b>₹${loan.principal}</b>
+    <br><br>
+    <button class="btn btn-primary"
+      onclick="toggleInstallments('${loan.id}')">
+      View Installments
+    </button>
+
+    <div id="inst-${loan.id}" 
+         style="display:none;margin-top:10px;">
+    </div>
+  </div>
+`;
   });
 }
 
