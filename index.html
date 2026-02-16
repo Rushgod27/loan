@@ -45,81 +45,119 @@
 import { auth, db } from "./js/firebase.js";
 
 import {
-  signInWithEmailAndPassword,
-  sendPasswordResetEmail,
-  onAuthStateChanged
+  sendSignInLinkToEmail,
+  isSignInWithEmailLink,
+  signInWithEmailLink
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 import {
+  collection,
+  query,
+  where,
+  getDocs,
   doc,
   getDoc
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-/* LOGIN */
+/* ================= SEND LOGIN LINK ================= */
 
-window.loginUser = async ()=>{
+window.sendLink = async () => {
 
-  const email = loginEmail.value.trim();
-  const password = loginPassword.value.trim();
-
-  if(!email || !password){
-    alert("Enter email and password");
-    return;
-  }
-
-  try{
-    await signInWithEmailAndPassword(auth,email,password);
-  }catch(err){
-    alert(err.message);
-  }
-};
-
-/* RESET PASSWORD */
-
-window.resetPassword = async ()=>{
-
-  const email = loginEmail.value.trim();
+  const email = document.getElementById("email").value.trim().toLowerCase();
 
   if(!email){
-    alert("Enter your email first");
+    alert("Enter email");
     return;
   }
 
   try{
-    await sendPasswordResetEmail(auth,email);
-    alert("Password reset email sent.");
+
+    /* 🔎 CHECK IF EMAIL REGISTERED IN USERS COLLECTION */
+
+    const q = query(
+      collection(db,"users"),
+      where("email","==",email)
+    );
+
+    const snap = await getDocs(q);
+
+    if(snap.empty){
+      alert("Email not registered with the app.");
+      return;
+    }
+
+    /* ✅ If exists → send login link */
+
+    const actionCodeSettings = {
+      url: window.location.href,
+      handleCodeInApp: true
+    };
+
+    await sendSignInLinkToEmail(
+      auth,
+      email,
+      actionCodeSettings
+    );
+
+    localStorage.setItem("emailForSignIn", email);
+
+    alert("Login link sent! Check your email.");
+
   }catch(err){
     alert(err.message);
   }
 };
 
-/* ROLE REDIRECT */
+/* ================= HANDLE EMAIL LINK LOGIN ================= */
 
-onAuthStateChanged(auth, async(user)=>{
+if(isSignInWithEmailLink(auth, window.location.href)){
 
-  if(!user) return;
+  let email = localStorage.getItem("emailForSignIn");
 
-  const snap = await getDoc(
-    doc(db,"users",user.uid)
-  );
-
-  if(!snap.exists()){
-    alert("User role not assigned.");
-    return;
+  if(!email){
+    email = prompt("Confirm your email");
   }
 
-  const role = snap.data().role;
+  try{
 
-  if(role==="boss")
-    location.href="boss-dashboard.html";
-  else if(role==="owner")
-    location.href="owner-dashboard.html";
-  else if(role==="agent")
-    location.href="agent-dashboard.html";
-  else
-    alert("Invalid role");
+    const result = await signInWithEmailLink(
+      auth,
+      email,
+      window.location.href
+    );
 
-});
+    localStorage.removeItem("emailForSignIn");
+
+    /* ===== ROLE BASED REDIRECT ===== */
+
+    const snap = await getDoc(
+      doc(db,"users",result.user.uid)
+    );
+
+    if(!snap.exists()){
+      alert("User role not assigned.");
+      return;
+    }
+
+    const role = (snap.data().role || "").toLowerCase();
+
+    if(role === "boss"){
+      location.href="boss-dashboard.html";
+    }
+    else if(role === "owner"){
+      location.href="owner-dashboard.html";
+    }
+    else if(role === "agent"){
+      location.href="agent-dashboard.html";
+    }
+    else{
+      alert("Invalid role found");
+    }
+
+  }catch(err){
+    alert("Login error: " + err.message);
+  }
+}
 
 </script>
 
