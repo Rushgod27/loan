@@ -4,19 +4,26 @@
 <meta charset="UTF-8">
 <title>Agent Dashboard</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="stylesheet" href="css/styles.css?v=13">
+<link rel="stylesheet" href="css/styles.css?v=15">
 
 <style>
 
-/* Safe Logout Button */
+/* Safe Bottom Logout */
+
+.logout-wrapper{
+  padding:16px;
+}
+
 .logout-btn{
-  background:transparent;
+  width:100%;
+  padding:14px;
+  border-radius:10px;
   border:1px solid #ef4444;
+  background:#fff;
   color:#ef4444;
-  padding:6px 14px;
-  border-radius:8px;
-  cursor:pointer;
   font-weight:600;
+  font-size:15px;
+  cursor:pointer;
 }
 
 .logout-btn:hover{
@@ -33,19 +40,21 @@
 <div class="nav">
   <div class="active">Dashboard</div>
   <div onclick="goBorrowers()">Borrowers</div>
-  <button class="logout-btn" onclick="confirmLogout()">Logout</button>
 </div>
 
 <div class="container" id="content"></div>
 
+<div class="logout-wrapper">
+  <button class="logout-btn" onclick="confirmLogout()">
+    Logout
+  </button>
+</div>
+
 <script type="module">
 
 import { auth, db } from "./js/firebase.js";
-
-import {
-  signOut,
-  onAuthStateChanged
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { signOut, onAuthStateChanged } 
+from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 import {
   collection,
@@ -60,36 +69,36 @@ import {
 
 let uid = null;
 
-/* ================= SAFE LOGOUT ================= */
+/* NAVIGATION */
+
+window.goBorrowers = () => {
+  location.href="borrowers.html";
+};
+
+/* SAFE LOGOUT */
 
 window.confirmLogout = () => {
 
-  const confirmBox = confirm(
+  const ok = confirm(
     "Are you sure you want to logout?\n\nYou will need to login again."
   );
 
-  if(!confirmBox) return;
+  if(!ok) return;
 
-  performLogout();
+  logoutUser();
 };
 
-async function performLogout(){
+async function logoutUser(){
   await signOut(auth);
   location.href="index.html";
 }
 
-/* ================= NAVIGATION ================= */
-
-window.goBorrowers = () => {
-  location.href = "borrowers.html";
-};
-
-/* ================= AUTH ================= */
+/* AUTH CHECK */
 
 onAuthStateChanged(auth, async user => {
 
-  if (!user) {
-    location.href = "index.html";
+  if(!user){
+    location.href="index.html";
     return;
   }
 
@@ -105,11 +114,12 @@ onAuthStateChanged(auth, async user => {
   loadDashboard();
 });
 
-/* ================= MARK PAID ================= */
+/* MARK PAID */
 
 window.markPaid = async (instId, loanId, borrowerId, amount) => {
 
-  if(!confirm("Mark this installment as paid?")) return;
+  const ok = confirm("Mark this installment as paid?");
+  if(!ok) return;
 
   await updateDoc(doc(db,"installments",instId),{
     status:"completed"
@@ -124,10 +134,11 @@ window.markPaid = async (instId, loanId, borrowerId, amount) => {
     date:Date.now()
   });
 
+  alert("Payment recorded successfully");
   loadDashboard();
 };
 
-/* ================= DASHBOARD ================= */
+/* DASHBOARD */
 
 async function loadDashboard(){
 
@@ -288,7 +299,7 @@ async function loadDashboard(){
 
   content.innerHTML = `
     <div class="card">
-      <h3>📊 Overview</h3>
+      <h3>🔅Overview</h3>
       <div class="card-row"><div>Total Borrowers</div><b>${totalBorrowers}</b></div>
       <div class="card-row"><div>Active Borrowers</div><b>${activeBorrowers}</b></div>
       <div class="card-row"><div>Active Loans</div><b>${activeLoans}</b></div>
@@ -298,7 +309,7 @@ async function loadDashboard(){
     </div>
 
     <div class="card">
-      <h3>📅 Due Today</h3>
+      <h3>🟠 Due Today</h3>
       ${dueTodayHTML || "No dues today"}
     </div>
 
