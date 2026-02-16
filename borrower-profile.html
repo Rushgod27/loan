@@ -28,9 +28,8 @@
 <script type="module">
 
 import { auth, db } from "./js/firebase.js";
-import {
-  onAuthStateChanged
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { onAuthStateChanged } 
+from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 import {
   doc,
@@ -43,7 +42,7 @@ import {
   updateDoc
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-/* GET BORROWER ID FROM URL */
+/* GET BORROWER ID */
 const params = new URLSearchParams(window.location.search);
 const borrowerId = params.get("id");
 
@@ -58,27 +57,49 @@ let currentUserId=null;
 let borrowerData=null;
 let ownerId=null;
 
-/* AUTH */
-onAuthStateChanged(auth,user=>{
+/* ================= AUTH + ROLE CHECK ================= */
+
+onAuthStateChanged(auth, async user => {
+
   if(!user){
     location.href="index.html";
     return;
   }
-  currentUserId=user.uid;
+
+  currentUserId = user.uid;
+
+  // Verify agent role
+  const userSnap = await getDoc(doc(db,"users", user.uid));
+
+  if(!userSnap.exists() || userSnap.data().role !== "agent"){
+    location.href="index.html";
+    return;
+  }
+
   loadProfile();
 });
 
-/* LOAD PROFILE */
+/* ================= LOAD PROFILE ================= */
+
 async function loadProfile(){
 
   const snap = await getDoc(doc(db,"borrowers",borrowerId));
+
   if(!snap.exists()){
     alert("Borrower not found");
     return;
   }
 
   borrowerData = snap.data();
-  ownerId = borrowerData.ownerId || null;
+
+  // 🔥 SECURITY CHECK
+  if(borrowerData.agentId !== currentUserId){
+    alert("Unauthorized access.");
+    location.href="borrowers.html";
+    return;
+  }
+
+  ownerId = borrowerData.ownerId;
 
   const b = borrowerData;
 
@@ -87,46 +108,25 @@ async function loadProfile(){
       <div>
         <h3 style="margin:0">${b.name}</h3>
         <a href="tel:${b.phone}"
-        style="color:#2563eb;text-decoration:none;">
-        📞 ${b.phone}</a><br>
+          style="color:#2563eb;text-decoration:none;">
+          📞 ${b.phone}
+        </a><br>
         <a target="_blank"
-        href="https://wa.me/91${b.phone}">
-        💬 WhatsApp</a>
+          href="https://wa.me/91${b.phone}">
+          💬 WhatsApp
+        </a>
       </div>
 
       <button class="btn btn-primary"
-      onclick="toggleCreateLoan()">+ Loan</button>
+        onclick="toggleCreateLoan()">+ Loan</button>
     </div>
   `;
 
   loadLoans();
 }
 
-/* TOGGLE CREATE LOAN */
-window.toggleCreateLoan = ()=>{
-  if(createLoanSection.innerHTML){
-    createLoanSection.innerHTML="";
-    return;
-  }
+/* ================= CREATE LOAN ================= */
 
-  createLoanSection.innerHTML=`
-    <div class="card">
-      <input id="principal" placeholder="Principal">
-      <input id="interest" placeholder="Interest %">
-      <input id="count" placeholder="Installments Count">
-      <select id="interval">
-        <option value="7">7 Days</option>
-        <option value="15">15 Days</option>
-        <option value="30">30 Days</option>
-      </select>
-      <input type="date" id="startDate">
-      <button class="btn btn-success"
-      onclick="createLoan()">Create</button>
-    </div>
-  `;
-};
-
-/* CREATE LOAN */
 window.createLoan = async () => {
 
   const principalValue =
@@ -152,28 +152,22 @@ window.createLoan = async () => {
 
   const startTime = new Date(startValue).getTime();
   const installment = principalValue / countValue;
-  const interestAmount = (principalValue * interestValue) / 100;
-
-  /* ===== CREATE LOAN WITH OWNERID ===== */
+  const interestAmount =
+    (principalValue * interestValue) / 100;
 
   const loanRef = await addDoc(collection(db,"loans"),{
     borrowerId,
     agentId: currentUserId,
     ownerId: ownerId,
-
     principal: principalValue,
     interestPercent: interestValue,
     interestAmount,
-
     count: countValue,
     interval: intervalValue,
     startDate: startTime,
-
     status: "active",
     createdAt: Date.now()
   });
-
-  /* ===== CREATE INSTALLMENTS WITH OWNERID ===== */
 
   for(let i=0;i<countValue;i++){
     await addDoc(collection(db,"installments"),{
@@ -181,7 +175,6 @@ window.createLoan = async () => {
       borrowerId,
       agentId: currentUserId,
       ownerId: ownerId,
-
       number: i+1,
       amount: installment,
       dueDate: startTime + ((i+1)*intervalValue*86400000),
@@ -195,12 +188,14 @@ window.createLoan = async () => {
   loadLoans();
 };
 
-/* LOAD LOANS */
+/* ================= LOAD LOANS ================= */
+
 async function loadLoans(){
 
   const snap = await getDocs(query(
     collection(db,"loans"),
-    where("borrowerId","==",borrowerId)
+    where("borrowerId","==",borrowerId),
+    where("agentId","==",currentUserId)
   ));
 
   const loans=[];
@@ -211,7 +206,8 @@ async function loadLoans(){
   renderLoans(loans);
 }
 
-/* PAY */
+/* ================= PAY INSTALLMENT ================= */
+
 window.pay = async(id,loanId,amt)=>{
 
   if(!confirm("Mark this EMI as Paid?")) return;
@@ -221,17 +217,14 @@ window.pay = async(id,loanId,amt)=>{
     {status:"completed"}
   );
 
-  /* ===== CREATE COLLECTION WITH OWNERID ===== */
-
   await addDoc(collection(db,"collections"),{
-    loanId:loanId,
-    borrowerId:borrowerId,
-    agentId:currentUserId,
-    ownerId:ownerId,
-
-    amount:amt,
-    type:"installment",
-    date:Date.now()
+    loanId,
+    borrowerId,
+    agentId: currentUserId,
+    ownerId: ownerId,
+    amount: amt,
+    type: "installment",
+    date: Date.now()
   });
 
   const snap = await getDocs(query(
@@ -252,7 +245,6 @@ window.pay = async(id,loanId,amt)=>{
     );
   }
 
-  toggleInstallments(loanId);
   loadLoans();
 };
 
