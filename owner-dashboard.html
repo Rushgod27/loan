@@ -83,11 +83,15 @@ button{padding:8px 14px;border:none;border-radius:6px;color:white;cursor:pointer
 
 import { auth, db } from "./js/firebase.js";
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { collection, query, where, getDocs, onSnapshot, updateDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { 
+  collection, query, where, getDocs, onSnapshot,
+  updateDoc, deleteDoc, doc,
+  serverTimestamp, deleteField 
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-let ownerId=null;
-let borrowersData=[];
-let agentsMap={};
+let ownerId = null;
+let borrowersData = [];
+let agentsMap = {};
 let chart;
 
 /* ================= AUTH CHECK ================= */
@@ -99,24 +103,24 @@ onAuthStateChanged(auth, async(user)=>{
     return;
   }
 
-  const snap=await getDocs(
-    query(collection(db,"users"),where("email","==",user.email))
+  const snap = await getDocs(
+    query(collection(db,"users"), where("email","==",user.email))
   );
 
-  if(snap.empty || snap.docs[0].data().role!=="owner"){
+  if(snap.empty || snap.docs[0].data().role !== "owner"){
     await signOut(auth);
     location.href="index.html";
     return;
   }
 
-  ownerId=user.uid;
+  ownerId = user.uid;
 
   listenAgentRequests();
   loadAgents();
   listenBorrowers();
 });
 
-window.logoutUser=async()=>{
+window.logoutUser = async()=>{
   await signOut(auth);
   location.href="index.html";
 };
@@ -125,7 +129,7 @@ window.logoutUser=async()=>{
 
 function listenAgentRequests(){
 
-  const q=query(
+  const q = query(
     collection(db,"users"),
     where("role","==","pending"),
     where("requestedRole","==","agent")
@@ -133,7 +137,7 @@ function listenAgentRequests(){
 
   onSnapshot(q,(snapshot)=>{
 
-    const container=document.getElementById("agentRequests");
+    const container = document.getElementById("agentRequests");
     container.innerHTML="";
 
     if(snapshot.empty){
@@ -142,7 +146,7 @@ function listenAgentRequests(){
     }
 
     snapshot.forEach(docSnap=>{
-      const data=docSnap.data();
+      const data = docSnap.data();
 
       container.innerHTML+=`
         <div class="card-row">
@@ -157,48 +161,50 @@ function listenAgentRequests(){
           </button>
         </div>`;
     });
+
   });
 }
 
-window.approveAgent=async(id)=>{
+window.approveAgent = async(id)=>{
 
   await updateDoc(doc(db,"users",id),{
-    role:"agent",
-    approvedBy:ownerId
+    role: "agent",
+    approvedBy: ownerId,
+    approvedAt: serverTimestamp(),
+    requestedRole: deleteField()
   });
 
-  alert("Agent Approved");
+  await loadAgents();   // refresh dropdown immediately
 };
 
-window.rejectAgent=async(id)=>{
+window.rejectAgent = async(id)=>{
 
-  const confirmReject=confirm("Reject this agent request?");
-  if(!confirmReject)return;
+  if(!confirm("Reject this agent request?")) return;
 
   await deleteDoc(doc(db,"users",id));
-
-  alert("Agent Rejected");
 };
 
-/* ================= LOAD AGENTS ================= */
+/* ================= LOAD APPROVED AGENTS ================= */
 
 async function loadAgents(){
 
-  const snap=await getDocs(query(
+  const snap = await getDocs(query(
     collection(db,"users"),
     where("role","==","agent"),
     where("approvedBy","==",ownerId)
   ));
 
-  const select=document.getElementById("agentFilter");
+  const select = document.getElementById("agentFilter");
   select.innerHTML=`<option value="all">All Agents</option>`;
-  agentsMap={};
+
+  agentsMap = {};
 
   snap.forEach(docSnap=>{
     agentsMap[docSnap.id]=docSnap.data().name;
-    select.innerHTML+=`<option value="${docSnap.id}">
-      ${docSnap.data().name}
-    </option>`;
+    select.innerHTML+=`
+      <option value="${docSnap.id}">
+        ${docSnap.data().name}
+      </option>`;
   });
 }
 
@@ -224,7 +230,7 @@ window.applyFilter=()=>{
   processData();
 };
 
-/* ================= PROCESS DATA ================= */
+/* ================= ANALYTICS PROCESS ================= */
 
 function processData(){
 
@@ -235,8 +241,8 @@ function processData(){
   const startDate=start?new Date(start):null;
   const endDate=end?new Date(end):null;
 
-  if(startDate)startDate.setHours(0,0,0,0);
-  if(endDate)endDate.setHours(23,59,59,999);
+  if(startDate) startDate.setHours(0,0,0,0);
+  if(endDate) endDate.setHours(23,59,59,999);
 
   let filtered=borrowersData.filter(b=>{
 
@@ -245,8 +251,8 @@ function processData(){
 
     if(b.createdAt?.seconds){
       const created=new Date(b.createdAt.seconds*1000);
-      if(startDate && created<startDate)return false;
-      if(endDate && created>endDate)return false;
+      if(startDate && created<startDate) return false;
+      if(endDate && created>endDate) return false;
     }
 
     return true;
@@ -283,7 +289,6 @@ function processData(){
       due.setHours(0,0,0,0);
 
       const balance=loan-paid;
-
       if(balance<=0)return;
 
       if(due.getTime()===today.getTime()){
@@ -323,7 +328,10 @@ function processData(){
 
   chart=new Chart(document.getElementById("agentChart"),{
     type:"bar",
-    data:{labels:labels,datasets:[{label:"Collection",data:data}]},
+    data:{
+      labels:labels,
+      datasets:[{label:"Collection",data:data}]
+    },
     options:{responsive:true,plugins:{legend:{display:false}}}
   });
 }
