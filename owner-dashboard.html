@@ -24,20 +24,17 @@ button{padding:8px 14px;border:none;border-radius:6px;color:white;cursor:pointer
 .logout{width:100%;margin-top:10px;background:#111827}
 </style>
 </head>
-
 <body>
 
 <div class="header">Owner Dashboard</div>
 
 <div class="container">
 
-<!-- AGENT REQUESTS -->
 <div class="card">
   <h3>Agent Requests</h3>
   <div id="agentRequests"></div>
 </div>
 
-<!-- FILTER -->
 <div class="card">
   <h3>Filters</h3>
   <div class="grid">
@@ -48,7 +45,6 @@ button{padding:8px 14px;border:none;border-radius:6px;color:white;cursor:pointer
   </div>
 </div>
 
-<!-- OVERVIEW -->
 <div class="card">
   <h3>Overview</h3>
   <div>Total Loan: ₹ <span class="stat" id="totalLoan">0</span></div>
@@ -57,19 +53,16 @@ button{padding:8px 14px;border:none;border-radius:6px;color:white;cursor:pointer
   <div>Top Agent: <span class="stat" id="topAgent">-</span></div>
 </div>
 
-<!-- CHART -->
 <div class="card">
   <h3>Agent Performance</h3>
   <canvas id="agentChart"></canvas>
 </div>
 
-<!-- DUE TODAY -->
 <div class="card">
   <h3>Due Today</h3>
   <div id="dueToday"></div>
 </div>
 
-<!-- OVERDUE -->
 <div class="card">
   <h3>Overdue</h3>
   <div id="overdue"></div>
@@ -82,21 +75,13 @@ button{padding:8px 14px;border:none;border-radius:6px;color:white;cursor:pointer
 <script type="module">
 
 import { auth, db } from "./js/firebase.js";
-import { onAuthStateChanged, signOut } 
-from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { onAuthStateChanged, signOut } from 
+"https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 import {
-  collection,
-  query,
-  where,
-  getDocs,
-  onSnapshot,
-  updateDoc,
-  deleteDoc,
-  doc,
-  getDoc,
-  serverTimestamp,
-  deleteField
+  collection, query, where, getDocs,
+  onSnapshot, updateDoc, deleteDoc,
+  doc, getDoc, serverTimestamp, deleteField
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 let ownerId=null;
@@ -108,10 +93,9 @@ let chart;
 onAuthStateChanged(auth, async(user)=>{
   if(!user){ location.href="index.html"; return; }
 
-  const userRef = doc(db,"users", user.uid);
-  const userSnap = await getDoc(userRef);
+  const snap = await getDoc(doc(db,"users",user.uid));
 
-  if(!userSnap.exists() || userSnap.data().role !== "owner"){
+  if(!snap.exists() || snap.data().role!=="owner"){
     await signOut(auth);
     location.href="index.html";
     return;
@@ -121,7 +105,7 @@ onAuthStateChanged(auth, async(user)=>{
 
   listenAgentRequests();
   await loadAgents();
-  processData(); // 🔥 LOAD ANALYTICS
+  setupRealtimeAnalytics();
 });
 
 window.logoutUser = async()=>{
@@ -136,20 +120,20 @@ function listenAgentRequests(){
   const q = query(
     collection(db,"users"),
     where("role","==","pending"),
-    where("requestedRole","==","agent")
+    where("requestedRole","==","agent"),
+    where("requestedTo","==",ownerId)
   );
 
-  onSnapshot(q,(snapshot)=>{
-
+  onSnapshot(q,(snap)=>{
     const box=document.getElementById("agentRequests");
     box.innerHTML="";
 
-    if(snapshot.empty){
+    if(snap.empty){
       box.innerHTML="<p>No agent requests</p>";
       return;
     }
 
-    snapshot.forEach(d=>{
+    snap.forEach(d=>{
       const data=d.data();
 
       box.innerHTML+=`
@@ -161,13 +145,13 @@ function listenAgentRequests(){
           onclick="approveAgent('${d.id}')">
           Approve
         </button>
+
         <button class="reject"
           onclick="rejectAgent('${d.id}')">
           Reject
         </button>
       </div>`;
     });
-
   });
 }
 
@@ -176,7 +160,8 @@ window.approveAgent = async(id)=>{
     role:"agent",
     approvedBy:ownerId,
     approvedAt:serverTimestamp(),
-    requestedRole:deleteField()
+    requestedRole:deleteField(),
+    requestedTo:deleteField()
   });
 };
 
@@ -208,87 +193,105 @@ async function loadAgents(){
   });
 }
 
-/* ================= ANALYTICS ================= */
+/* ================= REALTIME ANALYTICS ================= */
+
+function setupRealtimeAnalytics(){
+
+  onSnapshot(
+    query(collection(db,"loans"),
+    where("ownerId","==",ownerId)),
+    ()=> processData()
+  );
+
+  onSnapshot(
+    query(collection(db,"collections"),
+    where("ownerId","==",ownerId)),
+    ()=> processData()
+  );
+
+  onSnapshot(
+    query(collection(db,"installments"),
+    where("ownerId","==",ownerId)),
+    ()=> processData()
+  );
+}
+
+window.applyFilter=()=>processData();
+
+/* ================= PROCESS ================= */
 
 async function processData(){
 
-  /* ----------- TOTAL LOANS ----------- */
+  const start=document.getElementById("startDate").value;
+  const end=document.getElementById("endDate").value;
+  const agentFilter=document.getElementById("agentFilter").value||"all";
+
+  const startTime=start?new Date(start).getTime():null;
+  const endTime=end?new Date(end).setHours(23,59,59,999):null;
 
   const loanSnap = await getDocs(query(
     collection(db,"loans"),
     where("ownerId","==",ownerId)
   ));
 
-  let totalLoan = 0;
-
+  let totalLoan=0;
   loanSnap.forEach(d=>{
-    totalLoan += d.data().principal || 0;
+    const data=d.data();
+    if(agentFilter!=="all" && data.agentId!==agentFilter) return;
+    if(startTime && data.createdAt<startTime) return;
+    if(endTime && data.createdAt>endTime) return;
+    totalLoan+=data.principal||0;
   });
-
-  /* ----------- COLLECTION ----------- */
 
   const colSnap = await getDocs(query(
     collection(db,"collections"),
     where("ownerId","==",ownerId)
   ));
 
-  let totalCollection = 0;
-  let agentPerformance = {};
+  let totalCollection=0;
+  let agentPerf={};
 
   colSnap.forEach(d=>{
     const data=d.data();
-    totalCollection += data.amount || 0;
+    if(agentFilter!=="all" && data.agentId!==agentFilter) return;
+    if(startTime && data.date<startTime) return;
+    if(endTime && data.date>endTime) return;
 
-    if(!agentPerformance[data.agentId])
-      agentPerformance[data.agentId]=0;
+    totalCollection+=data.amount||0;
 
-    agentPerformance[data.agentId]+=data.amount;
+    if(!agentPerf[data.agentId])
+      agentPerf[data.agentId]=0;
+
+    agentPerf[data.agentId]+=data.amount;
   });
 
-  let outstanding = totalLoan - totalCollection;
+  const outstanding=totalLoan-totalCollection;
 
   document.getElementById("totalLoan").innerText=totalLoan;
   document.getElementById("totalCollection").innerText=totalCollection;
   document.getElementById("outstanding").innerText=outstanding;
 
-  /* ----------- TOP AGENT ----------- */
-
   let top="-",max=0;
-
-  Object.keys(agentPerformance).forEach(a=>{
-    if(agentPerformance[a]>max){
-      max=agentPerformance[a];
+  Object.keys(agentPerf).forEach(a=>{
+    if(agentPerf[a]>max){
+      max=agentPerf[a];
       top=agentsMap[a]||"-";
     }
   });
 
   document.getElementById("topAgent").innerText=top;
 
-  /* ----------- CHART ----------- */
-
-  const labels=Object.keys(agentPerformance)
-    .map(a=>agentsMap[a]||"Agent");
-
-  const data=Object.values(agentPerformance);
-
   if(chart) chart.destroy();
-
-  chart=new Chart(
-    document.getElementById("agentChart"),{
-      type:"bar",
-      data:{
-        labels:labels,
-        datasets:[
-          {
-            label:"Collection",
-            data:data
-          }
-        ]
-      }
+  chart=new Chart(document.getElementById("agentChart"),{
+    type:"bar",
+    data:{
+      labels:Object.keys(agentPerf)
+        .map(a=>agentsMap[a]||"Agent"),
+      datasets:[{label:"Collection",data:Object.values(agentPerf)}]
     }
-  );
+  });
 
-  /* ----------- DUE + OVERDUE ----------- */
+  /* ===== DUE + OVERDUE ===== */
 
   const instSnap = await getDocs(query(
     collection(db,"installments"),
@@ -299,39 +302,34 @@ async function processData(){
   const today=new Date();
   today.setHours(0,0,0,0);
 
-  const dueDiv=document.getElementById("dueToday");
-  const overdueDiv=document.getElementById("overdue");
-  dueDiv.innerHTML="";
-  overdueDiv.innerHTML="";
+  dueToday.innerHTML="";
+  overdue.innerHTML="";
 
   instSnap.forEach(d=>{
     const data=d.data();
     const dueDate=new Date(data.dueDate);
-    const balance=data.amount;
+    dueDate.setHours(0,0,0,0);
 
-    if(dueDate.toDateString()===today.toDateString()){
-      dueDiv.innerHTML+=
+    if(agentFilter!=="all" && data.agentId!==agentFilter)
+      return;
+
+    if(dueDate.getTime()===today.getTime()){
+      dueToday.innerHTML+=
         `<div class="success-box">
-           ₹${balance}
-         </div>`;
+          ₹${data.amount}
+        </div>`;
     }
 
     if(dueDate<today){
-      overdueDiv.innerHTML+=
+      overdue.innerHTML+=
         `<div class="alert-box">
-           ₹${balance}
-         </div>`;
+          ₹${data.amount}
+        </div>`;
     }
-
   });
 
 }
 
-window.applyFilter = ()=>{
-  processData();
-};
-
 </script>
-
 </body>
 </html>
