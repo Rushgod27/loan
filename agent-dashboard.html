@@ -33,7 +33,9 @@ import {
   collection,
   query,
   where,
-  getDocs
+  getDocs,
+  doc,
+  getDoc
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 let uid = null;
@@ -49,13 +51,24 @@ window.logoutUser = async () => {
   location.href = "index.html";
 };
 
-/* ================= AUTH ================= */
+/* ================= AUTH + ROLE CHECK ================= */
 
-onAuthStateChanged(auth, user => {
+onAuthStateChanged(auth, async user => {
+
   if (!user) {
     location.href = "index.html";
     return;
   }
+
+  const userRef = doc(db,"users", user.uid);
+  const userSnap = await getDoc(userRef);
+
+  if(!userSnap.exists() || userSnap.data().role !== "agent"){
+    await signOut(auth);
+    location.href = "index.html";
+    return;
+  }
+
   uid = user.uid;
   loadDashboard();
 });
@@ -134,8 +147,7 @@ async function loadDashboard(){
     const waLink =
       `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
 
-    /* ===== Due Today ===== */
-
+    /* Due Today */
     if(dueDate>=today && dueDate<tomorrow){
 
       dueCount++;
@@ -156,20 +168,15 @@ async function loadDashboard(){
           </div>
           <div class="card-actions">
             <button class="btn btn-success"
-              onclick="window.location.href='tel:${phone}'">
-              📞
-            </button>
+              onclick="window.location.href='tel:${phone}'">📞</button>
             <button class="btn btn-warning"
-              onclick="window.open('${waLink}','_blank')">
-              💬
-            </button>
+              onclick="window.open('${waLink}','_blank')">💬</button>
           </div>
         </div>
       </div>`;
     }
 
-    /* ===== Overdue ===== */
-
+    /* Overdue */
     if(dueDate < today){
 
       overdueCount++;
@@ -193,13 +200,9 @@ async function loadDashboard(){
           </div>
           <div class="card-actions">
             <button class="btn btn-success"
-              onclick="window.location.href='tel:${phone}'">
-              📞
-            </button>
+              onclick="window.location.href='tel:${phone}'">📞</button>
             <button class="btn btn-danger"
-              onclick="window.open('${waLink}','_blank')">
-              💬
-            </button>
+              onclick="window.open('${waLink}','_blank')">💬</button>
           </div>
         </div>
       </div>`;
