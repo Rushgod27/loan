@@ -25,7 +25,6 @@
   <div id="loanContainer"></div>
 
 </div>
-
 <script type="module">
 
 import { auth, db } from "./js/firebase.js";
@@ -56,6 +55,8 @@ if(!borrowerId){
 window.goBack = () => location.href="borrowers.html";
 
 let currentUserId=null;
+let borrowerData=null;
+let ownerId=null;
 
 /* AUTH */
 onAuthStateChanged(auth,user=>{
@@ -76,7 +77,10 @@ async function loadProfile(){
     return;
   }
 
-  const b = snap.data();
+  borrowerData = snap.data();
+  ownerId = borrowerData.ownerId || null;
+
+  const b = borrowerData;
 
   profileCard.innerHTML=`
     <div style="display:flex;justify-content:space-between;">
@@ -150,23 +154,34 @@ window.createLoan = async () => {
   const installment = principalValue / countValue;
   const interestAmount = (principalValue * interestValue) / 100;
 
+  /* ===== CREATE LOAN WITH OWNERID ===== */
+
   const loanRef = await addDoc(collection(db,"loans"),{
     borrowerId,
     agentId: currentUserId,
+    ownerId: ownerId,
+
     principal: principalValue,
     interestPercent: interestValue,
     interestAmount,
+
     count: countValue,
     interval: intervalValue,
     startDate: startTime,
+
     status: "active",
     createdAt: Date.now()
   });
+
+  /* ===== CREATE INSTALLMENTS WITH OWNERID ===== */
 
   for(let i=0;i<countValue;i++){
     await addDoc(collection(db,"installments"),{
       loanId: loanRef.id,
       borrowerId,
+      agentId: currentUserId,
+      ownerId: ownerId,
+
       number: i+1,
       amount: installment,
       dueDate: startTime + ((i+1)*intervalValue*86400000),
@@ -196,143 +211,29 @@ async function loadLoans(){
   renderLoans(loans);
 }
 
-/* RENDER LOANS */
-function renderLoans(loans){
-
-  loanContainer.innerHTML="";
-
-  if(!loans.length){
-    loanContainer.innerHTML=
-    "<div class='card'>No loans found</div>";
-    return;
-  }
-
-  const active=loans.filter(l=>l.status==="active");
-  const completed=loans.filter(l=>l.status==="completed");
-
-  function section(title,list){
-    if(!list.length) return "";
-
-    let html=`<h4 style="margin:14px 0">${title}</h4>`;
-
-    list.forEach(loan=>{
-      html+=`
-      <div class="card">
-        <div style="display:flex;
-        justify-content:space-between;">
-          <div>
-            <b>₹${loan.principal}</b><br>
-            <small>Started:
-            ${new Date(loan.startDate)
-              .toLocaleDateString()}</small>
-          </div>
-
-          <button class="btn btn-primary"
-          onclick="toggleInstallments('${loan.id}')">
-          View
-          </button>
-        </div>
-
-        <div id="inst-${loan.id}"
-        class="inst hidden"></div>
-      </div>`;
-    });
-
-    return html;
-  }
-
-  loanContainer.innerHTML=
-    section("Active Loans",active) +
-    section("Completed Loans",completed);
-}
-
-/* TOGGLE EMI */
-window.toggleInstallments=async(loanId)=>{
-
-  document.querySelectorAll(".inst")
-  .forEach(el=>{
-    if(el.id!==`inst-${loanId}`){
-      el.classList.add("hidden");
-      el.innerHTML="";
-    }
-  });
-
-  const box=document.getElementById(
-    `inst-${loanId}`);
-
-  if(!box.classList.contains("hidden")){
-    box.classList.add("hidden");
-    box.innerHTML="";
-    return;
-  }
-
-  box.classList.remove("hidden");
-
-  const snap=await getDocs(query(
-    collection(db,"installments"),
-    where("loanId","==",loanId)
-  ));
-
-  const list=[];
-  snap.forEach(d=>{
-    list.push({id:d.id,...d.data()});
-  });
-
-  list.sort((a,b)=>a.number-b.number);
-
-  list.forEach(i=>{
-
-    let state="emi-pending";
-    if(i.status==="completed")
-      state="emi-paid";
-    else if(i.dueDate<Date.now())
-      state="emi-overdue";
-
-    box.innerHTML+=`
-      <div class="emi-row ${state}">
-        <div>
-          EMI ${i.number} |
-          ₹${i.amount} |
-          ${new Date(i.dueDate)
-           .toLocaleDateString()}
-        </div>
-
-        ${
-          i.status==="pending"
-          ? `<button class="btn btn-success"
-             onclick="pay('${i.id}',
-             '${loanId}',
-             ${i.amount})">
-             Pay</button>`
-          : "Paid"
-        }
-      </div>
-    `;
-  });
-};
-
 /* PAY */
 window.pay = async(id,loanId,amt)=>{
 
   if(!confirm("Mark this EMI as Paid?")) return;
 
-  // 1️⃣ Mark installment completed
   await updateDoc(
     doc(db,"installments",id),
     {status:"completed"}
   );
 
-  // 2️⃣ CREATE COLLECTION ENTRY
+  /* ===== CREATE COLLECTION WITH OWNERID ===== */
+
   await addDoc(collection(db,"collections"),{
     loanId:loanId,
     borrowerId:borrowerId,
     agentId:currentUserId,
+    ownerId:ownerId,
+
     amount:amt,
     type:"installment",
     date:Date.now()
   });
 
-  // 3️⃣ Check if loan fully completed
   const snap = await getDocs(query(
     collection(db,"installments"),
     where("loanId","==",loanId)
