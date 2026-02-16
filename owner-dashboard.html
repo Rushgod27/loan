@@ -2,30 +2,70 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Owner Dashboard</title>
+<title>Owner Analytics Dashboard</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <style>
 body{margin:0;font-family:system-ui;background:#f3f4f6}
-.header{background:#2563eb;color:#fff;padding:16px;text-align:center;font-weight:600}
+.header{background:#2563eb;color:#fff;padding:16px;text-align:center;font-weight:600;font-size:18px}
 .container{padding:16px}
-.card{background:#fff;padding:16px;border-radius:10px;margin-bottom:16px;box-shadow:0 2px 6px rgba(0,0,0,0.08)}
-.card-row{background:#f9fafb;padding:10px;border-radius:6px;margin-bottom:8px}
-select{padding:6px;border-radius:6px}
-button{padding:6px 10px;border:none;background:#111827;color:#fff;border-radius:6px;cursor:pointer}
-.logout{width:100%;margin-top:10px}
+.card{background:#fff;padding:16px;border-radius:12px;margin-bottom:16px;box-shadow:0 3px 8px rgba(0,0,0,0.08)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}
+.stat{font-size:20px;font-weight:bold}
+select,input{padding:8px;border-radius:6px;border:1px solid #ddd}
+.alert-box{background:#fee2e2;padding:10px;border-radius:8px;margin-bottom:8px}
+.success-box{background:#dcfce7;padding:10px;border-radius:8px;margin-bottom:8px}
+button{padding:8px 14px;border:none;border-radius:6px;background:#111827;color:#fff;cursor:pointer}
 </style>
 </head>
+
 <body>
 
-<div class="header">Owner Panel</div>
+<div class="header">Owner Performance Dashboard</div>
+
 <div class="container">
 
+<!-- FILTER -->
 <div class="card">
-  <h3>Pending Users (Approve Agents)</h3>
-  <div id="pendingList"></div>
+  <h3>Filters</h3>
+  <div class="grid">
+    <input type="date" id="startDate">
+    <input type="date" id="endDate">
+    <select id="agentFilter"></select>
+    <button onclick="applyFilter()">Apply</button>
+  </div>
 </div>
 
-<button class="logout" onclick="logoutUser()">Logout</button>
+<!-- OVERVIEW -->
+<div class="card">
+  <h3>Overview</h3>
+  <div>Total Loan: ₹ <span class="stat" id="totalLoan">0</span></div>
+  <div>Total Collection: ₹ <span class="stat" id="totalCollection">0</span></div>
+  <div>Outstanding: ₹ <span class="stat" id="outstanding">0</span></div>
+  <div>Top Agent: <span class="stat" id="topAgent">-</span></div>
+</div>
+
+<!-- CHART -->
+<div class="card">
+  <h3>Agent Performance</h3>
+  <canvas id="agentChart"></canvas>
+</div>
+
+<!-- DUE TODAY -->
+<div class="card">
+  <h3>Due Today</h3>
+  <div id="dueToday"></div>
+</div>
+
+<!-- OVERDUE -->
+<div class="card">
+  <h3>Overdue</h3>
+  <div id="overdue"></div>
+</div>
+
+<button onclick="logoutUser()">Logout</button>
 
 </div>
 
@@ -33,21 +73,25 @@ button{padding:6px 10px;border:none;background:#111827;color:#fff;border-radius:
 
 import { auth, db } from "./js/firebase.js";
 import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { collection, query, where, getDocs, updateDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { collection, query, where, getDocs, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+let ownerId = null;
+let borrowersData = [];
+let agentsMap = {};
 
 onAuthStateChanged(auth, async(user)=>{
   if(!user){ location.href="index.html"; return; }
 
-  const q = query(collection(db,"users"),where("email","==",user.email));
-  const snap = await getDocs(q);
-
+  const snap = await getDocs(query(collection(db,"users"),where("email","==",user.email)));
   if(snap.empty || snap.docs[0].data().role !== "owner"){
     await signOut(auth);
     location.href="index.html";
     return;
   }
 
-  loadPending();
+  ownerId = user.uid;
+  loadAgents();
+  listenBorrowers();
 });
 
 window.logoutUser = async()=>{
@@ -55,34 +99,113 @@ window.logoutUser = async()=>{
   location.href="index.html";
 };
 
-async function loadPending(){
-  const q = query(collection(db,"users"),where("role","==","pending"));
-  const snap = await getDocs(q);
-  const container = document.getElementById("pendingList");
-  container.innerHTML="";
+async function loadAgents(){
+  const snap = await getDocs(query(
+    collection(db,"users"),
+    where("role","==","agent"),
+    where("approvedBy","==",ownerId)
+  ));
 
-  if(snap.empty){
-    container.innerHTML="<p>No pending users</p>";
-    return;
-  }
+  const select = document.getElementById("agentFilter");
+  select.innerHTML=`<option value="all">All Agents</option>`;
 
-  snap.forEach(d=>{
-    const data = d.data();
-    container.innerHTML += `
-      <div class="card-row">
-        <strong>${data.name}</strong><br>
-        ${data.email}<br><br>
-        <button onclick="approveAgent('${d.id}')">Approve as Agent</button>
-      </div>
-    `;
+  snap.forEach(doc=>{
+    agentsMap[doc.id] = doc.data().name;
+    select.innerHTML += `<option value="${doc.id}">${doc.data().name}</option>`;
   });
 }
 
-window.approveAgent = async(id)=>{
-  await updateDoc(doc(db,"users",id),{ role:"agent" });
-  alert("Approved as Agent");
-  loadPending();
+function listenBorrowers(){
+  onSnapshot(query(
+    collection(db,"borrowers"),
+    where("ownerId","==",ownerId)
+  ), snap=>{
+    borrowersData=[];
+    snap.forEach(doc=>{
+      borrowersData.push(doc.data());
+    });
+    processData();
+  });
+}
+
+window.applyFilter = ()=>{
+  processData();
 };
+
+let chart;
+
+function processData(){
+
+  const startDate = document.getElementById("startDate").value;
+  const endDate = document.getElementById("endDate").value;
+  const agentFilter = document.getElementById("agentFilter").value;
+
+  let filtered = borrowersData.filter(b=>{
+
+    if(agentFilter !== "all" && b.agentId !== agentFilter) return false;
+
+    if(startDate && new Date(b.createdAt.seconds*1000) < new Date(startDate)) return false;
+    if(endDate && new Date(b.createdAt.seconds*1000) > new Date(endDate)) return false;
+
+    return true;
+  });
+
+  let totalLoan=0, totalCollection=0;
+  let agentPerformance={};
+
+  const today = new Date();
+  today.setHours(0,0,0,0);
+
+  const dueToday = document.getElementById("dueToday");
+  const overdue = document.getElementById("overdue");
+  dueToday.innerHTML="";
+  overdue.innerHTML="";
+
+  filtered.forEach(b=>{
+    totalLoan += b.loanAmount || 0;
+    totalCollection += b.paidAmount || 0;
+
+    if(!agentPerformance[b.agentId]) agentPerformance[b.agentId]=0;
+    agentPerformance[b.agentId]+= b.paidAmount || 0;
+
+    if(b.dueDate){
+      const due = new Date(b.dueDate.seconds*1000);
+      due.setHours(0,0,0,0);
+
+      if(due.getTime()===today.getTime()){
+        dueToday.innerHTML += `<div class="success-box">${b.name} - ₹${b.loanAmount-b.paidAmount}</div>`;
+      }
+      else if(due<today){
+        overdue.innerHTML += `<div class="alert-box">${b.name} - ₹${b.loanAmount-b.paidAmount}</div>`;
+      }
+    }
+  });
+
+  document.getElementById("totalLoan").innerText=totalLoan;
+  document.getElementById("totalCollection").innerText=totalCollection;
+  document.getElementById("outstanding").innerText=totalLoan-totalCollection;
+
+  // Top Agent
+  let topAgent="-", max=0;
+  Object.keys(agentPerformance).forEach(a=>{
+    if(agentPerformance[a]>max){
+      max=agentPerformance[a];
+      topAgent=agentsMap[a] || "-";
+    }
+  });
+  document.getElementById("topAgent").innerText=topAgent;
+
+  // Chart
+  const labels=Object.keys(agentPerformance).map(a=>agentsMap[a]);
+  const data=Object.values(agentPerformance);
+
+  if(chart) chart.destroy();
+
+  chart = new Chart(document.getElementById("agentChart"),{
+    type:"bar",
+    data:{ labels:labels, datasets:[{label:"Collection",data:data}] }
+  });
+}
 
 </script>
 </body>
