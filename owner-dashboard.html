@@ -96,6 +96,11 @@ let chart;
 
 /* ================= AUTH CHECK ================= */
 
+/* ================= AUTH CHECK ================= */
+
+import { doc, getDoc } from 
+"https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
 onAuthStateChanged(auth, async(user)=>{
 
   if(!user){
@@ -103,11 +108,10 @@ onAuthStateChanged(auth, async(user)=>{
     return;
   }
 
-  const snap = await getDocs(
-    query(collection(db,"users"), where("email","==",user.email))
-  );
+  const userRef = doc(db,"users", user.uid);
+  const userSnap = await getDoc(userRef);
 
-  if(snap.empty || snap.docs[0].data().role !== "owner"){
+  if(!userSnap.exists() || userSnap.data().role !== "owner"){
     await signOut(auth);
     location.href="index.html";
     return;
