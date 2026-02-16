@@ -95,39 +95,43 @@ import {
   query,
   where,
   getDocs,
-  addDoc
+  doc,
+  setDoc,
+  getDoc
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 let currentUser = null;
+
+/* ================= GOOGLE LOGIN ================= */
 
 window.googleLogin = async()=>{
   const provider = new GoogleAuthProvider();
   await signInWithPopup(auth, provider);
 };
 
+/* ================= AUTH CHECK ================= */
+
 onAuthStateChanged(auth, async(user)=>{
+
   if(!user) return;
 
   currentUser = user;
 
-  const q = query(
-    collection(db,"users"),
-    where("email","==", user.email)
-  );
-
-  const snap = await getDocs(q);
+  // 🔥 DIRECTLY check document using UID
+  const userRef = doc(db,"users", user.uid);
+  const userSnap = await getDoc(userRef);
 
   // -----------------------------
   // NEW USER → SHOW ROLE SELECT
   // -----------------------------
-  if(snap.empty){
+  if(!userSnap.exists()){
 
     document.getElementById("roleSelect").style.display="block";
     document.getElementById("submitRoleBtn").style.display="block";
     return;
   }
 
-  const data = snap.docs[0].data();
+  const data = userSnap.data();
 
   // -----------------------------
   // PENDING
@@ -155,20 +159,21 @@ onAuthStateChanged(auth, async(user)=>{
 
 });
 
-// --------------------------------
-// SUBMIT ROLE APPLICATION
-// --------------------------------
+/* ================= SUBMIT ROLE ================= */
 
-document.getElementById("submitRoleBtn").addEventListener("click", async()=>{
+document.getElementById("submitRoleBtn")
+.addEventListener("click", async()=>{
 
-  const selectedRole = document.getElementById("roleSelect").value;
+  const selectedRole =
+    document.getElementById("roleSelect").value;
 
   if(!selectedRole){
     alert("Please select a role");
     return;
   }
 
-  await addDoc(collection(db,"users"),{
+  // 🔥 IMPORTANT CHANGE
+  await setDoc(doc(db,"users", currentUser.uid),{
     name: currentUser.displayName,
     email: currentUser.email,
     role: "pending",
