@@ -4,8 +4,84 @@
 <meta charset="UTF-8">
 <title>Boss Dashboard</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="stylesheet" href="css/styles.css?v=20">
+<link rel="stylesheet" href="css/styles.css?v=21">
+
+<style>
+body{
+  margin:0;
+  font-family:system-ui;
+  background:#f3f4f6;
+}
+
+.header{
+  background:#111827;
+  color:#fff;
+  padding:16px;
+  text-align:center;
+  font-weight:600;
+}
+
+.nav{
+  display:flex;
+  justify-content:space-between;
+  background:#1f2937;
+  color:#fff;
+  padding:12px 16px;
+}
+
+.nav div{
+  cursor:pointer;
+}
+
+.container{
+  padding:16px;
+}
+
+.card{
+  background:#fff;
+  padding:16px;
+  border-radius:10px;
+  box-shadow:0 2px 6px rgba(0,0,0,0.08);
+  margin-bottom:16px;
+}
+
+input,select{
+  width:100%;
+  padding:10px;
+  margin-bottom:10px;
+  border-radius:6px;
+  border:1px solid #ddd;
+  font-size:14px;
+}
+
+button{
+  width:100%;
+  padding:10px;
+  border:none;
+  border-radius:6px;
+  background:#2563eb;
+  color:#fff;
+  font-weight:600;
+  cursor:pointer;
+}
+
+.card-row{
+  background:#f9fafb;
+  padding:10px;
+  border-radius:6px;
+  margin-bottom:8px;
+}
+
+.role-badge{
+  font-size:12px;
+  padding:3px 8px;
+  border-radius:12px;
+  background:#e5e7eb;
+  margin-left:8px;
+}
+</style>
 </head>
+
 <body>
 
 <div class="header">
@@ -13,29 +89,38 @@
 </div>
 
 <div class="nav">
-  <div class="active">Owners</div>
+  <div>Manage Users</div>
   <div onclick="logoutUser()">Logout</div>
 </div>
 
 <div class="container">
 
-  <!-- ADD OWNER CARD -->
+  <!-- ADD USER -->
   <div class="card">
-    <h3>Add Owner</h3>
+    <h3>Add User</h3>
 
-    <input id="ownerName" placeholder="Owner Name">
-    <input id="ownerEmail" placeholder="Owner Email">
+    <input id="userName" placeholder="Name">
+    <input id="userEmail" placeholder="Email">
 
-    <button class="btn btn-primary"
-      onclick="addOwner()">
-      + Add Owner
-    </button>
+    <select id="userRole">
+      <option value="">Select Role</option>
+      <option value="owner">Owner</option>
+      <option value="boss">Boss</option>
+    </select>
+
+    <button onclick="addUser()">+ Add User</button>
   </div>
 
   <!-- OWNER LIST -->
   <div class="card">
     <h3>All Owners</h3>
     <div id="ownerList"></div>
+  </div>
+
+  <!-- BOSS LIST -->
+  <div class="card">
+    <h3>All Bosses</h3>
+    <div id="bossList"></div>
   </div>
 
 </div>
@@ -59,7 +144,7 @@ import {
 
 let bossId = null;
 
-/* ================= AUTH ================= */
+/* ================= AUTH CHECK ================= */
 
 onAuthStateChanged(auth, async(user)=>{
   if(!user){
@@ -69,6 +154,7 @@ onAuthStateChanged(auth, async(user)=>{
 
   bossId = user.uid;
   loadOwners();
+  loadBosses();
 });
 
 /* ================= LOGOUT ================= */
@@ -78,19 +164,20 @@ window.logoutUser = async()=>{
   location.href="index.html";
 };
 
-/* ================= ADD OWNER ================= */
+/* ================= ADD USER ================= */
 
-window.addOwner = async()=>{
+window.addUser = async()=>{
 
-  const name = ownerName.value.trim();
-  const email = ownerEmail.value.trim().toLowerCase();
+  const name = document.getElementById("userName").value.trim();
+  const email = document.getElementById("userEmail").value.trim().toLowerCase();
+  const role = document.getElementById("userRole").value;
 
-  if(!name || !email){
-    alert("Enter name and email");
+  if(!name || !email || !role){
+    alert("Enter name, email and select role");
     return;
   }
 
-  // Check if already exists
+  // Check duplicate email
   const q = query(
     collection(db,"users"),
     where("email","==",email)
@@ -99,25 +186,26 @@ window.addOwner = async()=>{
   const snap = await getDocs(q);
 
   if(!snap.empty){
-    alert("Owner already exists");
+    alert("User already exists");
     return;
   }
 
-  // Create owner document
   await addDoc(collection(db,"users"),{
     name,
     email,
-    role:"owner",
+    role,
     createdBy:bossId,
     createdAt:Date.now()
   });
 
-  alert("Owner Added Successfully");
+  alert(role.toUpperCase() + " Added Successfully");
 
-  ownerName.value="";
-  ownerEmail.value="";
+  document.getElementById("userName").value="";
+  document.getElementById("userEmail").value="";
+  document.getElementById("userRole").value="";
 
   loadOwners();
+  loadBosses();
 };
 
 /* ================= LOAD OWNERS ================= */
@@ -131,6 +219,7 @@ async function loadOwners(){
 
   const snap = await getDocs(q);
 
+  const ownerList = document.getElementById("ownerList");
   ownerList.innerHTML="";
 
   if(snap.empty){
@@ -138,20 +227,46 @@ async function loadOwners(){
     return;
   }
 
-  snap.forEach(d=>{
-    const data = d.data();
+  snap.forEach(doc=>{
+    const data = doc.data();
 
     ownerList.innerHTML += `
-      <div class="card-row"
-        style="margin-bottom:12px;">
-        <div class="card-details">
-          <div class="card-title">
-            ${data.name}
-          </div>
-          <div class="card-sub">
-            ${data.email}
-          </div>
-        </div>
+      <div class="card-row">
+        <strong>${data.name}</strong>
+        <span class="role-badge">Owner</span>
+        <div>${data.email}</div>
+      </div>
+    `;
+  });
+}
+
+/* ================= LOAD BOSSES ================= */
+
+async function loadBosses(){
+
+  const q = query(
+    collection(db,"users"),
+    where("role","==","boss")
+  );
+
+  const snap = await getDocs(q);
+
+  const bossList = document.getElementById("bossList");
+  bossList.innerHTML="";
+
+  if(snap.empty){
+    bossList.innerHTML="<p>No bosses yet</p>";
+    return;
+  }
+
+  snap.forEach(doc=>{
+    const data = doc.data();
+
+    bossList.innerHTML += `
+      <div class="card-row">
+        <strong>${data.name}</strong>
+        <span class="role-badge">Boss</span>
+        <div>${data.email}</div>
       </div>
     `;
   });
