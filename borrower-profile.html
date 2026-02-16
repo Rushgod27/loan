@@ -342,7 +342,87 @@ View Installments
 </div>`;
 }
 }
+/* ================= VIEW INSTALLMENTS ================= */
 
+window.toggleInstallments = async (loanId) => {
+
+  const box = document.getElementById("inst-" + loanId);
+
+  // Toggle open/close
+  if (box.dataset.open === "true") {
+    box.innerHTML = "";
+    box.dataset.open = "false";
+    return;
+  }
+
+  box.dataset.open = "true";
+  box.innerHTML = "Loading...";
+
+  const snap = await getDocs(query(
+    collection(db, "installments"),
+    where("loanId", "==", loanId)
+  ));
+
+  let installments = [];
+  snap.forEach(d => installments.push({ id: d.id, ...d.data() }));
+
+  if (!installments.length) {
+    box.innerHTML = "No installments found";
+    return;
+  }
+
+  installments.sort((a, b) => a.number - b.number);
+
+  const today = new Date();
+  today.setHours(0,0,0,0);
+
+  let html = "";
+
+  installments.forEach(i => {
+
+    let dueDate = new Date(i.dueDate);
+    dueDate.setHours(0,0,0,0);
+
+    let statusClass = "pending";
+    let statusText = "Pending";
+
+    if (i.status === "completed") {
+      statusClass = "paid";
+      statusText = "Paid";
+    } else if (dueDate < today) {
+      statusClass = "overdue";
+      statusText = "Overdue";
+    } else if (dueDate.getTime() === today.getTime()) {
+      statusClass = "due";
+      statusText = "Due Today";
+    }
+
+    let periodLabel = "";
+    if (i.interval === 7) periodLabel = `Week ${i.number}`;
+    if (i.interval === 15) periodLabel = `15 Days ${i.number}`;
+    if (i.interval === 30) periodLabel = `Month ${i.number}`;
+
+    html += `
+      <div class="inst-card ${statusClass}">
+        <div>
+          <div>${periodLabel}</div>
+          <div class="inst-amount">₹${i.amount}</div>
+          <div>${dueDate.toLocaleDateString()}</div>
+          <div>${statusText}</div>
+        </div>
+
+        ${i.status !== "completed" ? `
+          <button class="pay-btn"
+            onclick="pay('${i.id}','${loanId}',${i.amount})">
+            Mark Paid
+          </button>
+        ` : ``}
+      </div>
+    `;
+  });
+
+  box.innerHTML = html;
+};
 /* ================= PAY ================= */
 
 window.pay=async(id,loanId,amt)=>{
