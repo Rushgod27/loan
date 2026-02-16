@@ -1,27 +1,3 @@
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<title>Agent Dashboard</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="stylesheet" href="css/styles.css?v=11">
-</head>
-<body>
-
-<div class="header">
-  Agent Panel
-</div>
-
-<div class="nav">
-  <div class="active">Dashboard</div>
-  <div onclick="goBorrowers()">Borrowers</div>
-  <div onclick="logoutUser()">Logout</div>
-</div>
-
-<div class="container" id="content"></div>
-
-<script type="module">
-
 import { auth, db } from "./js/firebase.js";
 
 import {
@@ -34,8 +10,9 @@ import {
   query,
   where,
   getDocs,
-  doc,
-  getDoc
+  updateDoc,
+  addDoc,
+  doc
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 let uid = null;
@@ -51,24 +28,13 @@ window.logoutUser = async () => {
   location.href = "index.html";
 };
 
-/* ================= AUTH + ROLE CHECK ================= */
+/* ================= AUTH ================= */
 
-onAuthStateChanged(auth, async user => {
-
+onAuthStateChanged(auth, user => {
   if (!user) {
     location.href = "index.html";
     return;
   }
-
-  const userRef = doc(db,"users", user.uid);
-  const userSnap = await getDoc(userRef);
-
-  if(!userSnap.exists() || userSnap.data().role !== "agent"){
-    await signOut(auth);
-    location.href = "index.html";
-    return;
-  }
-
   uid = user.uid;
   loadDashboard();
 });
@@ -83,15 +49,8 @@ async function loadDashboard(){
   const tomorrow = new Date(today);
   tomorrow.setDate(today.getDate()+1);
 
-  let dueTodayHTML="";
+  let dueHTML="";
   let overdueHTML="";
-  let dueCount=0;
-  let overdueCount=0;
-  let todayCollection=0;
-
-  let totalBorrowers=0;
-  let activeBorrowers=0;
-  let activeLoans=0;
 
   /* ================= BORROWERS ================= */
 
@@ -100,188 +59,120 @@ async function loadDashboard(){
     where("agentId","==",uid)
   ));
 
-  totalBorrowers = borrowerSnap.size;
-
-  const borrowerMap={};
-  const activeBorrowerSet=new Set();
-
+  const borrowerMap = {};
   borrowerSnap.forEach(d=>{
-    borrowerMap[d.id]=d.data();
+    borrowerMap[d.id] = d.data();
   });
-
-  /* ================= LOANS ================= */
-
-  const loanSnap = await getDocs(query(
-    collection(db,"loans"),
-    where("agentId","==",uid),
-    where("status","==","active")
-  ));
-
-  activeLoans = loanSnap.size;
-
-  loanSnap.forEach(d=>{
-    activeBorrowerSet.add(d.data().borrowerId);
-  });
-
-  activeBorrowers = activeBorrowerSet.size;
 
   /* ================= INSTALLMENTS ================= */
 
   const instSnap = await getDocs(query(
     collection(db,"installments"),
+    where("agentId","==",uid),
     where("status","==","pending")
   ));
 
   instSnap.forEach(d=>{
 
     const data = d.data();
-    if(!borrowerMap[data.borrowerId]) return;
-
     const borrower = borrowerMap[data.borrowerId];
+    if(!borrower) return;
+
     const dueDate = new Date(data.dueDate);
+    dueDate.setHours(0,0,0,0);
+
     const phone = borrower.phone;
 
     const msg =
-      `Hello ${borrower.name}, your installment of ₹${data.amount} is pending. Please pay at the earliest.`;
+      `Hello ${borrower.name}, your installment of ₹${data.amount} is pending.`;
 
     const waLink =
       `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
 
-    /* Due Today */
-    if(dueDate>=today && dueDate<tomorrow){
-
-      dueCount++;
-
-      dueTodayHTML += `
-      <div class="card due">
-        <div class="card-row">
-          <div class="card-details">
-            <div class="card-title">${borrower.name}</div>
-            <div class="card-sub">
-              ₹${data.amount} • Due Today
-            </div>
-            <div class="card-sub">
-              📞 <a href="tel:${phone}" style="color:#2563eb;text-decoration:none;">
-              ${phone}
-              </a>
-            </div>
+    const cardHTML = `
+      <div class="card" style="margin-bottom:10px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div>
+            <b>${borrower.name}</b><br>
+            ₹${data.amount} <br>
+            <small>${dueDate.toLocaleDateString()}</small><br>
+            <a href="tel:${phone}">📞 ${phone}</a>
           </div>
-          <div class="card-actions">
-            <button class="btn btn-success"
-              onclick="window.location.href='tel:${phone}'">📞</button>
-            <button class="btn btn-warning"
-              onclick="window.open('${waLink}','_blank')">💬</button>
+
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            <button onclick="window.open('${waLink}','_blank')">🛎️</button>
+            <button onclick="window.location.href='tel:${phone}'">📞</button>
+            <button style="background:#16a34a;color:white;"
+              onclick="markPaid('${d.id}','${data.loanId}',${data.amount})">
+              ✓ Paid
+            </button>
           </div>
         </div>
-      </div>`;
+      </div>
+    `;
+
+    if(dueDate >= today && dueDate < tomorrow){
+      dueHTML += cardHTML;
     }
 
-    /* Overdue */
     if(dueDate < today){
-
-      overdueCount++;
-
-      const daysLate =
-        Math.floor((today - dueDate)/86400000);
-
-      overdueHTML += `
-      <div class="card overdue">
-        <div class="card-row">
-          <div class="card-details">
-            <div class="card-title">${borrower.name}</div>
-            <div class="card-sub">
-              ₹${data.amount} • ${daysLate} days overdue
-            </div>
-            <div class="card-sub">
-              📞 <a href="tel:${phone}" style="color:#2563eb;text-decoration:none;">
-              ${phone}
-              </a>
-            </div>
-          </div>
-          <div class="card-actions">
-            <button class="btn btn-success"
-              onclick="window.location.href='tel:${phone}'">📞</button>
-            <button class="btn btn-danger"
-              onclick="window.open('${waLink}','_blank')">💬</button>
-          </div>
-        </div>
-      </div>`;
+      overdueHTML += cardHTML;
     }
 
   });
-
-  /* ================= COLLECTION ================= */
-
-  const colSnap = await getDocs(query(
-    collection(db,"collections"),
-    where("agentId","==",uid)
-  ));
-
-  colSnap.forEach(d=>{
-
-    let rawDate = d.data().date;
-
-    let dateObj =
-      rawDate?.toDate ? rawDate.toDate()
-      : new Date(rawDate);
-
-    if(dateObj>=today && dateObj<tomorrow){
-      todayCollection += d.data().amount;
-    }
-  });
-
-  /* ================= RENDER ================= */
 
   content.innerHTML = `
-
     <div class="card">
-      <h3>📊 Overview</h3>
-
-      <div class="card-row">
-        <div class="card-details">Total Borrowers</div>
-        <div><b>${totalBorrowers}</b></div>
-      </div>
-
-      <div class="card-row">
-        <div class="card-details">Active Borrowers</div>
-        <div><b>${activeBorrowers}</b></div>
-      </div>
-
-      <div class="card-row">
-        <div class="card-details">Active Loans</div>
-        <div><b>${activeLoans}</b></div>
-      </div>
-
-      <div class="card-row">
-        <div class="card-details">Today's Collection</div>
-        <div><b>₹${todayCollection}</b></div>
-      </div>
-
-      <div class="card-row">
-        <div class="card-details">Due Today</div>
-        <div><b>${dueCount}</b></div>
-      </div>
-
-      <div class="card-row">
-        <div class="card-details">Overdue</div>
-        <div><b>${overdueCount}</b></div>
-      </div>
-
-    </div>
-
-    <div class="card">
-      <h3>📅 Due Today</h3>
-      ${dueTodayHTML || "No dues today"}
+      <h3>🟠 Due Today</h3>
+      ${dueHTML || "No dues today"}
     </div>
 
     <div class="card">
       <h3>🔴 Overdue</h3>
-      ${overdueHTML || "No overdue payments"}
+      ${overdueHTML || "No overdue EMI"}
     </div>
-
   `;
 }
 
-</script>
-</body>
-</html>
+/* ================= MARK PAID ================= */
+
+window.markPaid = async(instId, loanId, amt) => {
+
+  if(!confirm("Mark this installment as paid?")) return;
+
+  // Update installment
+  await updateDoc(
+    doc(db,"installments",instId),
+    { status:"completed" }
+  );
+
+  // Create collection entry
+  await addDoc(collection(db,"collections"),{
+    loanId,
+    agentId: uid,
+    amount: amt,
+    type:"installment",
+    date: Date.now()
+  });
+
+  // Check if loan completed
+  const snap = await getDocs(query(
+    collection(db,"installments"),
+    where("loanId","==",loanId)
+  ));
+
+  let completed = true;
+  snap.forEach(d=>{
+    if(d.data().status !== "completed")
+      completed = false;
+  });
+
+  if(completed){
+    await updateDoc(
+      doc(db,"loans",loanId),
+      { status:"completed" }
+    );
+  }
+
+  loadDashboard(); // refresh UI
+};
