@@ -244,38 +244,56 @@ function renderLoans(loans){
 
 /* ================= INSTALLMENTS ================= */
 
-window.toggleInstallments = async(loanId)=>{
+window.toggleInstallments = async (loanId) => {
 
-  const box=document.getElementById("inst-"+loanId);
+  const box = document.getElementById("inst-" + loanId);
 
-  if(box.innerHTML){
-    box.innerHTML="";
+  // If already visible -> collapse
+  if(box.style.display === "block"){
+    box.style.display = "none";
+    box.innerHTML = "";
     return;
   }
 
-  const snap=await getDocs(query(
+  box.style.display = "block";
+  box.innerHTML = "Loading...";
+
+  const snap = await getDocs(query(
     collection(db,"installments"),
     where("loanId","==",loanId)
   ));
 
-  let list=[];
-  snap.forEach(d=>list.push({id:d.id,...d.data()}));
+  let list = [];
+  snap.forEach(d => list.push({id:d.id,...d.data()}));
+
   list.sort((a,b)=>a.number-b.number);
 
-  list.forEach(i=>{
-    box.innerHTML+=`
-      <div>
-        EMI ${i.number} | ₹${i.amount}
-        |
-        ${new Date(i.dueDate).toLocaleDateString()}
-        |
+  box.innerHTML = "";
+
+  if(!list.length){
+    box.innerHTML = "No installments found";
+    return;
+  }
+
+  list.forEach(i => {
+
+    box.innerHTML += `
+      <div style="padding:8px 0;border-bottom:1px solid #eee;">
+        EMI ${i.number} |
+        ₹${i.amount} |
+        ${new Date(i.dueDate).toLocaleDateString()} |
         ${i.status}
         ${
-          i.status==="pending"
-          ? `<button onclick="pay('${i.id}','${loanId}',${i.amount})">Pay</button>`
+          i.status === "pending"
+          ? `<button 
+              style="margin-left:10px"
+              onclick="pay('${i.id}','${loanId}',${i.amount})">
+              Pay
+            </button>`
           : ""
         }
-      </div><hr>`;
+      </div>
+    `;
   });
 };
 
