@@ -216,55 +216,89 @@ window.toggleCreateLoan = ()=>{
 
 /* ================= CREATE LOAN ================= */
 
-window.createLoan = async ()=>{
+window.createLoan = async () => {
 
-  const principal = parseFloat(principal.value);
-  const interest = parseFloat(document.getElementById("interest").value)||0;
-  const count = parseInt(document.getElementById("count").value);
-  const interval = parseInt(document.getElementById("interval").value);
-  const start = document.getElementById("startDate").value;
+  const principalInput = document.getElementById("principal");
+  const interestInput  = document.getElementById("interest");
+  const countInput     = document.getElementById("count");
+  const intervalInput  = document.getElementById("interval");
+  const startInput     = document.getElementById("startDate");
 
-  if(!principal || !count || !interval || !start){
-    alert("All fields required"); return;
+  const principal = parseFloat(principalInput.value);
+  const interest  = parseFloat(interestInput.value) || 0;
+  const count     = parseInt(countInput.value);
+  const interval  = parseInt(intervalInput.value);
+  const start     = startInput.value;
+
+  if (!principal || !count || !interval || !start) {
+    alert("All fields are required.");
+    return;
   }
 
-  if(!confirm("Are you sure you want to create this loan?")) return;
-
   const startTime = new Date(start).getTime();
-  const installment = principal/count;
+  const installment = (principal / count).toFixed(2);
+  const interestAmount = (principal * interest) / 100;
+  const totalAmount = principal + interestAmount;
+
+  let periodLabel = "";
+  if(interval === 7) periodLabel = "Weekly";
+  if(interval === 15) periodLabel = "15 Days";
+  if(interval === 30) periodLabel = "Monthly";
+
+  /* ===== PREVIEW ===== */
+
+  const preview = `
+Loan Preview:
+
+Principal: ₹${principal}
+Interest: ₹${interestAmount}
+Total Amount: ₹${totalAmount}
+
+Installments: ${count} (${periodLabel})
+Each Installment: ₹${installment}
+
+Start Date: ${new Date(startTime).toLocaleDateString()}
+
+Proceed?
+  `;
+
+  if(!confirm(preview)) return;
+
+  /* ===== CREATE LOAN ===== */
 
   const loanRef = await addDoc(collection(db,"loans"),{
     borrowerId,
-    agentId:currentUserId,
+    agentId: currentUserId,
     ownerId,
     principal,
-    interestPercent:interest,
-    interestAmount:(principal*interest)/100,
+    interestPercent: interest,
+    interestAmount,
     count,
     interval,
-    startDate:startTime,
+    startDate: startTime,
     status:"active",
-    createdAt:Date.now()
+    createdAt: Date.now()
   });
 
   for(let i=0;i<count;i++){
     await addDoc(collection(db,"installments"),{
-      loanId:loanRef.id,
+      loanId: loanRef.id,
       borrowerId,
-      agentId:currentUserId,
+      agentId: currentUserId,
       ownerId,
-      number:i+1,
+      number: i+1,
       interval,
-      amount:installment,
-      dueDate:startTime + ((i+1)*interval*86400000),
+      amount: Number(installment),
+      dueDate: startTime + ((i+1) * interval * 86400000),
       status:"pending"
     });
   }
 
+  alert("Loan Created Successfully ✅");
+
   createLoanSection.innerHTML="";
   loadLoans();
 };
-
 /* ================= LOAD LOANS ================= */
 
 async function loadLoans(){
