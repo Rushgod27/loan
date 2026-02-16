@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <title>Login</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="stylesheet" href="css/styles.css?v=25">
+<link rel="stylesheet" href="css/styles.css?v=30">
 </head>
 <body>
 
@@ -28,8 +28,13 @@
       Login
     </button>
 
-    <div class="login-footer">
-      Secure Access Portal
+    <div style="text-align:center;margin-top:15px;">
+      <span style="color:#2563eb;
+                   cursor:pointer;
+                   font-size:14px;"
+            onclick="resetPassword()">
+        Forgot Password?
+      </span>
     </div>
 
   </div>
@@ -41,8 +46,8 @@ import { auth, db } from "./js/firebase.js";
 
 import {
   signInWithEmailAndPassword,
-  onAuthStateChanged,
-  signOut
+  sendPasswordResetEmail,
+  onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 import {
@@ -50,12 +55,12 @@ import {
   getDoc
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-/* ================= LOGIN FUNCTION ================= */
+/* LOGIN */
 
 window.loginUser = async ()=>{
 
-  const email = document.getElementById("loginEmail").value.trim();
-  const password = document.getElementById("loginPassword").value.trim();
+  const email = loginEmail.value.trim();
+  const password = loginPassword.value.trim();
 
   if(!email || !password){
     alert("Enter email and password");
@@ -65,64 +70,54 @@ window.loginUser = async ()=>{
   try{
     await signInWithEmailAndPassword(auth,email,password);
   }catch(err){
-    alert("Login Failed: " + err.message);
+    alert(err.message);
   }
 };
 
-/* ================= ROLE BASED REDIRECT ================= */
+/* RESET PASSWORD */
+
+window.resetPassword = async ()=>{
+
+  const email = loginEmail.value.trim();
+
+  if(!email){
+    alert("Enter your email first");
+    return;
+  }
+
+  try{
+    await sendPasswordResetEmail(auth,email);
+    alert("Password reset email sent.");
+  }catch(err){
+    alert(err.message);
+  }
+};
+
+/* ROLE REDIRECT */
 
 onAuthStateChanged(auth, async(user)=>{
 
   if(!user) return;
 
-  try{
+  const snap = await getDoc(
+    doc(db,"users",user.uid)
+  );
 
-    const snap = await getDoc(
-      doc(db,"users",user.uid)
-    );
-
-    if(!snap.exists()){
-      alert("User role not assigned.");
-      await signOut(auth);
-      return;
-    }
-
-    const data = snap.data();
-    const role = (data.role || "").toLowerCase();
-
-    /* 🔥 FREEZE CHECK */
-    if(data.status === "frozen"){
-      alert("Your account has been frozen. Contact Owner.");
-      await signOut(auth);
-      return;
-    }
-
-    /* 🔥 FORCE PASSWORD CHANGE */
-    if(data.mustChangePassword){
-      window.location.href = "change-password.html";
-      return;
-    }
-
-    /* 🔥 ROLE REDIRECTION */
-
-    if(role === "boss"){
-      window.location.href = "boss-dashboard.html";
-    }
-    else if(role === "owner"){
-      window.location.href = "owner-dashboard.html";
-    }
-    else if(role === "agent"){
-      window.location.href = "agent-dashboard.html";
-    }
-    else{
-      alert("Invalid role detected.");
-      await signOut(auth);
-    }
-
-  }catch(err){
-    alert("System Error: " + err.message);
-    await signOut(auth);
+  if(!snap.exists()){
+    alert("User role not assigned.");
+    return;
   }
+
+  const role = snap.data().role;
+
+  if(role==="boss")
+    location.href="boss-dashboard.html";
+  else if(role==="owner")
+    location.href="owner-dashboard.html";
+  else if(role==="agent")
+    location.href="agent-dashboard.html";
+  else
+    alert("Invalid role");
 
 });
 
