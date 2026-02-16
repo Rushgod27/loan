@@ -4,24 +4,31 @@
 <meta charset="UTF-8">
 <title>Login</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <style>
 body{
   margin:0;
   font-family:system-ui;
-  background:#f3f4f6;
+  background:linear-gradient(135deg,#2563eb,#111827);
   display:flex;
   justify-content:center;
   align-items:center;
   height:100vh;
 }
+
 .card{
   background:#fff;
   padding:30px;
-  border-radius:12px;
-  box-shadow:0 4px 10px rgba(0,0,0,0.1);
+  border-radius:14px;
+  box-shadow:0 8px 25px rgba(0,0,0,0.2);
+  width:320px;
   text-align:center;
-  width:300px;
 }
+
+h2{
+  margin-bottom:20px;
+}
+
 button{
   width:100%;
   padding:12px;
@@ -31,6 +38,20 @@ button{
   color:#fff;
   font-weight:600;
   cursor:pointer;
+  font-size:14px;
+}
+
+select{
+  width:100%;
+  padding:10px;
+  margin-top:15px;
+  border-radius:8px;
+  border:1px solid #ddd;
+}
+.note{
+  font-size:12px;
+  color:#666;
+  margin-top:10px;
 }
 </style>
 </head>
@@ -38,13 +59,30 @@ button{
 <body>
 
 <div class="card">
-  <h2>Login</h2>
+  <h2>Finance Portal Login</h2>
+
   <button onclick="googleLogin()">Sign in with Google</button>
+
+  <select id="roleSelect" style="display:none;">
+    <option value="">Apply As</option>
+    <option value="agent">Agent</option>
+    <option value="owner">Owner</option>
+    <option value="boss">Boss</option>
+  </select>
+
+  <button id="submitRoleBtn" style="display:none;margin-top:10px;">
+    Submit Application
+  </button>
+
+  <div class="note">
+    New users must apply and wait for approval.
+  </div>
 </div>
 
 <script type="module">
 
 import { auth, db } from "./js/firebase.js";
+
 import {
   GoogleAuthProvider,
   signInWithPopup,
@@ -60,6 +98,8 @@ import {
   addDoc
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
+let currentUser = null;
+
 window.googleLogin = async()=>{
   const provider = new GoogleAuthProvider();
   await signInWithPopup(auth, provider);
@@ -68,31 +108,39 @@ window.googleLogin = async()=>{
 onAuthStateChanged(auth, async(user)=>{
   if(!user) return;
 
-  const q = query(collection(db,"users"),where("email","==",user.email));
+  currentUser = user;
+
+  const q = query(
+    collection(db,"users"),
+    where("email","==", user.email)
+  );
+
   const snap = await getDocs(q);
 
-  // First login → create pending
+  // -----------------------------
+  // NEW USER → SHOW ROLE SELECT
+  // -----------------------------
   if(snap.empty){
-    await addDoc(collection(db,"users"),{
-      name:user.displayName,
-      email:user.email,
-      role:"pending",
-      createdAt:Date.now()
-    });
 
-    alert("Account created. Waiting for approval.");
-    await signOut(auth);
+    document.getElementById("roleSelect").style.display="block";
+    document.getElementById("submitRoleBtn").style.display="block";
     return;
   }
 
   const data = snap.docs[0].data();
 
+  // -----------------------------
+  // PENDING
+  // -----------------------------
   if(data.role === "pending"){
-    alert("Waiting for Boss approval.");
+    alert("Your application is waiting for approval.");
     await signOut(auth);
     return;
   }
 
+  // -----------------------------
+  // REDIRECT BASED ON ROLE
+  // -----------------------------
   if(data.role === "boss"){
     location.href="boss-dashboard.html";
   }
@@ -106,6 +154,34 @@ onAuthStateChanged(auth, async(user)=>{
   }
 
 });
+
+// --------------------------------
+// SUBMIT ROLE APPLICATION
+// --------------------------------
+
+document.getElementById("submitRoleBtn").addEventListener("click", async()=>{
+
+  const selectedRole = document.getElementById("roleSelect").value;
+
+  if(!selectedRole){
+    alert("Please select a role");
+    return;
+  }
+
+  await addDoc(collection(db,"users"),{
+    name: currentUser.displayName,
+    email: currentUser.email,
+    role: "pending",
+    requestedRole: selectedRole,
+    createdAt: Date.now()
+  });
+
+  alert("Application submitted successfully. Wait for approval.");
+
+  await signOut(auth);
+
+});
+
 </script>
 
 </body>
