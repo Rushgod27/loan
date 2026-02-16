@@ -4,39 +4,23 @@
 <meta charset="UTF-8">
 <title>Login</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="stylesheet" href="css/styles.css?v=30">
+<link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
 
 <div class="login-wrapper">
   <div class="login-card">
+    <div class="login-title">Loan Management Login</div>
 
-    <div class="login-title">
-      Loan Management System
-    </div>
+    <input id="email" placeholder="Enter your email">
 
-    <input id="loginEmail"
-           type="email"
-           placeholder="Enter Email">
-
-    <input id="loginPassword"
-           type="password"
-           placeholder="Enter Password">
-
-    <button class="login-btn"
-            onclick="loginUser()">
-      Login
+    <button class="login-btn" onclick="sendLink()">
+      Send Login Link
     </button>
 
-    <div style="text-align:center;margin-top:15px;">
-      <span style="color:#2563eb;
-                   cursor:pointer;
-                   font-size:14px;"
-            onclick="resetPassword()">
-        Forgot Password?
-      </span>
+    <div class="login-footer">
+      Passwordless Secure Login
     </div>
-
   </div>
 </div>
 
@@ -48,118 +32,117 @@ import {
   sendSignInLinkToEmail,
   isSignInWithEmailLink,
   signInWithEmailLink
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+} from 
+"https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 import {
   collection,
   query,
   where,
   getDocs,
-  doc,
-  getDoc
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  updateDoc
+} from
+"https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-/* ================= SEND LOGIN LINK ================= */
+/* SEND LOGIN LINK */
 
 window.sendLink = async () => {
 
-  const email = document.getElementById("email").value.trim().toLowerCase();
+  const email =
+    document.getElementById("email")
+    .value.trim()
+    .toLowerCase();
 
   if(!email){
     alert("Enter email");
     return;
   }
 
-  try{
+  const q = query(
+    collection(db,"users"),
+    where("email","==",email)
+  );
 
-    /* 🔎 CHECK IF EMAIL REGISTERED IN USERS COLLECTION */
+  const snap = await getDocs(q);
 
-    const q = query(
-      collection(db,"users"),
-      where("email","==",email)
-    );
-
-    const snap = await getDocs(q);
-
-    if(snap.empty){
-      alert("Email not registered with the app.");
-      return;
-    }
-
-    /* ✅ If exists → send login link */
-
-    const actionCodeSettings = {
-      url: window.location.href,
-      handleCodeInApp: true
-    };
-
-    await sendSignInLinkToEmail(
-      auth,
-      email,
-      actionCodeSettings
-    );
-
-    localStorage.setItem("emailForSignIn", email);
-
-    alert("Login link sent! Check your email.");
-
-  }catch(err){
-    alert(err.message);
+  if(snap.empty){
+    alert("Email not registered with the app.");
+    return;
   }
+
+  const actionCodeSettings = {
+    url: window.location.href,
+    handleCodeInApp: true
+  };
+
+  await sendSignInLinkToEmail(
+    auth,
+    email,
+    actionCodeSettings
+  );
+
+  localStorage.setItem(
+    "emailForSignIn",
+    email
+  );
+
+  alert("Login link sent to your email.");
 };
 
-/* ================= HANDLE EMAIL LINK LOGIN ================= */
+/* HANDLE LOGIN */
 
 if(isSignInWithEmailLink(auth, window.location.href)){
 
-  let email = localStorage.getItem("emailForSignIn");
+  let email =
+    localStorage.getItem("emailForSignIn");
 
   if(!email){
-    email = prompt("Confirm your email");
+    email = prompt("Confirm email");
   }
 
-  try{
-
-    const result = await signInWithEmailLink(
+  const result =
+    await signInWithEmailLink(
       auth,
       email,
       window.location.href
     );
 
-    localStorage.removeItem("emailForSignIn");
+  localStorage.removeItem("emailForSignIn");
 
-    /* ===== ROLE BASED REDIRECT ===== */
+  const uid = result.user.uid;
 
-    const snap = await getDoc(
-      doc(db,"users",result.user.uid)
-    );
+  const q = query(
+    collection(db,"users"),
+    where("email","==",email)
+  );
 
-    if(!snap.exists()){
-      alert("User role not assigned.");
-      return;
-    }
+  const snap = await getDocs(q);
 
-    const role = (snap.data().role || "").toLowerCase();
+  if(snap.empty){
+    alert("User record missing.");
+    return;
+  }
 
-    if(role === "boss"){
-      location.href="boss-dashboard.html";
-    }
-    else if(role === "owner"){
-      location.href="owner-dashboard.html";
-    }
-    else if(role === "agent"){
-      location.href="agent-dashboard.html";
-    }
-    else{
-      alert("Invalid role found");
-    }
+  const userDoc = snap.docs[0];
+  const data    = userDoc.data();
 
-  }catch(err){
-    alert("Login error: " + err.message);
+  if(!data.uid){
+    await updateDoc(userDoc.ref,{
+      uid: uid
+    });
+  }
+
+  if(data.role === "boss"){
+    location.href="boss-dashboard.html";
+  }
+  else if(data.role === "owner"){
+    location.href="owner-dashboard.html";
+  }
+  else if(data.role === "agent"){
+    location.href="agent-dashboard.html";
   }
 }
 
 </script>
-
 </body>
 </html>
