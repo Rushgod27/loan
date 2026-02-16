@@ -42,38 +42,60 @@ button{padding:8px 14px;border:none;border-radius:6px;color:#fff;cursor:pointer}
 <script type="module">
 
 import { auth, db } from "./js/firebase.js";
-import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { collection, query, where, onSnapshot, getDocs, updateDoc, deleteDoc, doc, getDoc, serverTimestamp, deleteField } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { onAuthStateChanged, signOut } 
+from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+import { 
+  collection, 
+  query, 
+  where, 
+  onSnapshot, 
+  updateDoc, 
+  deleteDoc, 
+  doc, 
+  getDoc, 
+  serverTimestamp, 
+  deleteField 
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 let bossUid=null;
 
-/* AUTH CHECK */
+/* ================= AUTH CHECK ================= */
+
 onAuthStateChanged(auth, async(user)=>{
-  if(!user){ location.href="index.html"; return; }
 
-  const snap=await getDocs(query(collection(db,"users"),where("email","==",user.email)));
+  if(!user){
+    location.href="index.html";
+    return;
+  }
 
-  if(snap.empty || snap.docs[0].data().role!=="boss"){
+  const userRef = doc(db,"users",user.uid);
+  const userSnap = await getDoc(userRef);
+
+  if(!userSnap.exists() || userSnap.data().role!=="boss"){
     await signOut(auth);
     location.href="index.html";
     return;
   }
 
-  bossUid=user.uid;
+  bossUid = user.uid;
 
   listenPending();
   listenApproved();
 });
 
-window.logoutUser=async()=>{
+/* ================= LOGOUT ================= */
+
+window.logoutUser = async()=>{
   await signOut(auth);
   location.href="index.html";
 };
 
-/* REALTIME PENDING */
+/* ================= REALTIME PENDING ================= */
+
 function listenPending(){
 
-  const q=query(
+  const q = query(
     collection(db,"users"),
     where("role","==","pending"),
     where("requestedRole","in",["owner","boss"])
@@ -109,7 +131,8 @@ function listenPending(){
   });
 }
 
-/* REALTIME APPROVED LIST */
+/* ================= REALTIME APPROVED ================= */
+
 function listenApproved(){
 
   const q=query(
@@ -135,27 +158,36 @@ function listenApproved(){
   });
 }
 
-/* APPROVE */
-window.approveUser=async(id)=>{
+/* ================= APPROVE ================= */
 
-  const ref=doc(db,"users",id);
-  const snap=await getDoc(ref);
-  const requestedRole=snap.data().requestedRole;
+window.approveUser = async(id)=>{
+
+  const ref = doc(db,"users",id);
+  const snap = await getDoc(ref);
+
+  if(!snap.exists()) return;
+
+  const requestedRole = snap.data().requestedRole;
 
   await updateDoc(ref,{
-    role:requestedRole,
-    approvedBy:bossUid,
-    approvedAt:serverTimestamp(),
-    requestedRole:deleteField()
+    role: requestedRole,
+    approvedBy: bossUid,
+    approvedAt: serverTimestamp(),
+    requestedRole: deleteField()
   });
 };
 
-/* REJECT */
-window.rejectUser=async(id)=>{
-  if(!confirm("Reject this request?"))return;
+/* ================= REJECT ================= */
+
+window.rejectUser = async(id)=>{
+
+  if(!confirm("Reject this request?")) return;
+
   await deleteDoc(doc(db,"users",id));
 };
 
 </script>
+
+
 </body>
 </html>
