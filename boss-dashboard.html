@@ -14,8 +14,16 @@ body{margin:0;font-family:system-ui;background:#f3f4f6}
 button{padding:8px 14px;border:none;border-radius:6px;color:#fff;cursor:pointer}
 .approve{background:#16a34a}
 .reject{background:#ef4444;margin-left:6px}
+.primary{background:#2563eb}
 .logout{width:100%;margin-top:10px;background:#111827}
 .badge{background:#e5e7eb;padding:2px 8px;border-radius:12px;font-size:12px;margin-left:6px}
+.code-box{
+  font-size:22px;
+  font-weight:bold;
+  letter-spacing:2px;
+  margin-bottom:10px;
+  color:#111827;
+}
 </style>
 </head>
 
@@ -25,11 +33,22 @@ button{padding:8px 14px;border:none;border-radius:6px;color:#fff;cursor:pointer}
 
 <div class="container">
 
+<!-- 🔐 BOSS INVITE CODE -->
+<div class="card">
+  <h3>Your Owner Invite Code</h3>
+  <div id="bossCodeBox" class="code-box">Loading...</div>
+  <button class="primary" onclick="regenerateBossCode()">
+    Regenerate Code
+  </button>
+</div>
+
+<!-- PENDING -->
 <div class="card">
   <h3>Pending Requests</h3>
   <div id="pendingList"></div>
 </div>
 
+<!-- APPROVED -->
 <div class="card">
   <h3>Approved Users Under You</h3>
   <div id="approvedList"></div>
@@ -46,16 +65,9 @@ import { onAuthStateChanged, signOut }
 from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 import { 
-  collection, 
-  query, 
-  where, 
-  onSnapshot, 
-  updateDoc, 
-  deleteDoc, 
-  doc, 
-  getDoc, 
-  serverTimestamp, 
-  deleteField 
+  collection, query, where, onSnapshot,
+  updateDoc, deleteDoc, doc,
+  getDoc, serverTimestamp, deleteField
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 let bossUid=null;
@@ -79,6 +91,7 @@ onAuthStateChanged(auth, async(user)=>{
 
   bossUid = user.uid;
 
+  await loadBossCode();
   listenPending();
   listenApproved();
 });
@@ -90,14 +103,47 @@ window.logoutUser = async()=>{
   location.href="index.html";
 };
 
-/* ================= PENDING REQUESTS ================= */
+/* ================= BOSS INVITE CODE SYSTEM ================= */
+
+async function loadBossCode(){
+
+  const ref = doc(db,"users",bossUid);
+  const snap = await getDoc(ref);
+
+  let code = snap.data().inviteCode;
+
+  if(!code){
+    code = generateCode("BOS");
+    await updateDoc(ref,{ inviteCode: code });
+  }
+
+  document.getElementById("bossCodeBox").innerText = code;
+}
+
+window.regenerateBossCode = async()=>{
+
+  const newCode = generateCode("BOS");
+
+  await updateDoc(doc(db,"users",bossUid),{
+    inviteCode:newCode
+  });
+
+  document.getElementById("bossCodeBox").innerText=newCode;
+};
+
+function generateCode(prefix){
+  const random = Math.floor(100000 + Math.random() * 900000);
+  return prefix + random;
+}
+
+/* ================= PENDING ================= */
 
 function listenPending(){
 
   const q = query(
     collection(db,"users"),
     where("role","==","pending"),
-    where("requestedTo","==",bossUid)   // 🔥 FIXED
+    where("requestedTo","==",bossUid)
   );
 
   onSnapshot(q,(snap)=>{
@@ -119,10 +165,12 @@ function listenPending(){
           <span class="badge">${data.requestedRole}</span>
           <br>${data.email}
           <br><br>
-          <button class="approve" onclick="approveUser('${d.id}')">
+          <button class="approve"
+            onclick="approveUser('${d.id}')">
             Approve
           </button>
-          <button class="reject" onclick="rejectUser('${d.id}')">
+          <button class="reject"
+            onclick="rejectUser('${d.id}')">
             Reject
           </button>
         </div>
@@ -175,7 +223,7 @@ window.approveUser = async(id)=>{
     approvedBy: bossUid,
     approvedAt: serverTimestamp(),
     requestedRole: deleteField(),
-    requestedTo: deleteField()  // 🔥 remove routing after approval
+    requestedTo: deleteField()
   });
 };
 
