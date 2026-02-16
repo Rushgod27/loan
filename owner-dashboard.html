@@ -4,103 +4,208 @@
 <meta charset="UTF-8">
 <title>Owner Dashboard</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="stylesheet" href="css/styles.css">
+<link rel="stylesheet" href="css/styles.css?v=20">
 </head>
 <body>
 
-<div class="header">Owner Panel</div>
-
-<div class="container">
-
-  <div class="card">
-    <h3>Add New Agent</h3>
-
-    <input id="agentName"
-      placeholder="Agent Name">
-
-    <input id="agentEmail"
-      placeholder="Agent Email">
-
-    <button class="btn btn-primary"
-      onclick="addAgent()">
-      Add Agent
-    </button>
-  </div>
-
+<div class="header">
+  Owner Panel
 </div>
+
+<div class="nav">
+  <div class="active">Dashboard</div>
+  <div onclick="logoutUser()">Logout</div>
+</div>
+
+<div class="container" id="content"></div>
 
 <script type="module">
 
 import { auth, db } from "./js/firebase.js";
 
 import {
+  signOut,
   onAuthStateChanged
-} from
-"https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 import {
   collection,
-  addDoc,
   query,
   where,
   getDocs
-} from
-"https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-let currentOwnerUid = null;
+let ownerId = null;
 
-onAuthStateChanged(auth,user=>{
+/* ================= AUTH ================= */
+
+onAuthStateChanged(auth, user => {
+
   if(!user){
     location.href="index.html";
     return;
   }
-  currentOwnerUid = user.uid;
+
+  ownerId = user.uid;
+  loadDashboard();
 });
 
-window.addAgent = async () => {
+/* ================= LOGOUT ================= */
 
-  const name  =
-    document.getElementById("agentName")
-    .value.trim();
-
-  const email =
-    document.getElementById("agentEmail")
-    .value.trim()
-    .toLowerCase();
-
-  if(!name || !email){
-    alert("Enter name and email");
-    return;
-  }
-
-  const q = query(
-    collection(db,"users"),
-    where("email","==",email)
-  );
-
-  const snap = await getDocs(q);
-
-  if(!snap.empty){
-    alert("Agent already registered.");
-    return;
-  }
-
-  await addDoc(collection(db,"users"),{
-    name,
-    email,
-    role:"agent",
-    ownerId: currentOwnerUid,
-    status:"active",
-    uid:null,
-    createdAt: Date.now()
-  });
-
-  alert("Agent added. Agent must login using email link.");
-
-  document.getElementById("agentName").value="";
-  document.getElementById("agentEmail").value="";
+window.logoutUser = async () => {
+  await signOut(auth);
+  location.href="index.html";
 };
 
+/* ================= DASHBOARD ================= */
+
+async function loadDashboard(){
+
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(today.getDate()+1);
+
+  /* ================= GET AGENTS ================= */
+
+  const agentSnap = await getDocs(query(
+    collection(db,"users"),
+    where("ownerId","==",ownerId),
+    where("role","==","agent")
+  ));
+
+  const agents=[];
+  agentSnap.forEach(d=>{
+    agents.push({id:d.id, ...d.data()});
+  });
+
+  const agentIds = agents.map(a=>a.id);
+
+  let totalBorrowers=0;
+  let totalActiveLoans=0;
+  let totalTodayCollection=0;
+
+  let performanceHTML="";
+
+  /* ================= LOOP AGENTS ================= */
+
+  for(const agent of agents){
+
+    /* ---- BORROWERS ---- */
+    const borrowerSnap = await getDocs(query(
+      collection(db,"borrowers"),
+      where("agentId","==",agent.id)
+    ));
+
+    const borrowerIds=[];
+    borrowerSnap.forEach(b=>{
+      borrowerIds.push(b.id);
+    });
+
+    const borrowerCount = borrowerSnap.size;
+    totalBorrowers += borrowerCount;
+
+    /* ---- LOANS ---- */
+    const loanSnap = await getDocs(query(
+      collection(db,"loans"),
+      where("agentId","==",agent.id),
+      where("status","==","active")
+    ));
+
+    const activeLoans = loanSnap.size;
+    totalActiveLoans += activeLoans;
+
+    /* ---- COLLECTION (using installments completed today) ---- */
+
+    let agentTodayCollection = 0;
+
+    const instSnap = await getDocs(query(
+      collection(db,"installments"),
+      where("status","==","completed")
+    ));
+
+    instSnap.forEach(i=>{
+      const data = i.data();
+      if(data.paidDate){
+        const paidDate = new Date(data.paidDate);
+        if(paidDate>=today && paidDate<tomorrow
+          && data.loanId){
+          agentTodayCollection += data.amount;
+        }
+      }
+    });
+
+    totalTodayCollection += agentTodayCollection;
+
+    /* ---- RENDER PERFORMANCE CARD ---- */
+
+    performanceHTML += `
+      <div class="card">
+        <div class="card-row">
+          <div class="card-details">
+            <div class="card-title">
+              ${agent.name}
+            </div>
+            <div class="card-sub">
+              ${agent.email}
+            </div>
+          </div>
+        </div>
+
+        <div class="card-row">
+          <div>Borrowers</div>
+          <b>${borrowerCount}</b>
+        </div>
+
+        <div class="card-row">
+          <div>Active Loans</div>
+          <b>${activeLoans}</b>
+        </div>
+
+        <div class="card-row">
+          <div>Today's Collection</div>
+          <b>₹${agentTodayCollection}</b>
+        </div>
+      </div>
+    `;
+  }
+
+  /* ================= RENDER OVERVIEW ================= */
+
+  content.innerHTML = `
+
+    <div class="card">
+      <h3>📊 Overview</h3>
+
+      <div class="card-row">
+        <div>Total Agents</div>
+        <b>${agents.length}</b>
+      </div>
+
+      <div class="card-row">
+        <div>Total Borrowers</div>
+        <b>${totalBorrowers}</b>
+      </div>
+
+      <div class="card-row">
+        <div>Total Active Loans</div>
+        <b>${totalActiveLoans}</b>
+      </div>
+
+      <div class="card-row">
+        <div>Today's Total Collection</div>
+        <b>₹${totalTodayCollection}</b>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>👤 Agent Performance</h3>
+      ${performanceHTML || "No agents found"}
+    </div>
+  `;
+}
+
 </script>
+
 </body>
 </html>
