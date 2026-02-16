@@ -8,53 +8,21 @@
 body{margin:0;font-family:system-ui;background:#f3f4f6}
 .header{background:#111827;color:#fff;padding:16px;text-align:center;font-weight:600}
 .container{padding:16px}
-.card{
-  background:#fff;
-  padding:16px;
-  border-radius:10px;
-  margin-bottom:16px;
-  box-shadow:0 2px 6px rgba(0,0,0,0.08)
-}
-.card-row{
-  background:#f9fafb;
-  padding:10px;
-  border-radius:6px;
-  margin-bottom:8px
-}
-select{
-  padding:6px;
-  border-radius:6px;
-}
-button{
-  padding:6px 10px;
-  border:none;
-  background:#ef4444;
-  color:#fff;
-  border-radius:6px;
-  cursor:pointer;
-}
-.logout{
-  background:#2563eb;
-  width:100%;
-  padding:12px;
-  margin-top:10px;
-}
+.card{background:#fff;padding:16px;border-radius:10px;margin-bottom:16px;box-shadow:0 2px 6px rgba(0,0,0,0.08)}
+.card-row{background:#f9fafb;padding:10px;border-radius:6px;margin-bottom:8px}
+select{padding:6px;border-radius:6px}
+button{padding:6px 10px;border:none;background:#2563eb;color:#fff;border-radius:6px;cursor:pointer}
+.logout{width:100%;margin-top:10px}
 </style>
 </head>
 <body>
 
 <div class="header">Boss Panel (Super Admin)</div>
-
 <div class="container">
 
 <div class="card">
   <h3>Pending Users</h3>
   <div id="pendingList"></div>
-</div>
-
-<div class="card">
-  <h3>Owners</h3>
-  <div id="ownerList"></div>
 </div>
 
 <button class="logout" onclick="logoutUser()">Logout</button>
@@ -64,46 +32,22 @@ button{
 <script type="module">
 
 import { auth, db } from "./js/firebase.js";
-import {
-  onAuthStateChanged,
-  signOut
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-
-import {
-  collection,
-  query,
-  where,
-  getDocs,
-  updateDoc,
-  doc
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-
-let bossEmail = null;
+import { onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { collection, query, where, getDocs, updateDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 onAuthStateChanged(auth, async(user)=>{
-  if(!user){
-    location.href="index.html";
-    return;
-  }
+  if(!user){ location.href="index.html"; return; }
 
-  const q = query(
-    collection(db,"users"),
-    where("email","==",user.email)
-  );
-
+  const q = query(collection(db,"users"),where("email","==",user.email));
   const snap = await getDocs(q);
 
   if(snap.empty || snap.docs[0].data().role !== "boss"){
-    alert("Access Denied");
     await signOut(auth);
     location.href="index.html";
     return;
   }
 
-  bossEmail = user.email;
-
   loadPending();
-  loadOwners();
 });
 
 window.logoutUser = async()=>{
@@ -124,38 +68,15 @@ async function loadPending(){
 
   snap.forEach(d=>{
     const data = d.data();
-
     container.innerHTML += `
       <div class="card-row">
         <strong>${data.name}</strong><br>
-        ${data.email}
-        <br><br>
+        ${data.email}<br><br>
         <select onchange="approveUser('${d.id}', this.value)">
-          <option value="">Select Role</option>
-          <option value="owner">Approve as Owner</option>
+          <option value="">Approve As</option>
+          <option value="owner">Owner</option>
+          <option value="boss">Boss</option>
         </select>
-      </div>
-    `;
-  });
-}
-
-async function loadOwners(){
-  const q = query(collection(db,"users"),where("role","==","owner"));
-  const snap = await getDocs(q);
-  const container = document.getElementById("ownerList");
-  container.innerHTML="";
-
-  if(snap.empty){
-    container.innerHTML="<p>No owners</p>";
-    return;
-  }
-
-  snap.forEach(d=>{
-    const data = d.data();
-    container.innerHTML += `
-      <div class="card-row">
-        <strong>${data.name}</strong><br>
-        ${data.email}
       </div>
     `;
   });
@@ -164,9 +85,8 @@ async function loadOwners(){
 window.approveUser = async(id, role)=>{
   if(!role) return;
   await updateDoc(doc(db,"users",id),{ role:role });
-  alert("User Approved");
+  alert("User Approved as " + role);
   loadPending();
-  loadOwners();
 };
 
 </script>
