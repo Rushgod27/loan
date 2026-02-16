@@ -68,11 +68,12 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 let currentUserId = null;
+let ownerId = null;
 let borrowerCache = [];
 
 /* ================= AUTH ================= */
 
-onAuthStateChanged(auth, user => {
+onAuthStateChanged(auth, async user => {
 
   if(!user){
     location.href = "index.html";
@@ -80,6 +81,14 @@ onAuthStateChanged(auth, user => {
   }
 
   currentUserId = user.uid;
+
+  // 🔥 Fetch ownerId from users collection
+  const userSnap = await getDoc(doc(db,"users",currentUserId));
+
+  if(userSnap.exists()){
+    ownerId = userSnap.data().approvedBy || null;
+  }
+
   loadBorrowers();
 });
 
@@ -162,12 +171,16 @@ window.createBorrower = async () => {
       if(!confirmAdd) return;
     }
 
-    /* ===== CREATE ===== */
+    /* ===== CREATE WITH OWNERID ===== */
+
     await addDoc(collection(db,"borrowers"),{
       name,
       phone,
-      nameLower:name.toLowerCase(),
+      nameLower: name.toLowerCase(),
+
       agentId: currentUserId,
+      ownerId: ownerId, // 🔥 NEW FIELD ADDED
+
       createdAt: Date.now()
     });
 
@@ -254,5 +267,6 @@ window.openProfile = (id)=>{
 };
 
 </script>
+
 </body>
 </html>
