@@ -62,9 +62,7 @@ import {
   query,
   where,
   getDocs,
-  addDoc,
-  doc,
-  getDoc
+  addDoc
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 let currentUserId = null;
@@ -82,11 +80,26 @@ onAuthStateChanged(auth, async user => {
 
   currentUserId = user.uid;
 
-  // 🔥 Fetch ownerId from users collection
-  const userSnap = await getDoc(doc(db,"users",currentUserId));
+  // 🔥 FIXED: Fetch user using email (not doc ID)
+  const userQuery = query(
+    collection(db,"users"),
+    where("email","==", user.email)
+  );
 
-  if(userSnap.exists()){
-    ownerId = userSnap.data().approvedBy || null;
+  const userSnap = await getDocs(userQuery);
+
+  if(!userSnap.empty){
+    const userData = userSnap.docs[0].data();
+
+    // If logged-in user is agent → approvedBy = ownerId
+    if(userData.role === "agent"){
+      ownerId = userData.approvedBy || null;
+    }
+
+    // If logged-in user is owner → ownerId = self
+    if(userData.role === "owner"){
+      ownerId = user.uid;
+    }
   }
 
   loadBorrowers();
@@ -125,6 +138,12 @@ window.createBorrower = async () => {
 
   try{
 
+    // 🚨 Safety check
+    if(!ownerId){
+      alert("Owner not linked properly. Contact admin.");
+      return;
+    }
+
     /* ===== CHECK SAME AGENT ===== */
     const sameQuery = query(
       collection(db,"borrowers"),
@@ -155,9 +174,15 @@ window.createBorrower = async () => {
 
       if(data.agentId === currentUserId) continue;
 
-      const agentSnap = await getDoc(doc(db,"users",data.agentId));
-      if(agentSnap.exists()){
-        otherAgents.push(agentSnap.data().name);
+      const agentQuery = query(
+        collection(db,"users"),
+        where("email","==",data.agentEmail)
+      );
+
+      const agentSnap = await getDocs(agentQuery);
+
+      if(!agentSnap.empty){
+        otherAgents.push(agentSnap.docs[0].data().name);
       }
     }
 
@@ -171,7 +196,7 @@ window.createBorrower = async () => {
       if(!confirmAdd) return;
     }
 
-    /* ===== CREATE WITH OWNERID ===== */
+    /* ===== CREATE BORROWER WITH OWNERID ===== */
 
     await addDoc(collection(db,"borrowers"),{
       name,
@@ -179,7 +204,7 @@ window.createBorrower = async () => {
       nameLower: name.toLowerCase(),
 
       agentId: currentUserId,
-      ownerId: ownerId, // 🔥 NEW FIELD ADDED
+      ownerId: ownerId,
 
       createdAt: Date.now()
     });
@@ -267,6 +292,5 @@ window.openProfile = (id)=>{
 };
 
 </script>
-
 </body>
 </html>
