@@ -10,17 +10,21 @@
 
 <div class="login-wrapper">
   <div class="login-card">
-    <div class="login-title">Login</div>
 
-    <input id="loginEmail" placeholder="Enter your email">
+    <div class="login-title">
+      Loan Management System
+    </div>
 
-    <button class="login-btn" onclick="sendLink()">
+    <input id="emailInput" type="email" placeholder="Enter your email">
+
+    <button class="login-btn" onclick="sendLoginLink()">
       Send Login Link
     </button>
 
     <div class="login-footer">
-      Magic link will be sent to your email
+      Secure passwordless login
     </div>
+
   </div>
 </div>
 
@@ -40,11 +44,12 @@ import {
   getDoc
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
+
 /* ================= SEND LOGIN LINK ================= */
 
-window.sendLink = async () => {
+window.sendLoginLink = async () => {
 
-  let email = document.getElementById("loginEmail").value.trim().toLowerCase();
+  let email = document.getElementById("emailInput").value.trim().toLowerCase();
 
   if(!email){
     alert("Enter email");
@@ -52,65 +57,66 @@ window.sendLink = async () => {
   }
 
   const actionCodeSettings = {
-    url: window.location.origin, // VERY IMPORTANT
+    url: "https://rushgod27.github.io/loan/",
     handleCodeInApp: true
   };
 
   try{
     await sendSignInLinkToEmail(auth, email, actionCodeSettings);
     localStorage.setItem("emailForSignIn", email);
-    alert("Login link sent. Check email.");
-  }catch(err){
-    alert(err.message);
+    alert("Login link sent. Check your email.");
+  } catch(err){
+    alert("Error: " + err.message);
   }
 };
 
 
-/* ================= COMPLETE LOGIN ================= */
+/* ================= AUTO LOGIN FROM EMAIL LINK ================= */
 
 if (isSignInWithEmailLink(auth, window.location.href)) {
 
   let email = localStorage.getItem("emailForSignIn");
 
   if (!email) {
-    email = prompt("Confirm your email");
+    email = prompt("Confirm your email:");
   }
 
   signInWithEmailLink(auth, email, window.location.href)
     .then(() => {
       localStorage.removeItem("emailForSignIn");
     })
-    .catch((error) => {
-      alert(error.message);
+    .catch(err => {
+      alert("Login error: " + err.message);
     });
 }
 
 
-/* ================= ROLE REDIRECT ================= */
+/* ================= ROLE BASED REDIRECT ================= */
 
-onAuthStateChanged(auth, async(user)=>{
+onAuthStateChanged(auth, async (user) => {
+
   if(!user) return;
 
-  const snap = await getDoc(doc(db,"users",user.uid));
+  const snap = await getDoc(doc(db, "users", user.uid));
 
   if(!snap.exists()){
-    alert("User not registered in system");
+    alert("User not registered by admin.");
     return;
   }
 
-  const role = snap.data().role;
+  const role = (snap.data().role || "").toLowerCase();
 
-  if(role==="boss"){
+  if(role === "boss"){
     location.href="boss-dashboard.html";
   }
-  else if(role==="owner"){
+  else if(role === "owner"){
     location.href="owner-dashboard.html";
   }
-  else if(role==="agent"){
+  else if(role === "agent"){
     location.href="agent-dashboard.html";
   }
   else{
-    alert("Invalid role");
+    alert("Invalid role.");
   }
 
 });
