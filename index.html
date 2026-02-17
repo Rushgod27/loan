@@ -2,201 +2,173 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Finance Portal Login</title>
+<title>Login</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="stylesheet" href="css/styles.css">
-  <link rel="manifest" href="manifest.json">
+
+<link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#4f46e5">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
-</head>
 
+<link rel="stylesheet" href="css/styles.css?v=15">
+
+<style>
+/* ================= INSTALL GATE ================= */
+
+.install-gate{
+  position:fixed;
+  inset:0;
+  background:#ffffff;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  z-index:9999;
+  padding:30px;
+  text-align:center;
+}
+
+.install-box{
+  max-width:360px;
+}
+
+.install-box h2{
+  margin-bottom:10px;
+}
+
+.install-box p{
+  color:#64748b;
+  font-size:14px;
+}
+
+.install-btn{
+  margin-top:20px;
+  padding:14px 28px;
+  border-radius:999px;
+  border:none;
+  background:#eef2ff;
+  color:#4f46e5;
+  font-weight:600;
+  cursor:pointer;
+}
+</style>
+
+</head>
 <body>
 
-<div class="card">
+<!-- INSTALL BLOCKER -->
+<div id="installGate" class="install-gate"></div>
 
-<h2>Finance Portal</h2>
+<!-- LOGIN CONTENT -->
+<div id="loginContent">
 
-<button onclick="googleLogin()">
-Sign in with Google
-</button>
+  <!-- 🔽 KEEP YOUR EXISTING LOGIN FORM EXACTLY HERE 🔽 -->
+  <div class="login-wrapper">
+    <div class="login-card">
 
-<select id="roleSelect" style="display:none;">
-  <option value="">Apply As</option>
-  <option value="agent">Agent</option>
-  <option value="owner">Owner</option>
-</select>
+      <div class="login-title">Agent Login</div>
 
-<input id="codeInput"
-       placeholder="Enter Invite Code"
-       style="display:none;">
+      <input id="emailInput" type="email" placeholder="Email">
+      <input id="passwordInput" type="password" placeholder="Password">
 
-<button id="submitBtn"
-        style="display:none;">
-Submit Application
-</button>
+      <button onclick="loginUser()">Login</button>
 
-<div class="note">
-New users must apply and wait for approval.
-</div>
+    </div>
+  </div>
+  <!-- 🔼 END LOGIN FORM 🔼 -->
 
 </div>
 
 <script type="module">
 
-import { auth, db } from "./js/firebase.js";
+import { auth } from "./js/firebase.js";
+import { signInWithEmailAndPassword } 
+from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
-import {
-  GoogleAuthProvider,
-  signInWithPopup,
-  onAuthStateChanged,
-  signOut
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+/* ================= FORCE PWA INSTALL ================= */
 
-import {
-  doc,
-  setDoc,
-  getDoc,
-  collection,
-  query,
-  where,
-  getDocs
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+let deferredPrompt;
 
-let currentUser=null;
+function isStandalone(){
+  return window.matchMedia('(display-mode: standalone)').matches
+         || window.navigator.standalone === true;
+}
 
-/* GOOGLE LOGIN */
+const gate = document.getElementById("installGate");
+const loginContent = document.getElementById("loginContent");
 
-window.googleLogin = async()=>{
-  const provider = new GoogleAuthProvider();
-  await signInWithPopup(auth, provider);
+/* If NOT opened as installed app */
+if(!isStandalone()){
+
+  loginContent.style.display = "none";
+  gate.style.display = "flex";
+
+  gate.innerHTML = `
+    <div class="install-box">
+      <h2>Install App to Continue</h2>
+      <p>
+        For better performance and offline access,
+        please install the app before logging in.
+      </p>
+
+      <button id="installBtn" class="install-btn">
+        Install App
+      </button>
+
+      <p style="margin-top:15px;font-size:13px;">
+        iPhone Users:<br>
+        Tap <b>Share</b> → <b>Add to Home Screen</b>
+      </p>
+    </div>
+  `;
+}
+
+/* Android Install Prompt */
+window.addEventListener("beforeinstallprompt", (e) => {
+
+  e.preventDefault();
+  deferredPrompt = e;
+
+  const btn = document.getElementById("installBtn");
+
+  if(btn){
+    btn.onclick = async () => {
+
+      deferredPrompt.prompt();
+
+      const { outcome } = await deferredPrompt.userChoice;
+
+      if(outcome === "accepted"){
+        location.reload();
+      }
+    };
+  }
+});
+
+/* After Installation */
+window.addEventListener("appinstalled", () => {
+  location.reload();
+});
+
+/* ================= LOGIN FUNCTION ================= */
+
+window.loginUser = async function(){
+
+  const email = document.getElementById("emailInput").value;
+  const password = document.getElementById("passwordInput").value;
+
+  if(!email || !password){
+    alert("Enter email and password");
+    return;
+  }
+
+  try{
+    await signInWithEmailAndPassword(auth,email,password);
+    location.href="agent-dashboard.html";
+  }
+  catch(err){
+    alert("Invalid credentials");
+  }
 };
 
-/* AUTH STATE */
-
-onAuthStateChanged(auth, async(user)=>{
-
-  if(!user) return;
-
-  currentUser=user;
-
-  const userSnap = await getDoc(doc(db,"users",user.uid));
-
-  /* ===== EXISTING USER ===== */
-
-  if(userSnap.exists()){
-
-    const data=userSnap.data();
-
-    if(data.role==="pending"){
-      alert("Waiting for approval.");
-      await signOut(auth);
-      return;
-    }
-
-    if(data.role==="boss")
-      location.href="boss-dashboard.html";
-
-    if(data.role==="owner")
-      location.href="owner-dashboard.html";
-
-    if(data.role==="agent")
-      location.href="agent-dashboard.html";
-
-    return;
-  }
-
-  /* ===== NEW USER ===== */
-
-  document.getElementById("roleSelect").style.display="block";
-  document.getElementById("submitBtn").style.display="block";
-});
-
-/* ROLE CHANGE */
-
-document.getElementById("roleSelect")
-.addEventListener("change",(e)=>{
-
-  const role=e.target.value;
-  const codeInput=document.getElementById("codeInput");
-
-  if(role==="agent"){
-    codeInput.placeholder="Enter Owner Invite Code";
-    codeInput.style.display="block";
-  }
-
-  if(role==="owner"){
-    codeInput.placeholder="Enter Boss Invite Code";
-    codeInput.style.display="block";
-  }
-
-});
-
-/* SUBMIT APPLICATION */
-
-document.getElementById("submitBtn")
-.addEventListener("click",async()=>{
-
-  const role=document.getElementById("roleSelect").value;
-  const code=document.getElementById("codeInput").value.trim();
-
-  if(!role || !code){
-    alert("Fill all fields");
-    return;
-  }
-
-  /* ===== VERIFY INVITE CODE ===== */
-
-  const q=query(
-    collection(db,"users"),
-    where("inviteCode","==",code)
-  );
-
-  const snap=await getDocs(q);
-
-  if(snap.empty){
-    alert("Invalid Invite Code");
-    return;
-  }
-
-  const approverDoc = snap.docs[0];
-  const approverData = approverDoc.data();
-
-  /* ===== ROLE VALIDATION ===== */
-
-  if(role==="owner" && approverData.role!=="boss"){
-    alert("Owner must use Boss invite code");
-    return;
-  }
-
-  if(role==="agent" && approverData.role!=="owner"){
-    alert("Agent must use Owner invite code");
-    return;
-  }
-
-  const approverUID = approverDoc.id;
-
-  /* ===== CREATE PENDING USER ===== */
-
-  await setDoc(doc(db,"users",currentUser.uid),{
-    name:currentUser.displayName,
-    email:currentUser.email,
-    role:"pending",
-    requestedRole:role,
-    requestedTo:approverUID,
-    createdAt:Date.now()
-  });
-
-  alert("Application submitted. Wait for approval.");
-
-  await signOut(auth);
-});
-if("serviceWorker" in navigator){
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/sw.js")
-      .then(() => console.log("PWA Ready"))
-      .catch(err => console.log("SW Error", err));
-  });
-}
 </script>
 
 </body>
