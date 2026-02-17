@@ -42,6 +42,10 @@
   <div onclick="goBorrowers()">Borrowers</div>
 </div>
 
+<div class="welcome-wrapper">
+  <div id="welcomeBox"></div>
+</div>
+
 <div class="container" id="content"></div>
 
 <div class="logout-wrapper">
@@ -113,6 +117,21 @@ onAuthStateChanged(auth, async user => {
   uid = user.uid;
   loadDashboard();
 });
+
+
+
+const name = userSnap.data().name || user.displayName || "User";
+const role = userSnap.data().role;
+
+let roleClass = "welcome-agent";
+if(role === "owner") roleClass = "welcome-owner";
+if(role === "boss") roleClass = "welcome-boss";
+
+document.getElementById("welcomeBox").innerHTML = `
+  <div class="welcome-banner ${roleClass}">
+    Hi ${name} 👋
+  </div>
+`;
 
 /* MARK PAID */
 
