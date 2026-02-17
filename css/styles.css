@@ -369,7 +369,30 @@ button:hover,
   opacity:.4;
 }
 
+/* Mini Profile Avatar for Dashboard Cards */
 
+.card-left{
+  display:flex;
+  align-items:center;
+  gap:14px;
+}
+
+.mini-avatar{
+  width:46px;
+  height:46px;
+  border-radius:50%;
+  overflow:hidden;
+  flex-shrink:0;
+  background:#f1f5f9;
+  border:2px solid white;
+  box-shadow:0 4px 12px rgba(15,23,42,.06);
+}
+
+.mini-avatar img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+}
 /* ======================================================
    MOBILE
 ====================================================== */
