@@ -118,17 +118,15 @@ onAuthStateChanged(auth, async user => {
   /* ✅ WELCOME MESSAGE FIXED */
 
   const name = userSnap.data().name || user.displayName || "User";
-  const role = userSnap.data().role;
 
-  let roleClass = "welcome-agent";
-  if(role === "owner") roleClass = "welcome-owner";
-  if(role === "boss") roleClass = "welcome-boss";
-
-  document.getElementById("welcomeBox").innerHTML = `
-    <div class="welcome-banner ${roleClass}">
-      Hi ${name} 👋
+document.getElementById("welcomeBox").innerHTML = `
+  <div class="welcome-banner">
+    Hi ${name} <span class="wave">👋</span>
+    <div class="welcome-sub">
+      Ready to collect today? Let’s make it productive.
     </div>
-  `;
+  </div>
+`;
 
   loadDashboard();
 });
