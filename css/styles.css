@@ -361,3 +361,143 @@ button:active{
 .hidden{
   display:none;
 }
+
+/* ======================================================
+   MOBILE OPTIMIZATION PATCH
+   (Add at the BOTTOM of styles.css)
+====================================================== */
+
+@media (max-width: 768px){
+
+  /* -------- GENERAL LAYOUT -------- */
+
+  body{
+    font-size:15px;
+  }
+
+  .container,
+  .section-content{
+    padding:14px;
+  }
+
+  /* -------- HEADER -------- */
+
+  .header{
+    font-size:17px;
+    padding:18px 12px;
+  }
+
+  /* -------- NAV -------- */
+
+  .nav{
+    font-size:14px;
+  }
+
+  .nav div{
+    padding:14px 6px;
+  }
+
+  /* -------- CARDS -------- */
+
+  .card,
+  .loan-card{
+    padding:16px;
+    border-radius:20px;
+  }
+
+  /* -------- BUTTONS -------- */
+
+  button,
+  .btn,
+  .view-btn,
+  .pay-btn,
+  .logout-btn{
+    width:100%;
+    padding:14px;
+    font-size:15px;
+    border-radius:18px;
+  }
+
+  /* Side buttons inside cards should stack */
+  .card-actions{
+    flex-direction:column;
+    width:100%;
+  }
+
+  /* -------- INSTALLMENT CARD -------- */
+
+  .inst-card{
+    flex-direction:column;
+    align-items:flex-start;
+    gap:12px;
+  }
+
+  .inst-card button{
+    width:100%;
+  }
+
+  .inst-amount{
+    font-size:20px;
+  }
+
+  /* -------- BORROWER CARD -------- */
+
+  .borrower-card{
+    padding:16px;
+  }
+
+  /* -------- PROGRESS -------- */
+
+  .progress,
+  .progress-container{
+    height:8px;
+  }
+
+  /* -------- FORM INPUTS -------- */
+
+  input,
+  select{
+    font-size:16px; /* prevent iOS zoom */
+    padding:14px;
+  }
+
+  /* -------- LOGIN PAGE -------- */
+
+  .login-card{
+    padding:28px 18px;
+    border-radius:22px;
+  }
+
+  .login-title{
+    font-size:20px;
+  }
+
+  /* -------- WELCOME BANNER -------- */
+
+  .welcome-banner{
+    font-size:20px;
+    padding:20px;
+    border-radius:22px;
+  }
+
+}
+
+/* ======================================================
+   EXTRA SMALL DEVICES (Very Small Phones)
+====================================================== */
+
+@media (max-width: 380px){
+
+  .header{
+    font-size:16px;
+  }
+
+  .welcome-banner{
+    font-size:18px;
+  }
+
+  .inst-amount{
+    font-size:18px;
+  }
+
+}
