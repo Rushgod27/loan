@@ -1,6 +1,6 @@
 /* ======================================================
-   SOFT MODERN FINTECH UI
-   Light • Elegant • Mobile-first • Premium
+   LIQUID SOFT UI – ULTRA SMOOTH VERSION
+   Calm • Airy • Clean • Mobile-first
 ====================================================== */
 
 
@@ -9,27 +9,28 @@
 ====================================================== */
 
 :root{
-  --primary:#2563eb;
-  --accent:#0ea5e9;
-  --success:#16a34a;
-  --warning:#f59e0b;
+
+  --bg:#f7f9fc;
+  --surface:#ffffff;
+
+  --primary:#4f46e5;
+  --primary-soft:#eef2ff;
+
+  --success:#22c55e;
+  --warning:#facc15;
   --danger:#ef4444;
 
-  --bg:#f8fafc;
-  --surface:#ffffff;
-  --soft:#eef2f7;
+  --text:#111827;
+  --muted:#94a3b8;
 
-  --text:#0f172a;
-  --muted:#64748b;
-  --border:#e6ebf2;
+  --radius-xl:30px;
+  --radius-lg:22px;
+  --radius-md:16px;
 
-  --radius:20px;
-  --radius-lg:26px;
+  --shadow-soft:0 4px 20px rgba(0,0,0,0.05);
+  --shadow-float:0 12px 40px rgba(0,0,0,0.06);
 
-  --shadow-soft:0 8px 25px rgba(15,23,42,0.06);
-  --shadow-float:0 20px 50px rgba(15,23,42,0.08);
-
-  --transition:all .25s ease;
+  --transition:cubic-bezier(.4,0,.2,1);
 }
 
 
@@ -46,6 +47,7 @@ body{
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
   background:var(--bg);
   color:var(--text);
+  -webkit-font-smoothing:antialiased;
 }
 
 .hidden{
@@ -54,48 +56,43 @@ body{
 
 
 /* ======================================================
-   HEADER (Clean App Style)
+   HEADER (Floating Soft)
 ====================================================== */
 
 .header{
   padding:20px;
+  font-weight:600;
   font-size:18px;
-  font-weight:700;
-  background:var(--bg);
-  border-bottom:1px solid var(--border);
+  text-align:center;
+  background:transparent;
 }
 
 
 /* ======================================================
-   NAV (App Style Tabs)
+   NAV (Soft Pills)
 ====================================================== */
 
 .nav{
   display:flex;
-  padding:10px;
-  background:var(--bg);
   gap:8px;
+  padding:12px 16px;
 }
 
 .nav div{
   flex:1;
-  padding:12px;
   text-align:center;
+  padding:12px;
+  border-radius:999px;
   font-size:14px;
-  font-weight:600;
-  border-radius:14px;
-  cursor:pointer;
-  transition:var(--transition);
+  font-weight:500;
   color:var(--muted);
-}
-
-.nav div:hover{
-  background:var(--soft);
+  transition:all .3s var(--transition);
+  cursor:pointer;
 }
 
 .nav .active{
-  background:var(--primary);
-  color:white;
+  background:var(--primary-soft);
+  color:var(--primary);
 }
 
 
@@ -105,75 +102,72 @@ body{
 
 .container,
 .section-content{
-  padding:20px;
+  padding:18px;
 }
 
 
 /* ======================================================
-   CARD SYSTEM (Floating Clean)
+   CARD SYSTEM (Floating Soft Glass)
 ====================================================== */
 
 .card,
 .loan-card{
   background:var(--surface);
-  padding:22px;
-  border-radius:var(--radius-lg);
-  margin-bottom:20px;
+  border-radius:var(--radius-xl);
+  padding:24px;
+  margin-bottom:22px;
   box-shadow:var(--shadow-soft);
-  transition:var(--transition);
-  border:1px solid var(--border);
+  transition:all .35s var(--transition);
 }
 
 .card:hover{
-  transform:translateY(-4px);
+  transform:translateY(-3px);
   box-shadow:var(--shadow-float);
 }
 
 .loan-card.completed{
-  opacity:.6;
+  opacity:.55;
 }
 
 
 /* ======================================================
-   INPUTS (Modern App Fields)
+   INPUTS (Ultra Smooth Fields)
 ====================================================== */
 
 input,
 select{
   width:100%;
-  padding:15px;
+  padding:16px;
+  border-radius:var(--radius-lg);
+  border:none;
   font-size:15px;
   margin-bottom:16px;
-
-  border-radius:16px;
-  border:1px solid var(--border);
-  background:var(--soft);
+  background:#f1f5f9;
   color:var(--text);
-
-  transition:var(--transition);
+  transition:all .3s var(--transition);
 }
 
 input:focus,
 select:focus{
-  outline:none;
   background:white;
-  border-color:var(--primary);
+  box-shadow:0 0 0 4px var(--primary-soft);
+  outline:none;
 }
 
 
 /* ======================================================
-   BUTTONS (Smooth Rounded)
+   BUTTONS (Soft Liquid Buttons)
 ====================================================== */
 
 button,
 .btn{
-  padding:14px 20px;
-  border-radius:16px;
+  padding:14px 22px;
+  border-radius:999px;
   border:none;
-  font-weight:600;
+  font-weight:500;
   font-size:14px;
   cursor:pointer;
-  transition:var(--transition);
+  transition:all .3s var(--transition);
 
   background:var(--primary);
   color:white;
@@ -181,11 +175,14 @@ button,
 
 button:hover{
   transform:translateY(-2px);
+  opacity:.95;
 }
 
 button:active{
-  transform:scale(.97);
+  transform:scale(.96);
 }
+
+/* Variants */
 
 .btn-success{ background:var(--success); }
 .btn-warning{ background:var(--warning); }
@@ -193,7 +190,7 @@ button:active{
 
 
 /* ======================================================
-   INSTALLMENT CARDS (Soft Status)
+   INSTALLMENT CARDS (Smooth Status Style)
 ====================================================== */
 
 .inst-card{
@@ -201,54 +198,52 @@ button:active{
   justify-content:space-between;
   align-items:center;
   padding:18px;
+  border-radius:var(--radius-lg);
   margin-bottom:14px;
-  border-radius:18px;
-  border:1px solid var(--border);
-  background:white;
+  background:#f8fafc;
+  transition:all .3s var(--transition);
 }
 
 .inst-card.pending{
-  background:#fffbeb;
-  border-color:#fde68a;
+  background:#fef9c3;
 }
 
 .inst-card.paid{
-  background:#f0fdf4;
-  border-color:#bbf7d0;
+  background:#dcfce7;
+  opacity:.75;
 }
 
 .inst-card.overdue{
-  background:#fef2f2;
-  border-color:#fecaca;
+  background:#fee2e2;
 }
 
 .inst-amount{
   font-size:20px;
-  font-weight:700;
+  font-weight:600;
 }
 
 
 /* ======================================================
-   PROGRESS BAR (Modern Pill)
+   PROGRESS BAR (Liquid Pill)
 ====================================================== */
 
 .progress{
   margin-top:12px;
-  height:8px;
-  background:var(--soft);
+  height:7px;
+  background:#e2e8f0;
   border-radius:999px;
   overflow:hidden;
 }
 
 .progress-bar{
   height:100%;
-  background:linear-gradient(90deg,var(--primary),var(--accent));
-  transition:width .4s ease;
+  background:var(--primary);
+  transition:width .4s var(--transition);
 }
 
 
 /* ======================================================
-   LOGIN PAGE (App Feel)
+   LOGIN PAGE (Centered Soft Card)
 ====================================================== */
 
 .login-wrapper{
@@ -262,17 +257,17 @@ button:active{
 .login-card{
   width:100%;
   max-width:420px;
+  padding:40px 30px;
+  border-radius:var(--radius-xl);
   background:var(--surface);
-  padding:36px 28px;
-  border-radius:28px;
   box-shadow:var(--shadow-float);
 }
 
 .login-title{
   font-size:22px;
-  font-weight:700;
-  margin-bottom:28px;
+  font-weight:600;
   text-align:center;
+  margin-bottom:30px;
 }
 
 
@@ -284,7 +279,7 @@ button:active{
 
   .container,
   .section-content{
-    padding:16px;
+    padding:14px;
   }
 
   button{
