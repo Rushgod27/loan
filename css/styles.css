@@ -1,5 +1,5 @@
 /* ======================================================
-   PREMIUM FINANCE UI – FULL DESIGN SYSTEM
+   PREMIUM FINANCE DESIGN SYSTEM – FULL VERSION
 ====================================================== */
 
 *{
@@ -40,7 +40,7 @@ body{
 .nav{
   display:flex;
   justify-content:space-around;
-  background:rgba(255,255,255,0.8);
+  background:rgba(255,255,255,0.85);
   backdrop-filter:blur(14px);
   border-bottom:1px solid rgba(0,0,0,0.05);
 }
@@ -52,7 +52,6 @@ body{
   cursor:pointer;
   font-weight:600;
   transition:.25s ease;
-  border-radius:14px 14px 0 0;
 }
 
 .nav div:hover{
@@ -77,38 +76,29 @@ body{
    CARD SYSTEM
 ====================================================== */
 
-.card{
-  background:rgba(255,255,255,0.9);
-  border-radius:22px;
+.card,
+.loan-card{
+  background:rgba(255,255,255,0.95);
+  border-radius:24px;
   padding:20px;
   margin-bottom:18px;
   backdrop-filter:blur(14px);
   box-shadow:
-      0 15px 40px rgba(0,0,0,0.07),
+      0 15px 40px rgba(0,0,0,0.08),
       inset 0 0 0 1px rgba(255,255,255,0.6);
   transition:all .35s ease;
   position:relative;
-  overflow:hidden;
 }
 
-.card::before{
-  content:"";
-  position:absolute;
-  inset:0;
-  background:linear-gradient(
-      140deg,
-      rgba(99,102,241,0.08),
-      rgba(34,197,94,0.08),
-      rgba(236,72,153,0.08)
-  );
-  z-index:-1;
-}
-
-.card:hover{
+.card:hover,
+.loan-card:hover{
   transform:translateY(-6px);
   box-shadow:
-      0 25px 60px rgba(0,0,0,0.12),
-      inset 0 0 0 1px rgba(255,255,255,0.8);
+      0 25px 60px rgba(0,0,0,0.12);
+}
+
+.loan-card.completed{
+  opacity:.6;
 }
 
 /* ======================================================
@@ -119,12 +109,12 @@ input,
 select{
   width:100%;
   padding:15px;
-  border-radius:16px;
+  border-radius:18px;
   border:1px solid #e5e7eb;
   font-size:14px;
   margin-bottom:14px;
   background:#f9fafb;
-  transition:all .25s ease;
+  transition:.25s ease;
 }
 
 input:focus,
@@ -132,58 +122,58 @@ select:focus{
   background:white;
   border-color:#6366f1;
   box-shadow:0 0 0 4px rgba(99,102,241,0.15);
+  outline:none;
 }
 
 /* ======================================================
-   PREMIUM BUTTON SYSTEM
+   UNIVERSAL BUTTON SYSTEM
 ====================================================== */
 
-.btn{
+button,
+.btn,
+.view-btn,
+.pay-btn,
+.logout-btn{
   display:inline-flex;
   align-items:center;
   justify-content:center;
   gap:6px;
-  padding:13px 20px;
+  padding:14px 22px;
   border:none;
-  border-radius:20px;
+  border-radius:22px;
   font-weight:700;
   font-size:14px;
   cursor:pointer;
-  position:relative;
-  overflow:hidden;
   transition:all .25s ease;
+  color:white;
+  background:linear-gradient(135deg,#6366f1,#3b82f6);
+  box-shadow:0 12px 30px rgba(99,102,241,.35);
 }
 
-.btn:active{
+button:hover,
+.btn:hover{
+  transform:translateY(-3px);
+}
+
+button:active{
   transform:scale(.95);
 }
 
-.btn-primary{
-  color:white;
-  background:linear-gradient(135deg,#6366f1,#3b82f6,#9333ea);
-  background-size:200% 200%;
-  animation:gradientMove 6s ease infinite;
-  box-shadow:0 12px 30px rgba(99,102,241,.4);
-}
+/* Variants */
 
-.btn-success{
-  color:white;
+.btn-success,
+.pay-btn{
   background:linear-gradient(135deg,#22c55e,#16a34a);
   box-shadow:0 10px 25px rgba(34,197,94,.35);
 }
 
 .btn-warning{
-  color:white;
   background:linear-gradient(135deg,#f59e0b,#f97316);
 }
 
-.btn-danger{
-  color:white;
+.btn-danger,
+.logout-btn{
   background:linear-gradient(135deg,#ef4444,#b91c1c);
-}
-
-.btn:hover{
-  transform:translateY(-3px);
 }
 
 /* ======================================================
@@ -204,33 +194,43 @@ select:focus{
 }
 
 /* ======================================================
-   EMI STYLES
+   INSTALLMENT CARD
 ====================================================== */
 
-.emi-row{
-  padding:16px;
-  border-radius:18px;
+.inst-card{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:18px;
+  border-radius:22px;
   margin-bottom:12px;
-  transition:.3s ease;
   font-weight:600;
+  transition:.3s ease;
 }
 
-.emi-row:hover{
+.inst-card:hover{
   transform:scale(1.02);
 }
 
-.emi-pending{
+.inst-amount{
+  font-size:22px;
+  font-weight:800;
+}
+
+/* Status Colors */
+
+.inst-card.pending{
   background:linear-gradient(135deg,#fef3c7,#fde68a);
   border-left:6px solid #f59e0b;
 }
 
-.emi-paid{
+.inst-card.paid{
   background:linear-gradient(135deg,#dcfce7,#bbf7d0);
   border-left:6px solid #22c55e;
-  opacity:.7;
+  opacity:.75;
 }
 
-.emi-overdue{
+.inst-card.overdue{
   background:linear-gradient(135deg,#fee2e2,#fecaca);
   border-left:6px solid #ef4444;
 }
@@ -239,11 +239,12 @@ select:focus{
    PROGRESS BAR
 ====================================================== */
 
+.progress,
 .progress-container{
   margin-top:12px;
   height:10px;
   background:#e5e7eb;
-  border-radius:10px;
+  border-radius:12px;
   overflow:hidden;
 }
 
@@ -305,14 +306,14 @@ select:focus{
 }
 
 .welcome-banner{
-  padding:26px;
-  border-radius:26px;
-  font-size:24px;
+  padding:28px;
+  border-radius:28px;
+  font-size:26px;
   font-weight:800;
   color:white;
   position:relative;
   overflow:hidden;
-  box-shadow:0 20px 50px rgba(99,102,241,.4);
+  box-shadow:0 20px 60px rgba(99,102,241,.4);
 }
 
 .welcome-banner::before{
