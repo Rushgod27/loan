@@ -1,6 +1,6 @@
 /* ======================================================
-   LIQUID SOFT UI – POLISHED PREMIUM
-   Ultra Smooth • Soft Buttons • Better Spacing
+   LIQUID SOFT UI – PREMIUM LAYERED VERSION
+   Ultra Smooth • Soft Depth • Not Plain • Modern
 ====================================================== */
 
 
@@ -10,7 +10,7 @@
 
 :root{
 
-  --bg:#f7f9fc;
+  --bg:linear-gradient(180deg,#f8fafc 0%, #eef2f7 100%);
   --surface:#ffffff;
 
   --primary:#4f46e5;
@@ -24,15 +24,12 @@
   --danger:#dc2626;
   --danger-soft:#fee2e2;
 
-  --text:#111827;
-  --muted:#94a3b8;
+  --text:#0f172a;
+  --muted:#64748b;
 
   --radius-xl:32px;
   --radius-lg:24px;
   --radius-md:18px;
-
-  --shadow-soft:0 6px 22px rgba(0,0,0,0.05);
-  --shadow-float:0 15px 40px rgba(0,0,0,0.06);
 
   --transition:cubic-bezier(.4,0,.2,1);
 }
@@ -64,7 +61,7 @@ body{
 ====================================================== */
 
 .header{
-  padding:22px 20px 10px;
+  padding:22px 20px 14px;
   font-weight:600;
   font-size:20px;
   text-align:center;
@@ -73,29 +70,21 @@ body{
 
 
 /* ======================================================
-   WELCOME BANNER (Upgraded)
+   WELCOME BANNER
 ====================================================== */
 
 .welcome-banner{
   margin:10px 22px 28px;
   padding:28px;
   border-radius:var(--radius-xl);
-  background:linear-gradient(135deg,#f0f4ff,#eef2ff);
+
+  background:linear-gradient(135deg,#f8fafc,#eef2ff);
+  border:1px solid #e6eaf2;
+
   position:relative;
   overflow:hidden;
-  box-shadow:var(--shadow-soft);
-}
 
-.welcome-banner::after{
-  content:"";
-  position:absolute;
-  top:-50px;
-  right:-50px;
-  width:160px;
-  height:160px;
-  background:#c7d2fe;
-  border-radius:50%;
-  opacity:.25;
+  box-shadow:0 6px 22px rgba(15,23,42,.04);
 }
 
 .welcome-title{
@@ -137,7 +126,21 @@ body{
 
 
 /* ======================================================
-   CARD SYSTEM (Better Spacing)
+   SECTION HEADER
+====================================================== */
+
+.section-header{
+  font-size:14px;
+  font-weight:600;
+  color:var(--muted);
+  margin:24px 0 14px;
+  padding-left:8px;
+  border-left:3px solid #e2e8f0;
+}
+
+
+/* ======================================================
+   CARD SYSTEM
 ====================================================== */
 
 .card,
@@ -146,13 +149,16 @@ body{
   border-radius:var(--radius-xl);
   padding:28px;
   margin-bottom:28px;
-  box-shadow:var(--shadow-soft);
+
+  border:1px solid rgba(15,23,42,0.05);
+  box-shadow:0 8px 28px rgba(15,23,42,.04);
+
   transition:.35s var(--transition);
 }
 
 .card:hover{
   transform:translateY(-4px);
-  box-shadow:var(--shadow-float);
+  box-shadow:0 16px 40px rgba(15,23,42,.08);
 }
 
 
@@ -180,7 +186,7 @@ input:focus{
 
 
 /* ======================================================
-   LIGHT SOFT BUTTON SYSTEM
+   BUTTON SYSTEM (SOFT)
 ====================================================== */
 
 button,
@@ -195,20 +201,17 @@ button,
   margin-top:8px;
 }
 
-/* Primary (Light Blue) */
 button,
 .btn-primary{
   background:var(--primary-soft);
   color:var(--primary);
 }
 
-/* Success (Light Green) */
 .btn-success{
   background:var(--success-soft);
   color:var(--success);
 }
 
-/* Danger (Light Red) */
 .btn-danger{
   background:var(--danger-soft);
   color:var(--danger);
@@ -221,6 +224,48 @@ button:hover,
 
 
 /* ======================================================
+   CONTACT BUTTONS
+====================================================== */
+
+.contact-btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  padding:12px 20px;
+  margin-top:10px;
+  margin-right:8px;
+  border-radius:999px;
+  font-size:14px;
+  font-weight:500;
+  text-decoration:none;
+  transition:.25s var(--transition);
+}
+
+.call-btn{
+  background:#e0f2fe;
+  color:#0284c7;
+}
+
+.call-btn:hover{
+  background:#dbeafe;
+}
+
+.wa-btn{
+  background:#dcfce7;
+  color:#16a34a;
+}
+
+.wa-btn:hover{
+  background:#bbf7d0;
+}
+
+.contact-btn:active{
+  transform:scale(.96);
+}
+
+
+/* ======================================================
    INSTALLMENT CARDS
 ====================================================== */
 
@@ -228,7 +273,8 @@ button:hover,
   padding:20px;
   border-radius:var(--radius-lg);
   margin-bottom:16px;
-  background:#f8fafc;
+  background:white;
+  border:1px solid #eef2f7;
 }
 
 .inst-amount{
@@ -237,96 +283,6 @@ button:hover,
   margin-bottom:10px;
 }
 
-
-/* ======================================================
-   BORROWER PROFILE ACTIONS
-====================================================== */
-
-.borrower-actions{
-  display:flex;
-  gap:14px;
-  margin-top:16px;
-}
-
-.action-btn{
-  flex:1;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  padding:14px;
-  border-radius:999px;
-  font-size:14px;
-  font-weight:500;
-  transition:.3s var(--transition);
-}
-
-/* Call */
-.action-call{
-  background:#e0f2fe;
-  color:#0284c7;
-}
-
-/* WhatsApp */
-.action-wa{
-  background:#dcfce7;
-  color:#16a34a;
-}
-
-.action-btn:hover{
-  transform:translateY(-2px);
-}
-
-/* ======================================================
-   CONTACT BUTTONS – SOFT PREMIUM STYLE
-====================================================== */
-
-.contact-btn{
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  gap:8px;
-
-  padding:12px 20px;
-  margin-top:10px;
-  margin-right:8px;
-
-  border-radius:999px;
-  font-size:14px;
-  font-weight:500;
-  text-decoration:none;
-
-  transition:all .25s cubic-bezier(.4,0,.2,1);
-}
-
-/* 📞 Call Button - Light Blue */
-
-.call-btn{
-  background:#e0f2fe;        /* very light blue */
-  color:#0284c7;              /* darker blue text */
-}
-
-.call-btn:hover{
-  transform:translateY(-2px);
-  background:#dbeafe;
-}
-
-/* 💬 WhatsApp Button - Light Green */
-
-.wa-btn{
-  background:#dcfce7;         /* light green */
-  color:#16a34a;               /* darker green text */
-}
-
-.wa-btn:hover{
-  transform:translateY(-2px);
-  background:#bbf7d0;
-}
-
-/* Press effect */
-
-.contact-btn:active{
-  transform:scale(.96);
-}
 
 /* ======================================================
    PROGRESS BAR
@@ -342,11 +298,12 @@ button:hover,
 
 .progress-bar{
   height:100%;
-  background:var(--primary);
+  background:linear-gradient(90deg,#4f46e5,#6366f1);
 }
 
+
 /* ======================================================
-   HERO PROFILE PHOTO – PREMIUM GLOW EDITION
+   HERO PROFILE PHOTO – PREMIUM GLOW
 ====================================================== */
 
 .profile-photo-section{
@@ -354,10 +311,8 @@ button:hover,
   margin-bottom:40px;
 }
 
-/* ========= Main Hero Circle ========= */
-
 .profile-photo-wrapper{
-  width:180px;                /* Bigger hero size */
+  width:180px;
   height:180px;
   margin:0 auto 35px;
   border-radius:50%;
@@ -366,43 +321,23 @@ button:hover,
   display:flex;
   align-items:center;
   justify-content:center;
-
-  transition:transform .35s cubic-bezier(.4,0,.2,1);
+  transition:.35s var(--transition);
 }
-
-/* Soft lift on hover (desktop) */
-@media (min-width:769px){
-  .profile-photo-wrapper:hover{
-    transform:translateY(-4px);
-  }
-}
-
-/* ========= Gradient Glow Ring ========= */
 
 .profile-photo-wrapper::before{
   content:"";
   position:absolute;
-  inset:-6px; /* creates ring thickness */
+  inset:-6px;
   border-radius:50%;
-  background:linear-gradient(
-    135deg,
-    #6366f1,
-    #4f46e5,
-    #818cf8
-  );
-
-  z-index:0;
-  animation:rotateGlow 8s linear infinite;
-  opacity:.7;
+  background:linear-gradient(135deg,#6366f1,#4f46e5,#818cf8);
+  opacity:.6;
+  animation:rotateGlow 10s linear infinite;
 }
 
-/* Animated rotation */
 @keyframes rotateGlow{
-  from{ transform:rotate(0deg); }
-  to{ transform:rotate(360deg); }
+  from{transform:rotate(0deg);}
+  to{transform:rotate(360deg);}
 }
-
-/* ========= Inner Image Circle ========= */
 
 .profile-photo-wrapper img{
   width:100%;
@@ -411,87 +346,28 @@ button:hover,
   object-fit:cover;
   position:relative;
   z-index:1;
-
-  transition:
-    opacity .35s ease,
-    filter .35s ease,
-    transform .35s ease;
+  transition:.3s ease;
 }
-
-/* Subtle darken on hover */
-@media (min-width:769px){
-  .profile-photo-wrapper:hover img{
-    filter:brightness(.9);
-  }
-}
-
-/* ========= Camera Icon Overlay ========= */
 
 .camera-overlay{
   position:absolute;
   bottom:12px;
   right:12px;
-  width:40px;
-  height:40px;
-  border-radius:50%;
-
+  width:42px;
+  height:42px;
   background:white;
+  border-radius:50%;
   display:flex;
   align-items:center;
   justify-content:center;
-
   color:#4f46e5;
-  box-shadow:0 6px 18px rgba(0,0,0,0.15);
-
+  box-shadow:0 6px 18px rgba(0,0,0,.15);
   z-index:2;
-
-  opacity:0;
-  transform:translateY(8px);
-  transition:all .3s ease;
 }
-
-/* Show on hover desktop */
-@media (min-width:769px){
-  .profile-photo-wrapper:hover .camera-overlay{
-    opacity:1;
-    transform:translateY(0);
-  }
-}
-
-/* Always visible mobile */
-@media (max-width:768px){
-  .camera-overlay{
-    opacity:1;
-    transform:none;
-  }
-}
-
-/* ========= Tap Ripple ========= */
-
-.profile-photo-wrapper::after{
-  content:"";
-  position:absolute;
-  inset:0;
-  border-radius:50%;
-  background:rgba(79,70,229,0.15);
-  transform:scale(0);
-  opacity:0;
-  z-index:1;
-  transition:transform .4s ease, opacity .4s ease;
-}
-
-.profile-photo-wrapper:active::after{
-  transform:scale(1.1);
-  opacity:1;
-}
-
-/* ========= Smooth Upload Fade ========= */
 
 .profile-photo-wrapper img.updating{
   opacity:.4;
 }
-
-
 
 
 /* ======================================================
