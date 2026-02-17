@@ -71,35 +71,35 @@ async function loadProfile(){
   "https://cdn-icons-png.flaticon.com/512/149/149071.png";
 
   profileCard.innerHTML = `
-    <div class="profile-photo-section">
-      <div class="profile-photo-wrapper">
-        <img id="profileImage" src="${photo}">
-      </div>
-
-      <input type="file"
-        id="photoInput"
-        accept="image/*"
-        capture="environment"
-        hidden>
-
-      <div class="photo-actions">
-        <button type="button" onclick="triggerUpload()">Upload / Capture</button>
-        <button type="button" onclick="removePhoto()">Remove</button>
-      </div>
+  <div class="profile-photo-section">
+    <div class="profile-photo-wrapper">
+      <img id="profileImage" src="${photo}">
     </div>
 
-    <div style="display:flex;justify-content:space-between">
-      <div>
-        <h3>${b.name}</h3>
-        <a class="contact-btn call-btn" href="tel:${b.phone}">📞 Call</a>
-        <a class="contact-btn wa-btn" target="_blank"
-           href="https://wa.me/91${b.phone}?text=Hello%20${b.name}">
-           💬 WhatsApp
-        </a>
-      </div>
-      <button class="view-btn" onclick="toggleCreateLoan()">+ Loan</button>
+    <input type="file"
+      id="photoInput"
+      accept="image/*"
+      hidden>
+
+    <div class="photo-actions">
+      <button type="button" onclick="triggerUpload()">
+      change photo
+      </button>
     </div>
-  `;
+  </div>
+
+  <div style="display:flex;justify-content:space-between">
+    <div>
+      <h3>${b.name}</h3>
+      <a class="contact-btn call-btn" href="tel:${b.phone}">📞 Call</a>
+      <a class="contact-btn wa-btn" target="_blank"
+         href="https://wa.me/91${b.phone}?text=Hello%20${b.name}">
+         💬 WhatsApp
+      </a>
+    </div>
+    <button class="view-btn" onclick="toggleCreateLoan()">+ Loan</button>
+  </div>
+`;
 
   attachPhotoLogic();
   loadLoans();
