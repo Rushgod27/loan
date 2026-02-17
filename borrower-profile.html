@@ -1,3 +1,5 @@
+I added all the css in the styles.css now give me ready to go code without breaking anything else 
+
 <!DOCTYPE html>
 <html>
 <head>
@@ -111,8 +113,6 @@ profileCard.innerHTML = `
 
 /* ================= PHOTO LOGIC ================= */
 
-/* ================= PHOTO LOGIC ================= */
-
 function attachPhotoLogic(){
 
   const input = document.getElementById("photoInput");
@@ -124,13 +124,9 @@ function attachPhotoLogic(){
     const file = e.target.files[0];
     if(!file) return;
 
-    // Add smooth fading effect
-    img.classList.add("updating");
-
     const base64 = await compressImage(file, 300, 0.6);
 
     img.src = base64;
-    img.classList.remove("updating");
 
     await updateDoc(doc(db,"borrowers",borrowerId),{
       profileImage: base64
@@ -138,9 +134,6 @@ function attachPhotoLogic(){
 
     alert("Photo updated ✅");
   };
-
-}
-
 
   window.removePhoto = async function(){
     if(!confirm("Remove profile photo?")) return;
@@ -471,4 +464,3 @@ window.pay = async(id,loanId,amt)=>{
 
 </script>
 </body>
-</html>
