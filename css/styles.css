@@ -328,121 +328,6 @@ button:hover,
   transform:scale(.96);
 }
 
-
-/* ======================================================
-   PROFILE PHOTO – PREMIUM SMOOTH VERSION
-====================================================== */
-
-.profile-photo-section{
-  text-align:center;
-  margin-bottom:28px;
-}
-
-/* Main Circle Wrapper */
-
-.profile-photo-wrapper{
-  width:120px;
-  height:120px;
-  margin:0 auto 20px;
-  border-radius:50%;
-  overflow:hidden;
-  position:relative;
-  cursor:pointer;
-  transition:transform .3s cubic-bezier(.4,0,.2,1);
-}
-
-/* Slight lift on hover (desktop) */
-@media (min-width:769px){
-  .profile-photo-wrapper:hover{
-    transform:translateY(-2px);
-  }
-}
-
-/* Image */
-
-.profile-photo-wrapper img{
-  width:100%;
-  height:100%;
-  object-fit:cover;
-  transition:
-    opacity .35s ease,
-    filter .35s ease,
-    transform .35s ease;
-}
-
-/* Darken slightly on hover (desktop only) */
-@media (min-width:769px){
-  .profile-photo-wrapper:hover img{
-    filter:brightness(.85);
-  }
-}
-
-/* ======================
-   Camera Icon Overlay
-====================== */
-
-.camera-overlay{
-  position:absolute;
-  bottom:8px;
-  right:8px;
-  width:32px;
-  height:32px;
-  border-radius:50%;
-
-  background:white;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-
-  color:#4f46e5;
-  box-shadow:0 4px 12px rgba(0,0,0,0.12);
-
-  opacity:0;
-  transform:translateY(6px);
-  transition:all .3s ease;
-}
-
-/* Show on hover for desktop */
-@media (min-width:769px){
-  .profile-photo-wrapper:hover .camera-overlay{
-    opacity:1;
-    transform:translateY(0);
-  }
-}
-
-/* Always visible on mobile */
-@media (max-width:768px){
-  .camera-overlay{
-    opacity:1;
-    transform:none;
-  }
-}
-
-/* ======================
-   Ripple Tap Effect
-====================== */
-
-.profile-photo-wrapper::after{
-  content:"";
-  position:absolute;
-  inset:0;
-  border-radius:50%;
-  background:rgba(79,70,229,0.15);
-  transform:scale(0);
-  opacity:0;
-  transition:transform .4s ease, opacity .4s ease;
-}
-
-.profile-photo-wrapper:active::after{
-  transform:scale(1.1);
-  opacity:1;
-}
-
-/* Smooth fade when updating image */
-
-.profile-photo-wrapper img.updating{
-  opacity:.4;
-}
 /* ======================================================
    PROGRESS BAR
 ====================================================== */
@@ -459,6 +344,154 @@ button:hover,
   height:100%;
   background:var(--primary);
 }
+
+/* ======================================================
+   HERO PROFILE PHOTO – PREMIUM GLOW EDITION
+====================================================== */
+
+.profile-photo-section{
+  text-align:center;
+  margin-bottom:40px;
+}
+
+/* ========= Main Hero Circle ========= */
+
+.profile-photo-wrapper{
+  width:180px;                /* Bigger hero size */
+  height:180px;
+  margin:0 auto 35px;
+  border-radius:50%;
+  position:relative;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+  transition:transform .35s cubic-bezier(.4,0,.2,1);
+}
+
+/* Soft lift on hover (desktop) */
+@media (min-width:769px){
+  .profile-photo-wrapper:hover{
+    transform:translateY(-4px);
+  }
+}
+
+/* ========= Gradient Glow Ring ========= */
+
+.profile-photo-wrapper::before{
+  content:"";
+  position:absolute;
+  inset:-6px; /* creates ring thickness */
+  border-radius:50%;
+  background:linear-gradient(
+    135deg,
+    #6366f1,
+    #4f46e5,
+    #818cf8
+  );
+
+  z-index:0;
+  animation:rotateGlow 8s linear infinite;
+  opacity:.7;
+}
+
+/* Animated rotation */
+@keyframes rotateGlow{
+  from{ transform:rotate(0deg); }
+  to{ transform:rotate(360deg); }
+}
+
+/* ========= Inner Image Circle ========= */
+
+.profile-photo-wrapper img{
+  width:100%;
+  height:100%;
+  border-radius:50%;
+  object-fit:cover;
+  position:relative;
+  z-index:1;
+
+  transition:
+    opacity .35s ease,
+    filter .35s ease,
+    transform .35s ease;
+}
+
+/* Subtle darken on hover */
+@media (min-width:769px){
+  .profile-photo-wrapper:hover img{
+    filter:brightness(.9);
+  }
+}
+
+/* ========= Camera Icon Overlay ========= */
+
+.camera-overlay{
+  position:absolute;
+  bottom:12px;
+  right:12px;
+  width:40px;
+  height:40px;
+  border-radius:50%;
+
+  background:white;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+  color:#4f46e5;
+  box-shadow:0 6px 18px rgba(0,0,0,0.15);
+
+  z-index:2;
+
+  opacity:0;
+  transform:translateY(8px);
+  transition:all .3s ease;
+}
+
+/* Show on hover desktop */
+@media (min-width:769px){
+  .profile-photo-wrapper:hover .camera-overlay{
+    opacity:1;
+    transform:translateY(0);
+  }
+}
+
+/* Always visible mobile */
+@media (max-width:768px){
+  .camera-overlay{
+    opacity:1;
+    transform:none;
+  }
+}
+
+/* ========= Tap Ripple ========= */
+
+.profile-photo-wrapper::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  border-radius:50%;
+  background:rgba(79,70,229,0.15);
+  transform:scale(0);
+  opacity:0;
+  z-index:1;
+  transition:transform .4s ease, opacity .4s ease;
+}
+
+.profile-photo-wrapper:active::after{
+  transform:scale(1.1);
+  opacity:1;
+}
+
+/* ========= Smooth Upload Fade ========= */
+
+.profile-photo-wrapper img.updating{
+  opacity:.4;
+}
+
+
 
 
 /* ======================================================
