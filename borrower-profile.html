@@ -67,7 +67,27 @@ async function loadProfile(){
 
   ownerId = b.ownerId;
 
+  const photo = b.profileImage || 
+  "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+
   profileCard.innerHTML = `
+    <div class="profile-photo-section">
+      <div class="profile-photo-wrapper">
+        <img id="profileImage" src="${photo}">
+      </div>
+
+      <input type="file"
+        id="photoInput"
+        accept="image/*"
+        capture="environment"
+        hidden>
+
+      <div class="photo-actions">
+        <button type="button" onclick="triggerUpload()">Upload / Capture</button>
+        <button type="button" onclick="removePhoto()">Remove</button>
+      </div>
+    </div>
+
     <div style="display:flex;justify-content:space-between">
       <div>
         <h3>${b.name}</h3>
@@ -81,8 +101,79 @@ async function loadProfile(){
     </div>
   `;
 
+  attachPhotoLogic();
   loadLoans();
 }
+
+/* ================= PHOTO LOGIC ================= */
+
+function attachPhotoLogic(){
+
+  const input = document.getElementById("photoInput");
+  const img = document.getElementById("profileImage");
+
+  window.triggerUpload = ()=> input.click();
+
+  input.onchange = async function(e){
+    const file = e.target.files[0];
+    if(!file) return;
+
+    const base64 = await compressImage(file, 300, 0.6);
+
+    img.src = base64;
+
+    await updateDoc(doc(db,"borrowers",borrowerId),{
+      profileImage: base64
+    });
+
+    alert("Photo updated ✅");
+  };
+
+  window.removePhoto = async function(){
+    if(!confirm("Remove profile photo?")) return;
+
+    img.src = "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+
+    await updateDoc(doc(db,"borrowers",borrowerId),{
+      profileImage: ""
+    });
+
+    alert("Photo removed");
+  };
+}
+
+/* ================= IMAGE COMPRESS ================= */
+
+function compressImage(file, maxWidth, quality){
+  return new Promise(resolve=>{
+    const reader = new FileReader();
+
+    reader.onload = function(e){
+      const img = new Image();
+
+      img.onload = function(){
+        const canvas = document.createElement("canvas");
+        const scale = maxWidth / img.width;
+
+        canvas.width = maxWidth;
+        canvas.height = img.height * scale;
+
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img,0,0,canvas.width,canvas.height);
+
+        const base64 = canvas.toDataURL("image/jpeg", quality);
+        resolve(base64);
+      };
+
+      img.src = e.target.result;
+    };
+
+    reader.readAsDataURL(file);
+  });
+}
+
+/* ================= CREATE LOAN FORM ================= */
+/* (ALL YOUR ORIGINAL LOAN / INSTALLMENT CODE CONTINUES UNCHANGED BELOW) */
 
 /* ================= CREATE LOAN FORM ================= */
 
