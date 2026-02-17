@@ -47,21 +47,16 @@ import {
 let uid = null;
 
 /* NAVIGATION */
-
 window.goBorrowers = () => {
   location.href="borrowers.html";
 };
 
 /* SAFE LOGOUT */
-
 window.confirmLogout = () => {
-
   const ok = confirm(
     "Are you sure you want to logout?\n\nYou will need to login again."
   );
-
   if(!ok) return;
-
   logoutUser();
 };
 
@@ -88,24 +83,21 @@ onAuthStateChanged(auth, async user => {
 
   uid = user.uid;
 
-  /* ✅ WELCOME MESSAGE FIXED */
-
   const name = userSnap.data().name || user.displayName || "User";
 
-document.getElementById("welcomeBox").innerHTML = `
-  <div class="welcome-banner">
-    Hi ${name} <span class="wave">👋</span>
-    <div class="welcome-sub">
-      Ready to collect today? Let’s make it productive.
+  document.getElementById("welcomeBox").innerHTML = `
+    <div class="welcome-banner">
+      Hi ${name} <span class="wave">👋</span>
+      <div class="welcome-sub">
+        Ready to collect today? Let’s make it productive.
+      </div>
     </div>
-  </div>
-`;
+  `;
 
   loadDashboard();
 });
 
 /* MARK PAID */
-
 window.markPaid = async (instId, loanId, borrowerId, amount) => {
 
   const ok = confirm("Mark this installment as paid?");
@@ -197,6 +189,9 @@ async function loadDashboard(){
     const dueDate = new Date(data.dueDate);
     const phone = borrower.phone;
 
+    const profileImage = borrower.profileImage ||
+      'https://cdn-icons-png.flaticon.com/512/149/149071.png';
+
     const msg =
       `Hello ${borrower.name}, your installment of ₹${data.amount} is pending. Please pay at the earliest.`;
 
@@ -223,12 +218,23 @@ async function loadDashboard(){
       dueTodayHTML += `
       <div class="card due">
         <div class="card-row">
-          <div class="card-details">
-            <div class="card-title">${borrower.name}</div>
-            <div class="card-sub">
-              ₹${data.amount} • Due Today
+
+          <div class="card-left">
+
+            <div class="mini-avatar clickable-avatar"
+              onclick="window.location.href='borrower-profile.html?id=${data.borrowerId}'">
+              <img src="${profileImage}">
             </div>
+
+            <div class="card-details">
+              <div class="card-title">${borrower.name}</div>
+              <div class="card-sub">
+                ₹${data.amount} • Due Today
+              </div>
+            </div>
+
           </div>
+
           <div class="card-actions">
             <button class="view-btn"
               onclick="window.location.href='tel:${phone}'">📞</button>
@@ -252,21 +258,31 @@ async function loadDashboard(){
       overdueHTML += `
       <div class="card overdue">
         <div class="card-row">
-          <div class="card-details">
-            <div class="card-title">${borrower.name}</div>
-            <div class="card-sub">
-              ₹${data.amount} • ${daysLate} days overdue
-            </div>
-          </div>
-          <div class="card-actions">
 
-               ${markPaidBtn}
-                          <button class="btn btn-danger"
+          <div class="card-left">
+
+            <div class="mini-avatar clickable-avatar"
+              onclick="window.location.href='borrower-profile.html?id=${data.borrowerId}'">
+              <img src="${profileImage}">
+            </div>
+
+            <div class="card-details">
+              <div class="card-title">${borrower.name}</div>
+              <div class="card-sub">
+                ₹${data.amount} • ${daysLate} days overdue
+              </div>
+            </div>
+
+          </div>
+
+          <div class="card-actions">
+            ${markPaidBtn}
+            <button class="btn btn-danger"
               onclick="window.location.href='tel:${phone}'">call ☏</button>
             <button class="btn btn-success"
-              onclick="window.open('${waLink}','_blank')">send remainder 😶‍🌫️</button>
-           
+              onclick="window.open('${waLink}','_blank')">send reminder 😶‍🌫️</button>
           </div>
+
         </div>
       </div>`;
     }
