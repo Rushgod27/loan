@@ -1,6 +1,6 @@
 /* ======================================================
-   LIQUID SOFT UI – ULTRA SMOOTH VERSION
-   Calm • Airy • Clean • Mobile-first
+   LIQUID SOFT UI – POLISHED PREMIUM
+   Ultra Smooth • Soft Buttons • Better Spacing
 ====================================================== */
 
 
@@ -16,19 +16,23 @@
   --primary:#4f46e5;
   --primary-soft:#eef2ff;
 
-  --success:#22c55e;
+  --success:#16a34a;
+  --success-soft:#dcfce7;
+
   --warning:#facc15;
-  --danger:#ef4444;
+
+  --danger:#dc2626;
+  --danger-soft:#fee2e2;
 
   --text:#111827;
   --muted:#94a3b8;
 
-  --radius-xl:30px;
-  --radius-lg:22px;
-  --radius-md:16px;
+  --radius-xl:32px;
+  --radius-lg:24px;
+  --radius-md:18px;
 
-  --shadow-soft:0 4px 20px rgba(0,0,0,0.05);
-  --shadow-float:0 12px 40px rgba(0,0,0,0.06);
+  --shadow-soft:0 6px 22px rgba(0,0,0,0.05);
+  --shadow-float:0 15px 40px rgba(0,0,0,0.06);
 
   --transition:cubic-bezier(.4,0,.2,1);
 }
@@ -38,56 +42,92 @@
    GLOBAL
 ====================================================== */
 
-*{
-  box-sizing:border-box;
-}
+*{ box-sizing:border-box }
 
 body{
   margin:0;
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
   background:var(--bg);
   color:var(--text);
-  -webkit-font-smoothing:antialiased;
 }
 
-.hidden{
-  display:none !important;
+.container,
+.section-content{
+  padding:22px;
 }
+
+.hidden{ display:none }
 
 
 /* ======================================================
-   HEADER (Floating Soft)
+   HEADER
 ====================================================== */
 
 .header{
-  padding:20px;
+  padding:22px 20px 10px;
   font-weight:600;
-  font-size:18px;
+  font-size:20px;
   text-align:center;
   background:transparent;
 }
 
 
 /* ======================================================
-   NAV (Soft Pills)
+   WELCOME BANNER (Upgraded)
+====================================================== */
+
+.welcome-banner{
+  margin:10px 22px 28px;
+  padding:28px;
+  border-radius:var(--radius-xl);
+  background:linear-gradient(135deg,#f0f4ff,#eef2ff);
+  position:relative;
+  overflow:hidden;
+  box-shadow:var(--shadow-soft);
+}
+
+.welcome-banner::after{
+  content:"";
+  position:absolute;
+  top:-50px;
+  right:-50px;
+  width:160px;
+  height:160px;
+  background:#c7d2fe;
+  border-radius:50%;
+  opacity:.25;
+}
+
+.welcome-title{
+  font-size:22px;
+  font-weight:600;
+  margin-bottom:6px;
+}
+
+.welcome-sub{
+  font-size:14px;
+  color:var(--muted);
+}
+
+
+/* ======================================================
+   NAVIGATION
 ====================================================== */
 
 .nav{
   display:flex;
-  gap:8px;
-  padding:12px 16px;
+  gap:10px;
+  padding:14px 20px;
 }
 
 .nav div{
   flex:1;
-  text-align:center;
   padding:12px;
+  text-align:center;
   border-radius:999px;
-  font-size:14px;
   font-weight:500;
   color:var(--muted);
   transition:all .3s var(--transition);
-  cursor:pointer;
 }
 
 .nav .active{
@@ -97,58 +137,42 @@ body{
 
 
 /* ======================================================
-   LAYOUT
-====================================================== */
-
-.container,
-.section-content{
-  padding:18px;
-}
-
-
-/* ======================================================
-   CARD SYSTEM (Floating Soft Glass)
+   CARD SYSTEM (Better Spacing)
 ====================================================== */
 
 .card,
 .loan-card{
   background:var(--surface);
   border-radius:var(--radius-xl);
-  padding:24px;
-  margin-bottom:22px;
+  padding:28px;
+  margin-bottom:28px;
   box-shadow:var(--shadow-soft);
-  transition:all .35s var(--transition);
+  transition:.35s var(--transition);
 }
 
 .card:hover{
-  transform:translateY(-3px);
+  transform:translateY(-4px);
   box-shadow:var(--shadow-float);
-}
-
-.loan-card.completed{
-  opacity:.55;
 }
 
 
 /* ======================================================
-   INPUTS (Ultra Smooth Fields)
+   INPUTS
 ====================================================== */
 
 input,
 select{
   width:100%;
   padding:16px;
-  border-radius:var(--radius-lg);
   border:none;
+  border-radius:var(--radius-lg);
   font-size:15px;
-  margin-bottom:16px;
+  margin-bottom:18px;
   background:#f1f5f9;
-  color:var(--text);
-  transition:all .3s var(--transition);
+  transition:.3s var(--transition);
 }
 
-input:focus,
-select:focus{
+input:focus{
   background:white;
   box-shadow:0 0 0 4px var(--primary-soft);
   outline:none;
@@ -156,7 +180,7 @@ select:focus{
 
 
 /* ======================================================
-   BUTTONS (Soft Liquid Buttons)
+   LIGHT SOFT BUTTON SYSTEM
 ====================================================== */
 
 button,
@@ -167,68 +191,98 @@ button,
   font-weight:500;
   font-size:14px;
   cursor:pointer;
-  transition:all .3s var(--transition);
-
-  background:var(--primary);
-  color:white;
+  transition:.3s var(--transition);
+  margin-top:8px;
 }
 
-button:hover{
+/* Primary (Light Blue) */
+button,
+.btn-primary{
+  background:var(--primary-soft);
+  color:var(--primary);
+}
+
+/* Success (Light Green) */
+.btn-success{
+  background:var(--success-soft);
+  color:var(--success);
+}
+
+/* Danger (Light Red) */
+.btn-danger{
+  background:var(--danger-soft);
+  color:var(--danger);
+}
+
+button:hover,
+.btn:hover{
   transform:translateY(-2px);
-  opacity:.95;
 }
-
-button:active{
-  transform:scale(.96);
-}
-
-/* Variants */
-
-.btn-success{ background:var(--success); }
-.btn-warning{ background:var(--warning); }
-.btn-danger{ background:var(--danger); }
 
 
 /* ======================================================
-   INSTALLMENT CARDS (Smooth Status Style)
+   INSTALLMENT CARDS
 ====================================================== */
 
 .inst-card{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  padding:18px;
+  padding:20px;
   border-radius:var(--radius-lg);
-  margin-bottom:14px;
+  margin-bottom:16px;
   background:#f8fafc;
-  transition:all .3s var(--transition);
-}
-
-.inst-card.pending{
-  background:#fef9c3;
-}
-
-.inst-card.paid{
-  background:#dcfce7;
-  opacity:.75;
-}
-
-.inst-card.overdue{
-  background:#fee2e2;
 }
 
 .inst-amount{
   font-size:20px;
   font-weight:600;
+  margin-bottom:10px;
 }
 
 
 /* ======================================================
-   PROGRESS BAR (Liquid Pill)
+   BORROWER PROFILE ACTIONS
+====================================================== */
+
+.borrower-actions{
+  display:flex;
+  gap:14px;
+  margin-top:16px;
+}
+
+.action-btn{
+  flex:1;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:14px;
+  border-radius:999px;
+  font-size:14px;
+  font-weight:500;
+  transition:.3s var(--transition);
+}
+
+/* Call */
+.action-call{
+  background:#e0f2fe;
+  color:#0284c7;
+}
+
+/* WhatsApp */
+.action-wa{
+  background:#dcfce7;
+  color:#16a34a;
+}
+
+.action-btn:hover{
+  transform:translateY(-2px);
+}
+
+
+/* ======================================================
+   PROGRESS BAR
 ====================================================== */
 
 .progress{
-  margin-top:12px;
+  margin-top:14px;
   height:7px;
   background:#e2e8f0;
   border-radius:999px;
@@ -238,62 +292,19 @@ button:active{
 .progress-bar{
   height:100%;
   background:var(--primary);
-  transition:width .4s var(--transition);
 }
 
 
 /* ======================================================
-   LOGIN PAGE (Centered Soft Card)
+   MOBILE
 ====================================================== */
 
-.login-wrapper{
-  min-height:100vh;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  background:var(--bg);
-}
+@media(max-width:768px){
 
-.login-card{
-  width:100%;
-  max-width:420px;
-  padding:40px 30px;
-  border-radius:var(--radius-xl);
-  background:var(--surface);
-  box-shadow:var(--shadow-float);
-}
-
-.login-title{
-  font-size:22px;
-  font-weight:600;
-  text-align:center;
-  margin-bottom:30px;
-}
-
-
-/* ======================================================
-   MOBILE OPTIMIZATION
-====================================================== */
-
-@media (max-width:768px){
-
-  .container,
-  .section-content{
-    padding:14px;
-  }
+  .container{ padding:16px }
 
   button{
     width:100%;
-  }
-
-  .inst-card{
-    flex-direction:column;
-    align-items:flex-start;
-    gap:10px;
-  }
-
-  input{
-    font-size:16px; /* prevent iOS zoom */
   }
 
 }
