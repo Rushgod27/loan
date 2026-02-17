@@ -259,11 +259,13 @@ async function loadDashboard(){
             </div>
           </div>
           <div class="card-actions">
-            <button class="btn btn-success"
+
+               ${markPaidBtn}
+                          <button class="btn btn-danger"
               onclick="window.location.href='tel:${phone}'">call ☏</button>
-            <button class="btn btn-danger"
+            <button class="btn btn-success"
               onclick="window.open('${waLink}','_blank')">send remainder 😶‍🌫️</button>
-            ${markPaidBtn}
+           
           </div>
         </div>
       </div>`;
