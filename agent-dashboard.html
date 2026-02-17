@@ -8,7 +8,7 @@
 </head>
 <body>
 
-<div class="header">Agent Panel</div>
+<div class="header">Agent Dashboard</div>
 
 <div class="nav">
   <div class="active">Dashboard</div>
@@ -210,7 +210,7 @@ async function loadDashboard(){
           '${data.loanId}',
           '${data.borrowerId}',
           ${data.amount})">
-        ✔
+        Mark Paid 💰
       </button>
     `;
 
@@ -260,9 +260,9 @@ async function loadDashboard(){
           </div>
           <div class="card-actions">
             <button class="btn btn-success"
-              onclick="window.location.href='tel:${phone}'">📞</button>
+              onclick="window.location.href='tel:${phone}'">call ☏</button>
             <button class="btn btn-danger"
-              onclick="window.open('${waLink}','_blank')">💬</button>
+              onclick="window.open('${waLink}','_blank')">send remainder 😶‍🌫️</button>
             ${markPaidBtn}
           </div>
         </div>
