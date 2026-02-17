@@ -73,13 +73,15 @@ async function loadProfile(){
 profileCard.innerHTML = `
   <div class="profile-photo-section">
     <div class="profile-photo-wrapper"
-         onclick="triggerUpload()"
-         style="cursor:pointer;position:relative;">
+         onclick="triggerUpload()">
 
       <img id="profileImage" src="${photo}">
 
       <div class="camera-overlay">
-        📷
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h3l2-3h8l2 3h3a2 2 0 0 1 2 2z"/>
+          <circle cx="12" cy="13" r="4"/>
+        </svg>
       </div>
 
     </div>
