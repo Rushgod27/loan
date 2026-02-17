@@ -1,7 +1,7 @@
 {
-  "name": "Agent Finance App",
-  "short_name": "AgentApp",
-  "start_url": "/agent-dashboard.html",
+  "name": "Loan Management App",
+  "short_name": "Finance App",
+  "start_url": "./",
   "display": "standalone",
   "background_color": "#f8fafc",
   "theme_color": "#4f46e5",
