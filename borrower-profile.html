@@ -70,22 +70,24 @@ async function loadProfile(){
   const photo = b.profileImage || 
   "https://cdn-icons-png.flaticon.com/512/149/149071.png";
 
-  profileCard.innerHTML = `
+profileCard.innerHTML = `
   <div class="profile-photo-section">
-    <div class="profile-photo-wrapper">
+    <div class="profile-photo-wrapper"
+         onclick="triggerUpload()"
+         style="cursor:pointer;position:relative;">
+
       <img id="profileImage" src="${photo}">
+
+      <div class="camera-overlay">
+        📷
+      </div>
+
     </div>
 
     <input type="file"
       id="photoInput"
       accept="image/*"
       hidden>
-
-    <div class="photo-actions">
-      <button type="button" onclick="triggerUpload()">
-      change photo
-      </button>
-    </div>
   </div>
 
   <div style="display:flex;justify-content:space-between">
