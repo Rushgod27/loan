@@ -98,7 +98,6 @@ async function logoutUser(){
 }
 
 /* AUTH CHECK */
-
 onAuthStateChanged(auth, async user => {
 
   if(!user){
@@ -115,23 +114,24 @@ onAuthStateChanged(auth, async user => {
   }
 
   uid = user.uid;
+
+  /* ✅ WELCOME MESSAGE FIXED */
+
+  const name = userSnap.data().name || user.displayName || "User";
+  const role = userSnap.data().role;
+
+  let roleClass = "welcome-agent";
+  if(role === "owner") roleClass = "welcome-owner";
+  if(role === "boss") roleClass = "welcome-boss";
+
+  document.getElementById("welcomeBox").innerHTML = `
+    <div class="welcome-banner ${roleClass}">
+      Hi ${name} 👋
+    </div>
+  `;
+
   loadDashboard();
 });
-
-
-
-const name = userSnap.data().name || user.displayName || "User";
-const role = userSnap.data().role;
-
-let roleClass = "welcome-agent";
-if(role === "owner") roleClass = "welcome-owner";
-if(role === "boss") roleClass = "welcome-boss";
-
-document.getElementById("welcomeBox").innerHTML = `
-  <div class="welcome-banner ${roleClass}">
-    Hi ${name} 👋
-  </div>
-`;
 
 /* MARK PAID */
 
