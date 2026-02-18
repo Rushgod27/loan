@@ -431,68 +431,78 @@ window.createLoanUI=()=>{
   `;
 };
 
-window.createLoan=async()=>{
+window.createLoan = async () => {
 
   const principal = Number(loanAmt.value);
-  const interest = Number(loanInterest.value)||0;
+  const interest = Number(loanInterest.value) || 0;
   const count = Number(loanCount.value);
   const interval = Number(loanInterval.value);
   const start = loanStart.value;
 
-  if(!principal || !count || !interval || !start){
+  if (!principal || !count || !interval || !start) {
     alert("All fields required.");
     return;
   }
 
   const startTime = new Date(start).getTime();
-  const interestAmount = (principal*interest)/100;
-  const total = principal + interestAmount;
-  const perInstallment = Number((total/count).toFixed(2));
+
+  /* 🔥 UPFRONT MODEL */
+
+  const interestAmount = (principal * interest) / 100;
+  const disbursedAmount = principal - interestAmount;
+  const installmentAmount = Number((principal / count).toFixed(2));
 
   const preview = `
-Loan Preview:
+Loan Preview (Upfront Interest Model):
 
 Principal: ₹${principal}
-Interest: ₹${interestAmount}
-Total Amount: ₹${total}
+Upfront Interest: ₹${interestAmount}
+Borrower Receives: ₹${disbursedAmount}
+Total Payable: ₹${principal}
 Installments: ${count}
-Each Installment: ₹${perInstallment}
-Start: ${new Date(startTime).toLocaleDateString()}
+Each Installment: ₹${installmentAmount}
+Start Date: ${new Date(startTime).toLocaleDateString()}
 
 Proceed?
   `;
 
-  if(!confirm(preview)) return;
+  if (!confirm(preview)) return;
 
-  const ref = await addDoc(collection(db,"loans"),{
-    borrowerId:currentProfileId,
-    agentId:uid,
+  /* CREATE LOAN */
+
+  const ref = await addDoc(collection(db, "loans"), {
+    borrowerId: currentProfileId,
+    agentId: uid,
     principal,
-    interestPercent:interest,
+    interestPercent: interest,
     interestAmount,
-    totalAmount:total,
+    disbursedAmount,
+    totalAmount: principal, // 🔥 total is principal only
     count,
     interval,
-    startDate:startTime,
-    status:"active",
-    createdAt:Date.now()
+    startDate: startTime,
+    status: "active",
+    createdAt: Date.now()
   });
 
-  for(let i=0;i<count;i++){
-    await addDoc(collection(db,"installments"),{
-      loanId:ref.id,
-      borrowerId:currentProfileId,
-      agentId:uid,
-      number:i+1,
-      amount:perInstallment,
-      dueDate:startTime+((i+1)*interval*86400000),
-      status:"pending"
+  /* CREATE INSTALLMENTS */
+
+  for (let i = 0; i < count; i++) {
+
+    await addDoc(collection(db, "installments"), {
+      loanId: ref.id,
+      borrowerId: currentProfileId,
+      agentId: uid,
+      number: i + 1,
+      amount: installmentAmount,
+      dueDate: startTime + ((i + 1) * interval * 86400000),
+      status: "pending"
     });
+
   }
 
   alert("Loan Created Successfully ✅");
 };
-
 /* LOGOUT */
 window.logout=async()=>{
   await signOut(auth);
