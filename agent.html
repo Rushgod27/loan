@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Agent App</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="css/styles.css?v=30">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#4f46e5">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+</head>
+
+<body>
+
+<div class="header" id="pageTitle">Dashboard</div>
+
+<div class="nav">
+  <div id="navDashboard" class="active" onclick="showDashboard()">Dashboard</div>
+  <div id="navBorrowers" onclick="showBorrowers()">Borrowers</div>
+</div>
+
+<div id="dashboardSection" class="section-content"></div>
+<div id="borrowersSection" class="section-content hidden"></div>
+<div id="profileSection" class="section-content hidden"></div>
+
+<div class="logout-wrapper">
+  <button class="logout-btn" onclick="logout()">Logout</button>
+</div>
+
+<script type="module">
+
+import { auth, db } from "./js/firebase.js";
+import { signOut, onAuthStateChanged }
+from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+import {
+  collection, query, where, onSnapshot,
+  addDoc, doc, updateDoc
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+/* ================= GLOBAL STATE ================= */
+
+let uid=null;
+let ownerId=null;
+
+let state={
+  borrowers:[],
+  loans:[],
+  installments:[],
+  collections:[]
+};
+
+let currentView="dashboard";
+let currentProfileId=null;
+
+/* ================= AUTH ================= */
+
+onAuthStateChanged(auth, user=>{
+
+  if(!user){
+    location.href="index.html";
+    return;
+  }
+
+  uid=user.uid;
+
+  listenUser(user.uid);
+});
+
+/* ================= LISTEN USER ================= */
+
+function listenUser(uid){
+
+  onSnapshot(doc(db,"users",uid), snap=>{
+
+    if(!snap.exists() || snap.data().role!=="agent"){
+      logout();
+      return;
+    }
+
+    ownerId=snap.data().approvedBy || null;
+
+    startRealtimeListeners();
+  });
+}
+
+/* ================= REALTIME LISTENERS ================= */
+
+function startRealtimeListeners(){
+
+  /* BORROWERS */
+  onSnapshot(query(
+    collection(db,"borrowers"),
+    where("agentId","==",uid)
+  ), snap=>{
+    state.borrowers=[];
+    snap.forEach(d=>state.borrowers.push({id:d.id,...d.data()}));
+    refreshView();
+  });
+
+  /* LOANS */
+  onSnapshot(query(
+    collection(db,"loans"),
+    where("agentId","==",uid)
+  ), snap=>{
+    state.loans=[];
+    snap.forEach(d=>state.loans.push({id:d.id,...d.data()}));
+    refreshView();
+  });
+
+  /* INSTALLMENTS */
+  onSnapshot(query(
+    collection(db,"installments"),
+    where("agentId","==",uid)
+  ), snap=>{
+    state.installments=[];
+    snap.forEach(d=>state.installments.push({id:d.id,...d.data()}));
+    refreshView();
+  });
+
+  /* COLLECTIONS */
+  onSnapshot(query(
+    collection(db,"collections"),
+    where("agentId","==",uid)
+  ), snap=>{
+    state.collections=[];
+    snap.forEach(d=>state.collections.push({id:d.id,...d.data()}));
+    refreshView();
+  });
+}
+
+/* ================= VIEW CONTROLLER ================= */
+
+function refreshView(){
+  if(currentView==="dashboard") renderDashboard();
+  if(currentView==="borrowers") renderBorrowers();
+  if(currentView==="profile") renderProfile(currentProfileId);
+}
+
+window.showDashboard=()=>{
+  currentView="dashboard";
+  setActive("Dashboard");
+};
+
+window.showBorrowers=()=>{
+  currentView="borrowers";
+  setActive("Borrowers");
+};
+
+window.showProfile=(id)=>{
+  currentProfileId=id;
+  currentView="profile";
+  setActive("Profile", false);
+};
+
+function setActive(title){
+
+  pageTitle.innerText=title;
+
+  dashboardSection.classList.add("hidden");
+  borrowersSection.classList.add("hidden");
+  profileSection.classList.add("hidden");
+
+  navDashboard.classList.remove("active");
+  navBorrowers.classList.remove("active");
+
+  if(title==="Dashboard"){
+    dashboardSection.classList.remove("hidden");
+    navDashboard.classList.add("active");
+  }
+
+  if(title==="Borrowers"){
+    borrowersSection.classList.remove("hidden");
+    navBorrowers.classList.add("active");
+  }
+
+  if(title==="Profile"){
+    profileSection.classList.remove("hidden");
+  }
+
+  refreshView();
+}
+
+/* ================= DASHBOARD ================= */
+
+function renderDashboard(){
+
+  const today=new Date();
+  today.setHours(0,0,0,0);
+
+  let dueToday=0, overdue=0, todayCollection=0;
+
+  state.installments.forEach(i=>{
+    if(i.status==="pending"){
+      const due=new Date(i.dueDate);
+      due.setHours(0,0,0,0);
+
+      if(due.getTime()===today.getTime()) dueToday++;
+      if(due<today) overdue++;
+    }
+  });
+
+  state.collections.forEach(c=>{
+    const d=new Date(c.date);
+    d.setHours(0,0,0,0);
+    if(d.getTime()===today.getTime())
+      todayCollection+=c.amount;
+  });
+
+  dashboardSection.innerHTML=`
+    <div class="card">
+      <div class="card-row">
+        <div>Total Borrowers</div>
+        <b>${state.borrowers.length}</b>
+      </div>
+
+      <div class="card-row">
+        <div>Today's Collection</div>
+        <b>₹${todayCollection}</b>
+      </div>
+
+      <div class="card-row">
+        <div>Due Today</div>
+        <b>${dueToday}</b>
+      </div>
+
+      <div class="card-row">
+        <div>Overdue</div>
+        <b>${overdue}</b>
+      </div>
+    </div>
+  `;
+}
+
+/* ================= BORROWERS ================= */
+
+function renderBorrowers(){
+
+  let html=`
+    <div class="card">
+      <input id="searchInput" placeholder="Search borrower">
+    </div>
+    <div id="borrowerList"></div>
+  `;
+
+  borrowersSection.innerHTML=html;
+
+  renderBorrowerList(state.borrowers);
+
+  document.getElementById("searchInput")
+  .addEventListener("input", e=>{
+    const v=e.target.value.toLowerCase();
+    const filtered=state.borrowers.filter(b=>
+      b.name.toLowerCase().includes(v) ||
+      b.phone.includes(v)
+    );
+    renderBorrowerList(filtered);
+  });
+}
+
+function renderBorrowerList(list){
+
+  let html="";
+
+  list.forEach(b=>{
+    html+=`
+      <div class="card borrower-card"
+           onclick="showProfile('${b.id}')">
+        <b>${b.name}</b><br>
+        ${b.phone}
+      </div>
+    `;
+  });
+
+  document.getElementById("borrowerList").innerHTML=html;
+}
+
+/* ================= PROFILE ================= */
+
+function renderProfile(id){
+
+  const b=state.borrowers.find(x=>x.id===id);
+  if(!b){ alert("Borrower not found"); return; }
+
+  const photo=b.profileImage ||
+  "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+
+  profileSection.innerHTML=`
+    <div class="card">
+
+      <div class="profile-photo-wrapper">
+        <img src="${photo}"
+          style="width:150px;border-radius:50%">
+      </div>
+
+      <h3>${b.name}</h3>
+
+      <a class="contact-btn call-btn"
+         href="tel:${b.phone}">
+         📞 Call
+      </a>
+
+      <a class="contact-btn wa-btn"
+         target="_blank"
+         href="https://wa.me/91${b.phone}">
+         💬 WhatsApp
+      </a>
+
+      <br><br>
+      <button class="btn btn-primary"
+              onclick="showBorrowers()">
+        ← Back
+      </button>
+
+    </div>
+  `;
+}
+
+/* ================= LOGOUT ================= */
+
+window.logout=async()=>{
+  await signOut(auth);
+  sessionStorage.setItem("justLoggedOut","true");
+  window.location.replace("index.html");
+};
+
+/* ================= PWA ================= */
+
+if("serviceWorker" in navigator){
+  window.addEventListener("load",()=>{
+    navigator.serviceWorker.register("/sw.js");
+  });
+}
+
+</script>
+</body>
+</html>
