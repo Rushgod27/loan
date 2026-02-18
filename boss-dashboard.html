@@ -81,9 +81,17 @@ onAuthStateChanged(auth, async(user)=>{
 
 /* ================= LOGOUT ================= */
 
+/* ================= LOGOUT ================= */
+
 window.logoutUser = async()=>{
+
   await signOut(auth);
-  location.href="index.html";
+
+  // 🔥 Mark that logout just happened
+  sessionStorage.setItem("justLoggedOut", "true");
+
+  // 🔥 Prevent back button restoring dashboard
+  window.location.replace("index.html");
 };
 
 /* ================= BOSS INVITE CODE SYSTEM ================= */
