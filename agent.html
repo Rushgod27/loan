@@ -166,15 +166,17 @@ function renderDashboard(){
     const daysLate = Math.floor((today - due)/86400000);
 
     /* FULL REMINDER MESSAGE */
-    const reminderMsg =
+const reminderMsg =
 `Hello ${borrower.name},
 
 Loan Amount: ₹${loan.principal}
+Total Loan With Interest: ₹${loan.totalAmount || loan.principal}
 Installment No: ${inst.number}
 Installment Amount: ₹${inst.amount}
 Due Date: ${due.toLocaleDateString()}
 
 ${daysLate>0?`You are ${daysLate} days overdue.`:""}
+
 Please pay at the earliest.`;
 
     const waLink = 
@@ -388,37 +390,107 @@ window.toggleInstallments=(loanId)=>{
 
 /* MARK PAID */
 window.markPaid=async(id,loanId,borrowerId,amt)=>{
-  await updateDoc(doc(db,"installments",id),{status:"completed"});
-  await addDoc(collection(db,"collections"),{
-    loanId,borrowerId,agentId:uid,amount:amt,type:"installment",date:Date.now()
+
+  if(!confirm("Mark this installment as paid?")) return;
+
+  await updateDoc(doc(db,"installments",id),{
+    status:"completed"
   });
+
+  await addDoc(collection(db,"collections"),{
+    loanId,
+    borrowerId,
+    agentId:uid,
+    amount:amt,
+    type:"installment",
+    date:Date.now()
+  });
+
+  alert("Payment recorded successfully");
 };
 
 /* CREATE LOAN */
 window.createLoanUI=()=>{
   loanCreateBox.innerHTML=`
-    <input id="loanAmt" placeholder="Principal"><br>
-    <input id="loanCount" placeholder="Installments"><br>
-    <button class="btn btn-primary" onclick="createLoan()">Save</button>`;
+    <input id="loanAmt" type="number" placeholder="Principal Amount"><br><br>
+
+    <input id="loanInterest" type="number" placeholder="Upfront Interest %"><br><br>
+
+    <input id="loanCount" type="number" placeholder="Installments Count"><br><br>
+
+    <select id="loanInterval">
+      <option value="">Select Interval</option>
+      <option value="7">7 Days</option>
+      <option value="15">15 Days</option>
+      <option value="30">30 Days</option>
+    </select><br><br>
+
+    <input type="date" id="loanStart"><br><br>
+
+    <button class="btn btn-primary" onclick="createLoan()">Create Loan</button>
+  `;
 };
 
 window.createLoan=async()=>{
-  const amt=Number(loanAmt.value);
-  const count=Number(loanCount.value);
-  const ref=await addDoc(collection(db,"loans"),{
+
+  const principal = Number(loanAmt.value);
+  const interest = Number(loanInterest.value)||0;
+  const count = Number(loanCount.value);
+  const interval = Number(loanInterval.value);
+  const start = loanStart.value;
+
+  if(!principal || !count || !interval || !start){
+    alert("All fields required.");
+    return;
+  }
+
+  const startTime = new Date(start).getTime();
+  const interestAmount = (principal*interest)/100;
+  const total = principal + interestAmount;
+  const perInstallment = Number((total/count).toFixed(2));
+
+  const preview = `
+Loan Preview:
+
+Principal: ₹${principal}
+Interest: ₹${interestAmount}
+Total Amount: ₹${total}
+Installments: ${count}
+Each Installment: ₹${perInstallment}
+Start: ${new Date(startTime).toLocaleDateString()}
+
+Proceed?
+  `;
+
+  if(!confirm(preview)) return;
+
+  const ref = await addDoc(collection(db,"loans"),{
     borrowerId:currentProfileId,
     agentId:uid,
-    principal:amt,count,startDate:Date.now(),status:"active"
+    principal,
+    interestPercent:interest,
+    interestAmount,
+    totalAmount:total,
+    count,
+    interval,
+    startDate:startTime,
+    status:"active",
+    createdAt:Date.now()
   });
+
   for(let i=0;i<count;i++){
     await addDoc(collection(db,"installments"),{
-      loanId:ref.id,borrowerId:currentProfileId,
-      agentId:uid,number:i+1,
-      amount:amt/count,
-      dueDate:Date.now()+(i+1)*7*86400000,
+      loanId:ref.id,
+      borrowerId:currentProfileId,
+      agentId:uid,
+      number:i+1,
+      amount:perInstallment,
+      dueDate:startTime+((i+1)*interval*86400000),
       status:"pending"
     });
   }
+
+  alert("Loan Created Successfully ✅");
 };
 
 /* LOGOUT */
