@@ -12,7 +12,6 @@
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 
 <style>
-/* ===== INSTALL GATE ===== */
 .install-gate{
   position:fixed;
   inset:0;
@@ -48,7 +47,7 @@
 <!-- INSTALL BLOCKER -->
 <div id="installGate" class="install-gate"></div>
 
-<!-- ORIGINAL LOGIN CONTENT -->
+<!-- LOGIN CONTENT -->
 <div id="loginContent">
 
 <div class="card">
@@ -103,7 +102,7 @@ import {
   getDocs
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-/* ================= PWA FORCE INSTALL ================= */
+/* ================= PWA INSTALL ================= */
 
 let deferredPrompt;
 
@@ -116,7 +115,6 @@ const gate = document.getElementById("installGate");
 const loginContent = document.getElementById("loginContent");
 
 if(!isStandalone()){
-
   loginContent.style.display = "none";
   gate.style.display = "flex";
 
@@ -167,6 +165,13 @@ window.googleLogin = async()=>{
 
 onAuthStateChanged(auth, async(user)=>{
 
+  // 🔥 Prevent auto-redirect if coming from logout
+  const justLoggedOut = sessionStorage.getItem("justLoggedOut");
+  if(justLoggedOut){
+    sessionStorage.removeItem("justLoggedOut");
+    return;
+  }
+
   if(!user) return;
 
   currentUser=user;
@@ -184,13 +189,13 @@ onAuthStateChanged(auth, async(user)=>{
     }
 
     if(data.role==="boss")
-      location.href="boss-dashboard.html";
+      window.location.replace("boss-dashboard.html");
 
     if(data.role==="owner")
-      location.href="owner-dashboard.html";
+      window.location.replace("owner-dashboard.html");
 
     if(data.role==="agent")
-      location.href="agent-dashboard.html";
+      window.location.replace("agent-dashboard.html");
 
     return;
   }
@@ -216,7 +221,6 @@ document.getElementById("roleSelect")
     codeInput.placeholder="Enter Boss Invite Code";
     codeInput.style.display="block";
   }
-
 });
 
 /* ================= SUBMIT APPLICATION ================= */
@@ -272,7 +276,7 @@ document.getElementById("submitBtn")
   await signOut(auth);
 });
 
-/* ================= SERVICE WORKER (FIXED PATH) ================= */
+/* ================= SERVICE WORKER ================= */
 
 if("serviceWorker" in navigator){
   window.addEventListener("load", () => {
