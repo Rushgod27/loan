@@ -65,7 +65,12 @@ window.confirmLogout = () => {
 
 async function logoutUser(){
   await signOut(auth);
-  location.href="index.html";
+
+  // 🔥 tell login page we just logged out
+  sessionStorage.setItem("justLoggedOut", "true");
+
+  // 🔥 use replace to prevent back button reopening dashboard
+  window.location.replace("index.html");
 }
 
 /* AUTH CHECK */
