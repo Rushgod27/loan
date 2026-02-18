@@ -117,35 +117,25 @@ function setActive(title){
 }
 
 /* DASHBOARD */
-function renderDashboard(){
+const totalLoanValue =
+  state.loans.reduce((a,b)=>a+(b.principal||0),0);
 
-  const today = new Date();
-  today.setHours(0,0,0,0);
+const totalCollected =
+  state.collections.reduce((a,b)=>a+b.amount,0);
 
-  let overviewHTML = "";
-  let dueHTML = "";
-  let overdueHTML = "";
+const totalOutstanding =
+  totalLoanValue - totalCollected;
 
-  let todayCollection = 0;
-  let activeLoans = state.loans.filter(l=>l.status==="active").length;
-
-  /* ===== TODAY COLLECTION ===== */
-  state.collections.forEach(c=>{
-    const d = new Date(c.date);
-    d.setHours(0,0,0,0);
-    if(d.getTime()===today.getTime()){
-      todayCollection += c.amount;
-    }
-  });
-
-  overviewHTML = `
-    <div class="card">
-      <h3>Overview</h3>
-      <div>Total Borrowers: ${state.borrowers.length}</div>
-      <div>Active Loans: ${activeLoans}</div>
-      <div>Today's Collection: ₹${todayCollection}</div>
-    </div>
-  `;
+overviewHTML = `
+<div class="card">
+  <h3>Business Summary</h3>
+  <div>Total Borrowers: ${state.borrowers.length}</div>
+  <div>Total Loans Value: ₹${totalLoanValue}</div>
+  <div>Total Collection: ₹${totalCollected}</div>
+  <div>Outstanding Amount: ₹${totalOutstanding}</div>
+  <div>Active Loans: ${activeLoans}</div>
+</div>
+`;
 
   /* ===== INSTALLMENTS LOOP ===== */
   state.installments.forEach(inst =>{
@@ -193,9 +183,10 @@ Please pay at the earliest.`;
     const cardTemplate = `
       <div class="card">
         <div style="display:flex;align-items:center;gap:12px;">
-          <img src="${photo}" 
-               style="width:60px;height:60px;border-radius:50%;object-fit:cover;">
-          <div>
+<img src="${photo}"
+     onclick="showProfile('${borrower.id}')"
+     style="width:60px;height:60px;border-radius:50%;object-fit:cover;cursor:pointer;">  
+    <div>
             <b>${borrower.name}</b><br>
             ₹${inst.amount}
           </div>
@@ -208,16 +199,20 @@ Please pay at the earliest.`;
     /* DUE TODAY */
     if(due.getTime()===today.getTime()){
       dueHTML += cardTemplate.replace(
-        `₹${inst.amount}`,
-        `₹${inst.amount} • Due Today`
+        `Loan: ₹${loan.principal}
+<br>Installment ${inst.number}
+<br>Amount: ₹${inst.amount}
+<br>Due: ${due.toLocaleDateString()}`
       );
     }
 
     /* OVERDUE */
     if(due < today){
       overdueHTML += cardTemplate.replace(
-        `₹${inst.amount}`,
-        `₹${inst.amount} • ${daysLate} days overdue`
+        `Loan: ₹${loan.principal}
+<br>Installment ${inst.number}
+<br>Amount: ₹${inst.amount}
+<br>Due: ${due.toLocaleDateString()}`,
       );
     }
 
@@ -340,52 +335,117 @@ function renderProfile(id){
     reader.readAsDataURL(e.target.files[0]);
   };
 
-  /* DOCUMENTS */
-  const docs=b.documents||[];
-  renderDocs(docs);
-  docInput.onchange=async e=>{
-    const files=[...e.target.files];
-    const newDocs=[...docs];
-    for(const f of files){
-      const reader=new FileReader();
-      reader.onload=async ev=>{
-        newDocs.push(ev.target.result);
-        await updateDoc(doc(db,"borrowers",id),{documents:newDocs});
-        renderDocs(newDocs);
-      };
-      reader.readAsDataURL(f);
-    }
-  };
-}
+const docs = b.documents || [];
 
-function renderDocs(list){
-  docList.innerHTML="";
-  list.forEach(d=>docList.innerHTML+=`<a href="${d}" target="_blank">📄 View Document</a><br>`);
-}
+html += `
+<div class="card">
+  <h3>Documents</h3>
+
+  <input type="file" id="docInput" multiple><br><br>
+
+  <div id="docList">
+    ${docs.map((d,i)=>
+      `<div>
+        <a href="${d}" download="document_${i+1}.jpg">Download</a> |
+        <a href="${d}" target="_blank">View</a>
+      </div>`
+    ).join("")}
+  </div>
+</div>
+`;
+docInput.onchange = async e=>{
+  const files = [...e.target.files];
+  const newDocs = docs.slice();
+
+  for(const file of files){
+
+    const reader = new FileReader();
+
+    reader.onload = async ev=>{
+      newDocs.push(ev.target.result);
+
+      await updateDoc(doc(db,"borrowers",id),{
+        documents:newDocs
+      });
+    };
+
+    reader.readAsDataURL(file);
+  }
+};
 
 /* INSTALLMENTS */
-window.toggleInstallments=(loanId)=>{
-  const box=document.getElementById("inst-"+loanId);
-  if(openedLoanId===loanId){box.innerHTML="";openedLoanId=null;return;}
-  openedLoanId=loanId;
+window.toggleInstallments = (loanId)=>{
 
-  const list=state.installments.filter(i=>i.loanId===loanId).sort((a,b)=>a.number-b.number);
-  let html="";
+  const box = document.getElementById("inst-"+loanId);
+
+  if(openedLoanId === loanId){
+    box.innerHTML="";
+    openedLoanId=null;
+    return;
+  }
+
+  openedLoanId = loanId;
+
+  const today = new Date();
+  today.setHours(0,0,0,0);
+
+  const list = state.installments
+    .filter(i => i.loanId === loanId)
+    .sort((a,b)=> a.number - b.number);
+
+  let grouped = {
+    "Due Today":[],
+    "Overdue":[],
+    "Pending":[],
+    "Paid":[]
+  };
+
   list.forEach(i=>{
-    html+=`
-    <div class="inst-card">
-      Installment ${i.number}<br>
-      Amount: ₹${i.amount}<br>
-      Due: ${new Date(i.dueDate).toLocaleDateString()}<br>
-      Status: ${i.status}<br>
-      ${i.status==="pending"?`
-      <button class="btn btn-success"
-        onclick="markPaid('${i.id}','${loanId}','${i.borrowerId}',${i.amount})">
-        Mark Paid
-      </button>`:""}
-    </div>`;
+
+    const due = new Date(i.dueDate);
+    due.setHours(0,0,0,0);
+
+    if(i.status==="completed"){
+      grouped["Paid"].push(i);
+    }
+    else if(due.getTime()===today.getTime()){
+      grouped["Due Today"].push(i);
+    }
+    else if(due<today){
+      grouped["Overdue"].push(i);
+    }
+    else{
+      grouped["Pending"].push(i);
+    }
+
   });
-  box.innerHTML=html;
+
+  let html="";
+
+  Object.keys(grouped).forEach(group=>{
+
+    if(grouped[group].length===0) return;
+
+    html+=`<h4>${group}</h4>`;
+
+    grouped[group].forEach(i=>{
+      html+=`
+      <div class="inst-card">
+        Installment ${i.number}
+        <br>Amount: ₹${i.amount}
+        <br>Due: ${new Date(i.dueDate).toLocaleDateString()}
+        <br>Status: ${i.status}
+        <br>
+        ${i.status==="pending" ? `
+        <button onclick="confirmMarkPaid('${i.id}','${loanId}','${i.borrowerId}',${i.amount})">
+          Mark Paid
+        </button>` : ""}
+      </div>`;
+    });
+
+  });
+
+  box.innerHTML = html;
 };
 
 /* MARK PAID */
