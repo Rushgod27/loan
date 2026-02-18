@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <title>Agent App</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="stylesheet" href="css/styles.css?v=30">
+<link rel="stylesheet" href="css/styles.css?v=31">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#4f46e5">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
@@ -56,39 +56,18 @@ let currentProfileId=null;
 /* ================= AUTH ================= */
 
 onAuthStateChanged(auth, user=>{
-
   if(!user){
     location.href="index.html";
     return;
   }
-
   uid=user.uid;
-
-  listenUser(user.uid);
+  startRealtimeListeners();
 });
-
-/* ================= LISTEN USER ================= */
-
-function listenUser(uid){
-
-  onSnapshot(doc(db,"users",uid), snap=>{
-
-    if(!snap.exists() || snap.data().role!=="agent"){
-      logout();
-      return;
-    }
-
-    ownerId=snap.data().approvedBy || null;
-
-    startRealtimeListeners();
-  });
-}
 
 /* ================= REALTIME LISTENERS ================= */
 
 function startRealtimeListeners(){
 
-  /* BORROWERS */
   onSnapshot(query(
     collection(db,"borrowers"),
     where("agentId","==",uid)
@@ -98,7 +77,6 @@ function startRealtimeListeners(){
     refreshView();
   });
 
-  /* LOANS */
   onSnapshot(query(
     collection(db,"loans"),
     where("agentId","==",uid)
@@ -108,7 +86,6 @@ function startRealtimeListeners(){
     refreshView();
   });
 
-  /* INSTALLMENTS */
   onSnapshot(query(
     collection(db,"installments"),
     where("agentId","==",uid)
@@ -118,7 +95,6 @@ function startRealtimeListeners(){
     refreshView();
   });
 
-  /* COLLECTIONS */
   onSnapshot(query(
     collection(db,"collections"),
     where("agentId","==",uid)
@@ -129,13 +105,7 @@ function startRealtimeListeners(){
   });
 }
 
-/* ================= VIEW CONTROLLER ================= */
-
-function refreshView(){
-  if(currentView==="dashboard") renderDashboard();
-  if(currentView==="borrowers") renderBorrowers();
-  if(currentView==="profile") renderProfile(currentProfileId);
-}
+/* ================= VIEW SWITCH ================= */
 
 window.showDashboard=()=>{
   currentView="dashboard";
@@ -150,7 +120,7 @@ window.showBorrowers=()=>{
 window.showProfile=(id)=>{
   currentProfileId=id;
   currentView="profile";
-  setActive("Profile", false);
+  setActive("Profile");
 };
 
 function setActive(title){
@@ -181,6 +151,12 @@ function setActive(title){
   refreshView();
 }
 
+function refreshView(){
+  if(currentView==="dashboard") renderDashboard();
+  if(currentView==="borrowers") renderBorrowers();
+  if(currentView==="profile") renderProfile(currentProfileId);
+}
+
 /* ================= DASHBOARD ================= */
 
 function renderDashboard(){
@@ -188,16 +164,75 @@ function renderDashboard(){
   const today=new Date();
   today.setHours(0,0,0,0);
 
-  let dueToday=0, overdue=0, todayCollection=0;
+  let dueHTML="";
+  let overdueHTML="";
+  let dueCount=0;
+  let overdueCount=0;
+  let todayCollection=0;
 
   state.installments.forEach(i=>{
-    if(i.status==="pending"){
-      const due=new Date(i.dueDate);
-      due.setHours(0,0,0,0);
 
-      if(due.getTime()===today.getTime()) dueToday++;
-      if(due<today) overdue++;
+    if(i.status!=="pending") return;
+
+    const borrower=state.borrowers.find(b=>b.id===i.borrowerId);
+    const loan=state.loans.find(l=>l.id===i.loanId);
+    if(!borrower || !loan) return;
+
+    const due=new Date(i.dueDate);
+    due.setHours(0,0,0,0);
+
+    const phone=borrower.phone;
+    const daysLate=Math.floor((today-due)/86400000);
+
+    const message=
+`Hello ${borrower.name},
+
+Loan Amount: ₹${loan.principal}
+Installment No: ${i.number}
+Installment Amount: ₹${i.amount}
+Due Date: ${due.toLocaleDateString()}
+${daysLate>0?`Overdue by ${daysLate} days`:""}
+
+Please clear the payment at the earliest.`;
+
+    const waLink=`https://wa.me/91${phone}?text=${encodeURIComponent(message)}`;
+
+    const markBtn=`
+      <button class="btn btn-success"
+      onclick="markPaid('${i.id}','${i.loanId}','${i.borrowerId}',${i.amount})">
+      Mark Paid 💰</button>
+    `;
+
+    if(due.getTime()===today.getTime()){
+      dueCount++;
+      dueHTML+=`
+        <div class="card">
+          <b>${borrower.name}</b><br>
+          ₹${i.amount} • Due Today
+          <div class="card-actions">
+            ${markBtn}
+            <button onclick="window.location.href='tel:${phone}'">📞</button>
+            <button onclick="window.open('${waLink}','_blank')">💬 Reminder</button>
+          </div>
+        </div>
+      `;
     }
+
+    if(due<today){
+      overdueCount++;
+      overdueHTML+=`
+        <div class="card">
+          <b>${borrower.name}</b><br>
+          ₹${i.amount} • ${daysLate} days overdue
+          <div class="card-actions">
+            ${markBtn}
+            <button onclick="window.location.href='tel:${phone}'">📞</button>
+            <button onclick="window.open('${waLink}','_blank')">💬 Reminder</button>
+          </div>
+        </div>
+      `;
+    }
+
   });
 
   state.collections.forEach(c=>{
@@ -209,25 +244,20 @@ function renderDashboard(){
 
   dashboardSection.innerHTML=`
     <div class="card">
-      <div class="card-row">
-        <div>Total Borrowers</div>
-        <b>${state.borrowers.length}</b>
-      </div>
+      <div class="card-row"><div>Total Borrowers</div><b>${state.borrowers.length}</b></div>
+      <div class="card-row"><div>Today's Collection</div><b>₹${todayCollection}</b></div>
+      <div class="card-row"><div>Due Today</div><b>${dueCount}</b></div>
+      <div class="card-row"><div>Overdue</div><b>${overdueCount}</b></div>
+    </div>
 
-      <div class="card-row">
-        <div>Today's Collection</div>
-        <b>₹${todayCollection}</b>
-      </div>
+    <div class="card">
+      <h3>Due Today</h3>
+      ${dueHTML || "No dues today"}
+    </div>
 
-      <div class="card-row">
-        <div>Due Today</div>
-        <b>${dueToday}</b>
-      </div>
-
-      <div class="card-row">
-        <div>Overdue</div>
-        <b>${overdue}</b>
-      </div>
+    <div class="card">
+      <h3>Overdue</h3>
+      ${overdueHTML || "No overdue payments"}
     </div>
   `;
 }
@@ -235,44 +265,21 @@ function renderDashboard(){
 /* ================= BORROWERS ================= */
 
 function renderBorrowers(){
-
-  let html=`
-    <div class="card">
-      <input id="searchInput" placeholder="Search borrower">
-    </div>
+  borrowersSection.innerHTML=`
     <div id="borrowerList"></div>
   `;
 
-  borrowersSection.innerHTML=html;
-
-  renderBorrowerList(state.borrowers);
-
-  document.getElementById("searchInput")
-  .addEventListener("input", e=>{
-    const v=e.target.value.toLowerCase();
-    const filtered=state.borrowers.filter(b=>
-      b.name.toLowerCase().includes(v) ||
-      b.phone.includes(v)
-    );
-    renderBorrowerList(filtered);
-  });
-}
-
-function renderBorrowerList(list){
-
   let html="";
-
-  list.forEach(b=>{
+  state.borrowers.forEach(b=>{
     html+=`
       <div class="card borrower-card"
-           onclick="showProfile('${b.id}')">
-        <b>${b.name}</b><br>
-        ${b.phone}
+        onclick="showProfile('${b.id}')">
+        <b>${b.name}</b><br>${b.phone}
       </div>
     `;
   });
 
-  document.getElementById("borrowerList").innerHTML=html;
+  borrowerList.innerHTML=html;
 }
 
 /* ================= PROFILE ================= */
@@ -280,41 +287,61 @@ function renderBorrowerList(list){
 function renderProfile(id){
 
   const b=state.borrowers.find(x=>x.id===id);
-  if(!b){ alert("Borrower not found"); return; }
+  if(!b) return;
 
-  const photo=b.profileImage ||
-  "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+  const loans=state.loans.filter(l=>l.borrowerId===id);
 
-  profileSection.innerHTML=`
+  let html=`
     <div class="card">
-
-      <div class="profile-photo-wrapper">
-        <img src="${photo}"
-          style="width:150px;border-radius:50%">
-      </div>
-
       <h3>${b.name}</h3>
-
-      <a class="contact-btn call-btn"
-         href="tel:${b.phone}">
-         📞 Call
-      </a>
-
-      <a class="contact-btn wa-btn"
-         target="_blank"
-         href="https://wa.me/91${b.phone}">
-         💬 WhatsApp
-      </a>
-
-      <br><br>
-      <button class="btn btn-primary"
-              onclick="showBorrowers()">
-        ← Back
-      </button>
-
+      <a href="tel:${b.phone}">📞 Call</a>
+      <button onclick="showBorrowers()">← Back</button>
     </div>
   `;
+
+  loans.forEach(loan=>{
+
+    const installments=state.installments
+      .filter(i=>i.loanId===loan.id)
+      .sort((a,b)=>a.number-b.number);
+
+    html+=`<div class="card">
+      <b>Loan ₹${loan.principal}</b><br>`;
+
+    installments.forEach(i=>{
+      html+=`
+        <div class="inst-card">
+          Installment ${i.number} - ₹${i.amount}
+          (${i.status})
+          ${i.status==="pending"?
+          `<button onclick="markPaid('${i.id}','${loan.id}','${id}',${i.amount}')">
+          Mark Paid</button>`:""}
+        </div>
+      `;
+    });
+
+    html+=`</div>`;
+  });
+
+  profileSection.innerHTML=html;
 }
+
+/* ================= MARK PAID ================= */
+
+window.markPaid=async(instId,loanId,borrowerId,amount)=>{
+
+  await updateDoc(doc(db,"installments",instId),
+    {status:"completed"});
+
+  await addDoc(collection(db,"collections"),{
+    loanId,
+    borrowerId,
+    agentId:uid,
+    amount,
+    type:"installment",
+    date:Date.now()
+  });
+};
 
 /* ================= LOGOUT ================= */
 
