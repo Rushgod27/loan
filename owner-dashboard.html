@@ -109,8 +109,14 @@ onAuthStateChanged(auth, async(user)=>{
 });
 
 window.logoutUser = async()=>{
+
   await signOut(auth);
-  location.href="index.html";
+
+  // 🔥 Tell login page we just logged out
+  sessionStorage.setItem("justLoggedOut", "true");
+
+  // 🔥 Prevent back button restoring dashboard
+  window.location.replace("index.html");
 };
 
 /* ================= INVITE CODE SYSTEM ================= */
