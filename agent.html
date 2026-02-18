@@ -4,10 +4,35 @@
 <meta charset="UTF-8">
 <title>Agent App</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="stylesheet" href="css/styles.css?v=31">
+
+<link rel="stylesheet" href="css/styles.css?v=40">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#4f46e5">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
+
+<style>
+body{margin:0;font-family:system-ui;background:#f8fafc}
+.header{padding:18px;background:#4f46e5;color:#fff;font-weight:600;text-align:center}
+.nav{display:flex}
+.nav div{flex:1;padding:14px;text-align:center;background:#eef2ff;cursor:pointer}
+.nav .active{background:#4f46e5;color:#fff}
+.section-content{padding:16px}
+.hidden{display:none}
+.card{background:#fff;padding:15px;border-radius:12px;margin-bottom:15px;box-shadow:0 4px 12px rgba(0,0,0,0.05)}
+.borrower-card{cursor:pointer}
+.badge-active{background:#dcfce7;color:#16a34a;padding:4px 10px;border-radius:999px;font-size:12px;margin-left:auto}
+.profile-big{width:150px;height:150px;border-radius:50%;object-fit:cover;cursor:pointer}
+.profile-actions{display:flex;gap:10px;margin:10px 0}
+.call-btn,.wa-btn{padding:10px 18px;border-radius:999px;text-decoration:none;font-size:14px}
+.call-btn{background:#e0f2fe;color:#0284c7}
+.wa-btn{background:#dcfce7;color:#16a34a}
+.btn{padding:10px 16px;border:none;border-radius:8px;margin-top:8px;cursor:pointer}
+.btn-primary{background:#e0e7ff;color:#3730a3}
+.btn-success{background:#dcfce7;color:#166534}
+.inst-card{padding:10px;background:#f1f5f9;border-radius:8px;margin-top:8px}
+.logout-wrapper{padding:15px}
+.logout-btn{width:100%;padding:14px;border:none;border-radius:10px;background:#fee2e2;color:#991b1b;font-weight:600}
+</style>
 </head>
 
 <body>
@@ -38,326 +63,236 @@ import {
   addDoc, doc, updateDoc
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-/* ================= GLOBAL STATE ================= */
-
 let uid=null;
-let ownerId=null;
-
-let state={
-  borrowers:[],
-  loans:[],
-  installments:[],
-  collections:[]
-};
-
+let state={borrowers:[],loans:[],installments:[],collections:[]};
 let currentView="dashboard";
 let currentProfileId=null;
+let openedLoanId=null;
 
-/* ================= AUTH ================= */
-
-onAuthStateChanged(auth, user=>{
-  if(!user){
-    location.href="index.html";
-    return;
-  }
+/* AUTH */
+onAuthStateChanged(auth,user=>{
+  if(!user){location.href="index.html";return;}
   uid=user.uid;
-  startRealtimeListeners();
+  startRealtime();
 });
 
-/* ================= REALTIME LISTENERS ================= */
-
-function startRealtimeListeners(){
-
-  onSnapshot(query(
-    collection(db,"borrowers"),
-    where("agentId","==",uid)
-  ), snap=>{
-    state.borrowers=[];
-    snap.forEach(d=>state.borrowers.push({id:d.id,...d.data()}));
-    refreshView();
+function startRealtime(){
+  onSnapshot(query(collection(db,"borrowers"),where("agentId","==",uid)),s=>{
+    state.borrowers=[];s.forEach(d=>state.borrowers.push({id:d.id,...d.data()}));refresh();
   });
-
-  onSnapshot(query(
-    collection(db,"loans"),
-    where("agentId","==",uid)
-  ), snap=>{
-    state.loans=[];
-    snap.forEach(d=>state.loans.push({id:d.id,...d.data()}));
-    refreshView();
+  onSnapshot(query(collection(db,"loans"),where("agentId","==",uid)),s=>{
+    state.loans=[];s.forEach(d=>state.loans.push({id:d.id,...d.data()}));refresh();
   });
-
-  onSnapshot(query(
-    collection(db,"installments"),
-    where("agentId","==",uid)
-  ), snap=>{
-    state.installments=[];
-    snap.forEach(d=>state.installments.push({id:d.id,...d.data()}));
-    refreshView();
+  onSnapshot(query(collection(db,"installments"),where("agentId","==",uid)),s=>{
+    state.installments=[];s.forEach(d=>state.installments.push({id:d.id,...d.data()}));refresh();
   });
-
-  onSnapshot(query(
-    collection(db,"collections"),
-    where("agentId","==",uid)
-  ), snap=>{
-    state.collections=[];
-    snap.forEach(d=>state.collections.push({id:d.id,...d.data()}));
-    refreshView();
+  onSnapshot(query(collection(db,"collections"),where("agentId","==",uid)),s=>{
+    state.collections=[];s.forEach(d=>state.collections.push({id:d.id,...d.data()}));refresh();
   });
 }
 
-/* ================= VIEW SWITCH ================= */
+function refresh(){
+  if(currentView==="dashboard")renderDashboard();
+  if(currentView==="borrowers")renderBorrowers();
+  if(currentView==="profile")renderProfile(currentProfileId);
+}
 
-window.showDashboard=()=>{
-  currentView="dashboard";
-  setActive("Dashboard");
-};
-
-window.showBorrowers=()=>{
-  currentView="borrowers";
-  setActive("Borrowers");
-};
-
-window.showProfile=(id)=>{
-  currentProfileId=id;
-  currentView="profile";
-  setActive("Profile");
-};
+/* NAVIGATION */
+window.showDashboard=()=>{currentView="dashboard";setActive("Dashboard")}
+window.showBorrowers=()=>{currentView="borrowers";setActive("Borrowers")}
+window.showProfile=(id)=>{currentProfileId=id;currentView="profile";setActive("Profile")}
 
 function setActive(title){
-
   pageTitle.innerText=title;
-
   dashboardSection.classList.add("hidden");
   borrowersSection.classList.add("hidden");
   profileSection.classList.add("hidden");
-
   navDashboard.classList.remove("active");
   navBorrowers.classList.remove("active");
 
-  if(title==="Dashboard"){
-    dashboardSection.classList.remove("hidden");
-    navDashboard.classList.add("active");
-  }
-
-  if(title==="Borrowers"){
-    borrowersSection.classList.remove("hidden");
-    navBorrowers.classList.add("active");
-  }
-
-  if(title==="Profile"){
-    profileSection.classList.remove("hidden");
-  }
-
-  refreshView();
+  if(title==="Dashboard"){dashboardSection.classList.remove("hidden");navDashboard.classList.add("active")}
+  if(title==="Borrowers"){borrowersSection.classList.remove("hidden");navBorrowers.classList.add("active")}
+  if(title==="Profile"){profileSection.classList.remove("hidden")}
+  refresh();
 }
 
-function refreshView(){
-  if(currentView==="dashboard") renderDashboard();
-  if(currentView==="borrowers") renderBorrowers();
-  if(currentView==="profile") renderProfile(currentProfileId);
-}
-
-/* ================= DASHBOARD ================= */
-
+/* DASHBOARD */
 function renderDashboard(){
-
-  const today=new Date();
-  today.setHours(0,0,0,0);
-
-  let dueHTML="";
-  let overdueHTML="";
-  let dueCount=0;
-  let overdueCount=0;
-  let todayCollection=0;
-
-  state.installments.forEach(i=>{
-
-    if(i.status!=="pending") return;
-
-    const borrower=state.borrowers.find(b=>b.id===i.borrowerId);
-    const loan=state.loans.find(l=>l.id===i.loanId);
-    if(!borrower || !loan) return;
-
-    const due=new Date(i.dueDate);
-    due.setHours(0,0,0,0);
-
-    const phone=borrower.phone;
-    const daysLate=Math.floor((today-due)/86400000);
-
-    const message=
-`Hello ${borrower.name},
-
-Loan Amount: ₹${loan.principal}
-Installment No: ${i.number}
-Installment Amount: ₹${i.amount}
-Due Date: ${due.toLocaleDateString()}
-${daysLate>0?`Overdue by ${daysLate} days`:""}
-
-Please clear the payment at the earliest.`;
-
-    const waLink=`https://wa.me/91${phone}?text=${encodeURIComponent(message)}`;
-
-    const markBtn=`
-      <button class="btn btn-success"
-      onclick="markPaid('${i.id}','${i.loanId}','${i.borrowerId}',${i.amount})">
-      Mark Paid 💰</button>
-    `;
-
-    if(due.getTime()===today.getTime()){
-      dueCount++;
-      dueHTML+=`
-        <div class="card">
-          <b>${borrower.name}</b><br>
-          ₹${i.amount} • Due Today
-          <div class="card-actions">
-            ${markBtn}
-            <button onclick="window.location.href='tel:${phone}'">📞</button>
-            <button onclick="window.open('${waLink}','_blank')">💬 Reminder</button>
-          </div>
-        </div>
-      `;
-    }
-
-    if(due<today){
-      overdueCount++;
-      overdueHTML+=`
-        <div class="card">
-          <b>${borrower.name}</b><br>
-          ₹${i.amount} • ${daysLate} days overdue
-          <div class="card-actions">
-            ${markBtn}
-            <button onclick="window.location.href='tel:${phone}'">📞</button>
-            <button onclick="window.open('${waLink}','_blank')">💬 Reminder</button>
-          </div>
-        </div>
-      `;
-    }
-
-  });
-
-  state.collections.forEach(c=>{
-    const d=new Date(c.date);
-    d.setHours(0,0,0,0);
-    if(d.getTime()===today.getTime())
-      todayCollection+=c.amount;
-  });
-
   dashboardSection.innerHTML=`
     <div class="card">
-      <div class="card-row"><div>Total Borrowers</div><b>${state.borrowers.length}</b></div>
-      <div class="card-row"><div>Today's Collection</div><b>₹${todayCollection}</b></div>
-      <div class="card-row"><div>Due Today</div><b>${dueCount}</b></div>
-      <div class="card-row"><div>Overdue</div><b>${overdueCount}</b></div>
-    </div>
-
-    <div class="card">
-      <h3>Due Today</h3>
-      ${dueHTML || "No dues today"}
-    </div>
-
-    <div class="card">
-      <h3>Overdue</h3>
-      ${overdueHTML || "No overdue payments"}
-    </div>
-  `;
+      Total Borrowers: ${state.borrowers.length}
+    </div>`;
 }
 
-/* ================= BORROWERS ================= */
-
+/* BORROWERS */
 function renderBorrowers(){
   borrowersSection.innerHTML=`
-    <div id="borrowerList"></div>
-  `;
-
-  let html="";
-  state.borrowers.forEach(b=>{
-    html+=`
-      <div class="card borrower-card"
-        onclick="showProfile('${b.id}')">
-        <b>${b.name}</b><br>${b.phone}
-      </div>
-    `;
+    <div class="card">
+      <input id="searchInput" placeholder="Search borrower">
+    </div>
+    <div id="borrowerList"></div>`;
+  renderBorrowerList(state.borrowers);
+  searchInput.addEventListener("input",e=>{
+    const v=e.target.value.toLowerCase();
+    renderBorrowerList(state.borrowers.filter(b=>b.name.toLowerCase().includes(v)||b.phone.includes(v)));
   });
+}
 
+function renderBorrowerList(list){
+  let html="";
+  list.forEach(b=>{
+    const activeLoan=state.loans.some(l=>l.borrowerId===b.id&&l.status==="active");
+    const photo=b.profileImage||"https://cdn-icons-png.flaticon.com/512/149/149071.png";
+    html+=`
+      <div class="card borrower-card" onclick="showProfile('${b.id}')">
+        <div style="display:flex;align-items:center;gap:12px">
+          <img src="${photo}" style="width:55px;height:55px;border-radius:50%;object-fit:cover">
+          <div><b>${b.name}</b><br>${b.phone}</div>
+          ${activeLoan?`<span class="badge-active">Active</span>`:""}
+        </div>
+      </div>`;
+  });
   borrowerList.innerHTML=html;
 }
 
-/* ================= PROFILE ================= */
-
+/* PROFILE */
 function renderProfile(id){
-
-  const b=state.borrowers.find(x=>x.id===id);
-  if(!b) return;
-
-  const loans=state.loans.filter(l=>l.borrowerId===id);
+  const b=state.borrowers.find(x=>x.id===id); if(!b)return;
+  const photo=b.profileImage||"https://cdn-icons-png.flaticon.com/512/149/149071.png";
 
   let html=`
-    <div class="card">
-      <h3>${b.name}</h3>
-      <a href="tel:${b.phone}">📞 Call</a>
-      <button onclick="showBorrowers()">← Back</button>
+  <div class="card">
+    <div style="text-align:center">
+      <img id="profileImg" src="${photo}" class="profile-big" onclick="photoInput.click()">
+      <input type="file" id="photoInput" accept="image/*" hidden>
     </div>
-  `;
 
-  loans.forEach(loan=>{
+    <h3>${b.name}</h3>
+    <div class="profile-actions">
+      <a href="tel:${b.phone}" class="call-btn">📞 Call</a>
+      <a target="_blank" href="https://wa.me/91${b.phone}" class="wa-btn">💬 WhatsApp</a>
+    </div>
 
-    const installments=state.installments
-      .filter(i=>i.loanId===loan.id)
-      .sort((a,b)=>a.number-b.number);
+    <button class="btn btn-primary" onclick="createLoanUI()">+ Create Loan</button>
+    <div id="loanCreateBox"></div>
+  </div>`;
 
-    html+=`<div class="card">
-      <b>Loan ₹${loan.principal}</b><br>`;
-
-    installments.forEach(i=>{
-      html+=`
-        <div class="inst-card">
-          Installment ${i.number} - ₹${i.amount}
-          (${i.status})
-          ${i.status==="pending"?
-          `<button onclick="markPaid('${i.id}','${loan.id}','${id}',${i.amount}')">
-          Mark Paid</button>`:""}
-        </div>
-      `;
-    });
-
-    html+=`</div>`;
+  state.loans.filter(l=>l.borrowerId===id).forEach(loan=>{
+    html+=`
+    <div class="card">
+      <b>Loan ₹${loan.principal}</b><br>
+      Installments: ${loan.count}<br>
+      Start: ${new Date(loan.startDate).toLocaleDateString()}<br>
+      <button class="btn btn-success" onclick="toggleInstallments('${loan.id}')">View Installments</button>
+      <div id="inst-${loan.id}"></div>
+    </div>`;
   });
+
+  html+=`<div class="card">
+    <h3>Documents</h3>
+    <input type="file" id="docInput" multiple>
+    <div id="docList"></div>
+  </div>`;
 
   profileSection.innerHTML=html;
+
+  /* PHOTO UPDATE */
+  photoInput.onchange=e=>{
+    const reader=new FileReader();
+    reader.onload=ev=>{
+      updateDoc(doc(db,"borrowers",id),{profileImage:ev.target.result});
+    };
+    reader.readAsDataURL(e.target.files[0]);
+  };
+
+  /* DOCUMENTS */
+  const docs=b.documents||[];
+  renderDocs(docs);
+  docInput.onchange=async e=>{
+    const files=[...e.target.files];
+    const newDocs=[...docs];
+    for(const f of files){
+      const reader=new FileReader();
+      reader.onload=async ev=>{
+        newDocs.push(ev.target.result);
+        await updateDoc(doc(db,"borrowers",id),{documents:newDocs});
+        renderDocs(newDocs);
+      };
+      reader.readAsDataURL(f);
+    }
+  };
 }
 
-/* ================= MARK PAID ================= */
+function renderDocs(list){
+  docList.innerHTML="";
+  list.forEach(d=>docList.innerHTML+=`<a href="${d}" target="_blank">📄 View Document</a><br>`);
+}
 
-window.markPaid=async(instId,loanId,borrowerId,amount)=>{
+/* INSTALLMENTS */
+window.toggleInstallments=(loanId)=>{
+  const box=document.getElementById("inst-"+loanId);
+  if(openedLoanId===loanId){box.innerHTML="";openedLoanId=null;return;}
+  openedLoanId=loanId;
 
-  await updateDoc(doc(db,"installments",instId),
-    {status:"completed"});
+  const list=state.installments.filter(i=>i.loanId===loanId).sort((a,b)=>a.number-b.number);
+  let html="";
+  list.forEach(i=>{
+    html+=`
+    <div class="inst-card">
+      Installment ${i.number}<br>
+      Amount: ₹${i.amount}<br>
+      Due: ${new Date(i.dueDate).toLocaleDateString()}<br>
+      Status: ${i.status}<br>
+      ${i.status==="pending"?`
+      <button class="btn btn-success"
+        onclick="markPaid('${i.id}','${loanId}','${i.borrowerId}',${i.amount})">
+        Mark Paid
+      </button>`:""}
+    </div>`;
+  });
+  box.innerHTML=html;
+};
 
+/* MARK PAID */
+window.markPaid=async(id,loanId,borrowerId,amt)=>{
+  await updateDoc(doc(db,"installments",id),{status:"completed"});
   await addDoc(collection(db,"collections"),{
-    loanId,
-    borrowerId,
-    agentId:uid,
-    amount,
-    type:"installment",
-    date:Date.now()
+    loanId,borrowerId,agentId:uid,amount:amt,type:"installment",date:Date.now()
   });
 };
 
-/* ================= LOGOUT ================= */
+/* CREATE LOAN */
+window.createLoanUI=()=>{
+  loanCreateBox.innerHTML=`
+    <input id="loanAmt" placeholder="Principal"><br>
+    <input id="loanCount" placeholder="Installments"><br>
+    <button class="btn btn-primary" onclick="createLoan()">Save</button>`;
+};
 
+window.createLoan=async()=>{
+  const amt=Number(loanAmt.value);
+  const count=Number(loanCount.value);
+  const ref=await addDoc(collection(db,"loans"),{
+    borrowerId:currentProfileId,
+    agentId:uid,
+    principal:amt,count,startDate:Date.now(),status:"active"
+  });
+  for(let i=0;i<count;i++){
+    await addDoc(collection(db,"installments"),{
+      loanId:ref.id,borrowerId:currentProfileId,
+      agentId:uid,number:i+1,
+      amount:amt/count,
+      dueDate:Date.now()+(i+1)*7*86400000,
+      status:"pending"
+    });
+  }
+};
+
+/* LOGOUT */
 window.logout=async()=>{
   await signOut(auth);
-  sessionStorage.setItem("justLoggedOut","true");
   window.location.replace("index.html");
 };
-
-/* ================= PWA ================= */
-
-if("serviceWorker" in navigator){
-  window.addEventListener("load",()=>{
-    navigator.serviceWorker.register("/sw.js");
-  });
-}
 
 </script>
 </body>
