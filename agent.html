@@ -269,91 +269,135 @@ function renderBorrowerList(list){
 
 /* PROFILE */
 function renderProfile(id){
-  const b=state.borrowers.find(x=>x.id===id); if(!b)return;
-  const photo=b.profileImage||"https://cdn-icons-png.flaticon.com/512/149/149071.png";
 
-  let html=`
+  const b = state.borrowers.find(x=>x.id===id);
+  if(!b) return;
+
+  const photo = b.profileImage ||
+  "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+
+  const docs = b.documents || [];
+
+  let html = `
   <div class="card">
     <div style="text-align:center">
-      <img id="profileImg" src="${photo}" class="profile-big" onclick="photoInput.click()">
-      <input type="file" id="photoInput" accept="image/*" hidden>
+      <img id="profileImg"
+           src="${photo}"
+           class="profile-big"
+           style="width:150px;height:150px;border-radius:50%;cursor:pointer;">
+      <input type="file"
+             id="photoInput"
+             accept="image/*"
+             hidden>
     </div>
 
     <h3>${b.name}</h3>
+
     <div class="profile-actions">
       <a href="tel:${b.phone}" class="call-btn">📞 Call</a>
-      <a target="_blank" href="https://wa.me/91${b.phone}" class="wa-btn">💬 WhatsApp</a>
+      <a target="_blank"
+         href="https://wa.me/91${b.phone}"
+         class="wa-btn">💬 WhatsApp</a>
     </div>
 
-    <button class="btn btn-primary" onclick="createLoanUI()">+ Create Loan</button>
-    <div id="loanCreateBox"></div>
-  </div>`;
+    <button class="btn btn-primary"
+            onclick="createLoanUI()">
+      + Create Loan
+    </button>
 
-  state.loans.filter(l=>l.borrowerId===id).forEach(loan=>{
+    <div id="loanCreateBox"></div>
+  </div>
+  `;
+
+  /* ===== LOANS ===== */
+
+  const loans = state.loans
+    .filter(l=>l.borrowerId===id)
+    .sort((a,b)=>{
+      if(a.status===b.status){
+        return b.startDate - a.startDate;
+      }
+      return a.status==="active" ? -1 : 1;
+    });
+
+  loans.forEach(loan=>{
     html+=`
     <div class="card">
       <b>Loan ₹${loan.principal}</b><br>
       Installments: ${loan.count}<br>
       Start: ${new Date(loan.startDate).toLocaleDateString()}<br>
-      <button class="btn btn-success" onclick="toggleInstallments('${loan.id}')">View Installments</button>
+      Status: ${loan.status}<br><br>
+
+      <button class="btn btn-success"
+              onclick="toggleInstallments('${loan.id}')">
+        View Installments
+      </button>
+
       <div id="inst-${loan.id}"></div>
     </div>`;
   });
 
-  html+=`<div class="card">
+  /* ===== DOCUMENTS ===== */
+
+  html += `
+  <div class="card">
     <h3>Documents</h3>
-    <input type="file" id="docInput" multiple>
-    <div id="docList"></div>
-  </div>`;
 
-  profileSection.innerHTML=html;
+    <input type="file" id="docInput" multiple><br><br>
 
-  /* PHOTO UPDATE */
-  photoInput.onchange=e=>{
-    const reader=new FileReader();
-    reader.onload=ev=>{
-      updateDoc(doc(db,"borrowers",id),{profileImage:ev.target.result});
-    };
-    reader.readAsDataURL(e.target.files[0]);
-  };
-
-const docs = b.documents || [];
-
-html += `
-<div class="card">
-  <h3>Documents</h3>
-
-  <input type="file" id="docInput" multiple><br><br>
-
-  <div id="docList">
-    ${docs.map((d,i)=>
-      `<div>
-        <a href="${d}" download="document_${i+1}.jpg">Download</a> |
-        <a href="${d}" target="_blank">View</a>
-      </div>`
-    ).join("")}
+    <div id="docList">
+      ${docs.map((d,i)=>
+        `<div>
+           <a href="${d}" download="document_${i+1}">Download</a> |
+           <a href="${d}" target="_blank">View</a>
+         </div>`
+      ).join("")}
+    </div>
   </div>
-</div>
-`;
-docInput.onchange = async e=>{
-  const files = [...e.target.files];
-  const newDocs = docs.slice();
+  `;
 
-  for(const file of files){
+  profileSection.innerHTML = html;
+
+  /* ===== PHOTO UPDATE ===== */
+
+  const photoInput = document.getElementById("photoInput");
+  const profileImg = document.getElementById("profileImg");
+
+  profileImg.onclick = ()=> photoInput.click();
+
+  photoInput.onchange = e=>{
+    const file = e.target.files[0];
+    if(!file) return;
 
     const reader = new FileReader();
-
     reader.onload = async ev=>{
-      newDocs.push(ev.target.result);
-
       await updateDoc(doc(db,"borrowers",id),{
-        documents:newDocs
+        profileImage: ev.target.result
       });
     };
-
     reader.readAsDataURL(file);
-  }
-};
+  };
+
+  /* ===== DOCUMENT UPLOAD ===== */
+
+  const docInput = document.getElementById("docInput");
+
+  docInput.onchange = async e=>{
+    const files = [...e.target.files];
+    let newDocs = docs.slice();
+
+    for(const file of files){
+      const reader = new FileReader();
+      reader.onload = async ev=>{
+        newDocs.push(ev.target.result);
+        await updateDoc(doc(db,"borrowers",id),{
+          documents:newDocs
+        });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+}
 
 /* INSTALLMENTS */
 window.toggleInstallments = (loanId)=>{
