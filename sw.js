@@ -1,13 +1,14 @@
-const CACHE_NAME = "Loan-Management-App-v4";
+const CACHE_NAME = "Loan-Management-App-v5";
 
 const urlsToCache = [
   "./",
   "./index.html",
-  "./agent-dashboard.html",
-  "./borrowers.html",
-  "./borrower-profile.html",
+  "./agent.html",          // 🔥 single merged page
   "./css/styles.css",
-  "./js/firebase.js"
+  "./js/firebase.js",
+  "./manifest.json",
+  "./icons/icon-192.png",
+  "./icons/icon-512.png"
 ];
 
 self.addEventListener("install", event => {
@@ -21,7 +22,8 @@ self.addEventListener("activate", event => {
   event.waitUntil(
     caches.keys().then(cacheNames => {
       return Promise.all(
-        cacheNames.filter(name => name !== CACHE_NAME)
+        cacheNames
+          .filter(name => name !== CACHE_NAME)
           .map(name => caches.delete(name))
       );
     })
