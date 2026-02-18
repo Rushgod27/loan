@@ -118,11 +118,144 @@ function setActive(title){
 
 /* DASHBOARD */
 function renderDashboard(){
-  dashboardSection.innerHTML=`
+
+  const today = new Date();
+  today.setHours(0,0,0,0);
+
+  let overviewHTML = "";
+  let dueHTML = "";
+  let overdueHTML = "";
+
+  let todayCollection = 0;
+  let activeLoans = state.loans.filter(l=>l.status==="active").length;
+
+  /* ===== TODAY COLLECTION ===== */
+  state.collections.forEach(c=>{
+    const d = new Date(c.date);
+    d.setHours(0,0,0,0);
+    if(d.getTime()===today.getTime()){
+      todayCollection += c.amount;
+    }
+  });
+
+  overviewHTML = `
     <div class="card">
-      Total Borrowers: ${state.borrowers.length}
-    </div>`;
+      <h3>Overview</h3>
+      <div>Total Borrowers: ${state.borrowers.length}</div>
+      <div>Active Loans: ${activeLoans}</div>
+      <div>Today's Collection: ₹${todayCollection}</div>
+    </div>
+  `;
+
+  /* ===== INSTALLMENTS LOOP ===== */
+  state.installments.forEach(inst =>{
+
+    if(inst.status!=="pending") return;
+
+    const due = new Date(inst.dueDate);
+    due.setHours(0,0,0,0);
+
+    const borrower = state.borrowers.find(b=>b.id===inst.borrowerId);
+    const loan = state.loans.find(l=>l.id===inst.loanId);
+
+    if(!borrower || !loan) return;
+
+    const photo = borrower.profileImage ||
+      "https://cdn-icons-png.flaticon.com/512/149/149071.png";
+
+    const daysLate = Math.floor((today - due)/86400000);
+
+    /* FULL REMINDER MESSAGE */
+    const reminderMsg =
+`Hello ${borrower.name},
+
+Loan Amount: ₹${loan.principal}
+Installment No: ${inst.number}
+Installment Amount: ₹${inst.amount}
+Due Date: ${due.toLocaleDateString()}
+
+${daysLate>0?`You are ${daysLate} days overdue.`:""}
+Please pay at the earliest.`;
+
+    const waLink = 
+`https://wa.me/91${borrower.phone}?text=${encodeURIComponent(reminderMsg)}`;
+
+    const actionButtons = `
+      <button onclick="confirmCall('${borrower.phone}')">Call</button>
+      <button onclick="confirmReminder('${waLink}')">Send Reminder</button>
+      <button onclick="confirmMarkPaid('${inst.id}','${inst.loanId}','${inst.borrowerId}',${inst.amount})">
+        Mark Paid
+      </button>
+    `;
+
+    const cardTemplate = `
+      <div class="card">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <img src="${photo}" 
+               style="width:60px;height:60px;border-radius:50%;object-fit:cover;">
+          <div>
+            <b>${borrower.name}</b><br>
+            ₹${inst.amount}
+          </div>
+        </div>
+        <br>
+        ${actionButtons}
+      </div>
+    `;
+
+    /* DUE TODAY */
+    if(due.getTime()===today.getTime()){
+      dueHTML += cardTemplate.replace(
+        `₹${inst.amount}`,
+        `₹${inst.amount} • Due Today`
+      );
+    }
+
+    /* OVERDUE */
+    if(due < today){
+      overdueHTML += cardTemplate.replace(
+        `₹${inst.amount}`,
+        `₹${inst.amount} • ${daysLate} days overdue`
+      );
+    }
+
+  });
+
+  dashboardSection.innerHTML =
+    overviewHTML +
+    `<div class="card"><h3>Due Today</h3>${dueHTML || "No dues today"}</div>` +
+    `<div class="card"><h3>Overdue</h3>${overdueHTML || "No overdue payments"}</div>`;
 }
+window.confirmCall = (phone)=>{
+  if(confirm("Call this borrower?")){
+    window.location.href="tel:"+phone;
+  }
+};
+
+window.confirmReminder = (waLink)=>{
+  if(confirm("Send reminder message?")){
+    window.open(waLink,"_blank");
+  }
+};
+
+window.confirmMarkPaid = async(id,loanId,borrowerId,amt)=>{
+  if(!confirm("Mark this installment as paid?")) return;
+
+  await updateDoc(doc(db,"installments",id),
+    {status:"completed"});
+
+  await addDoc(collection(db,"collections"),{
+    loanId,
+    borrowerId,
+    agentId:uid,
+    amount:amt,
+    type:"installment",
+    date:Date.now()
+  });
+
+  alert("Payment recorded successfully");
+};
+
 
 /* BORROWERS */
 function renderBorrowers(){
