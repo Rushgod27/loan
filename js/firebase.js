@@ -4,7 +4,10 @@ from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth } 
 from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
-import { getFirestore } 
+import {
+  initializeFirestore,
+  enableIndexedDbPersistence
+}
 from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -19,4 +22,15 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 
 export const auth = getAuth(app);
-export const db   = getFirestore(app);
+
+/* ✅ High performance Firestore */
+export const db = initializeFirestore(app, {});
+
+/* 🔥 Enable local cache */
+enableIndexedDbPersistence(db)
+  .then(() => {
+    console.log("🔥 Firestore persistence enabled");
+  })
+  .catch((err) => {
+    console.log("Persistence failed:", err.code);
+  });
