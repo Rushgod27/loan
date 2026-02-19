@@ -117,27 +117,39 @@ function setActive(title){
 }
 
 /* DASHBOARD */
-const totalLoanValue =
-  state.loans.reduce((a,b)=>a+(b.principal||0),0);
 
-const totalCollected =
-  state.collections.reduce((a,b)=>a+b.amount,0);
+/* ================= DASHBOARD ================= */
+function renderDashboard() {
 
-const totalOutstanding =
-  totalLoanValue - totalCollected;
+  const today = new Date();
+  today.setHours(0,0,0,0);
 
-overviewHTML = `
-<div class="card">
-  <h3>Business Summary</h3>
-  <div>Total Borrowers: ${state.borrowers.length}</div>
-  <div>Total Loans Value: ₹${totalLoanValue}</div>
-  <div>Total Collection: ₹${totalCollected}</div>
-  <div>Outstanding Amount: ₹${totalOutstanding}</div>
-  <div>Active Loans: ${activeLoans}</div>
-</div>
-`;
+  let dueHTML = "";
+  let overdueHTML = "";
 
-  /* ===== INSTALLMENTS LOOP ===== */
+  const totalLoanValue =
+    state.loans.reduce((a,b)=>a+(b.principal||0),0);
+
+  const totalCollected =
+    state.collections.reduce((a,b)=>a+(b.amount||0),0);
+
+  const totalOutstanding =
+    totalLoanValue - totalCollected;
+
+  const activeLoans =
+    state.loans.filter(l=>l.status==="active").length;
+
+  let overviewHTML = `
+  <div class="card">
+    <h3>Business Summary</h3>
+    <div>Total Borrowers: ${state.borrowers.length}</div>
+    <div>Total Loans Value: ₹${totalLoanValue}</div>
+    <div>Total Collection: ₹${totalCollected}</div>
+    <div>Outstanding Amount: ₹${totalOutstanding}</div>
+    <div>Active Loans: ${activeLoans}</div>
+  </div>
+  `;
+
   state.installments.forEach(inst =>{
 
     if(inst.status!=="pending") return;
@@ -147,7 +159,6 @@ overviewHTML = `
 
     const borrower = state.borrowers.find(b=>b.id===inst.borrowerId);
     const loan = state.loans.find(l=>l.id===inst.loanId);
-
     if(!borrower || !loan) return;
 
     const photo = borrower.profileImage ||
@@ -155,65 +166,48 @@ overviewHTML = `
 
     const daysLate = Math.floor((today - due)/86400000);
 
-    /* FULL REMINDER MESSAGE */
-const reminderMsg =
+    const reminderMsg =
 `Hello ${borrower.name},
 
 Loan Amount: ₹${loan.principal}
-Total Loan With Interest: ₹${loan.totalAmount || loan.principal}
-Installment No: ${inst.number}
-Installment Amount: ₹${inst.amount}
+Total Loan: ₹${loan.totalAmount || loan.principal}
+Installment: ${inst.number}
+Amount: ₹${inst.amount}
 Due Date: ${due.toLocaleDateString()}
 
 ${daysLate>0?`You are ${daysLate} days overdue.`:""}
 
 Please pay at the earliest.`;
 
-    const waLink = 
-`https://wa.me/91${borrower.phone}?text=${encodeURIComponent(reminderMsg)}`;
-
-    const actionButtons = `
-      <button onclick="confirmCall('${borrower.phone}')">Call</button>
-      <button onclick="confirmReminder('${waLink}')">Send Reminder</button>
-      <button onclick="confirmMarkPaid('${inst.id}','${inst.loanId}','${inst.borrowerId}',${inst.amount})">
-        Mark Paid
-      </button>
-    `;
+    const waLink =
+      `https://wa.me/91${borrower.phone}?text=${encodeURIComponent(reminderMsg)}`;
 
     const cardTemplate = `
       <div class="card">
         <div style="display:flex;align-items:center;gap:12px;">
-<img src="${photo}"
-     onclick="showProfile('${borrower.id}')"
-     style="width:60px;height:60px;border-radius:50%;object-fit:cover;cursor:pointer;">  
-    <div>
+          <img src="${photo}"
+               onclick="showProfile('${borrower.id}')"
+               style="width:60px;height:60px;border-radius:50%;object-fit:cover;cursor:pointer;">
+          <div>
             <b>${borrower.name}</b><br>
             ₹${inst.amount}
           </div>
         </div>
         <br>
-        ${actionButtons}
+        <button onclick="confirmCall('${borrower.phone}')">Call</button>
+        <button onclick="confirmReminder('${waLink}')">Send Reminder</button>
+        <button onclick="confirmMarkPaid('${inst.id}','${inst.loanId}','${inst.borrowerId}',${inst.amount})">
+          Mark Paid
+        </button>
       </div>
     `;
 
-    /* DUE TODAY */
     if(due.getTime()===today.getTime()){
-      dueHTML += cardTemplate.replace(
-        `Loan: ₹${loan.principal}
-<br>Installment ${inst.number}
-<br>Amount: ₹${inst.amount}
-<br>Due: ${due.toLocaleDateString()}`
-      );
+      dueHTML += cardTemplate;
     }
 
-    /* OVERDUE */
     if(due < today){
-      overdueHTML += cardTemplate.replace(
-        `Loan: ₹${loan.principal}
-<br>Installment ${inst.number}
-<br>Amount: ₹${inst.amount}
-<br>Due: ${due.toLocaleDateString()}`,
-      );
+      overdueHTML += cardTemplate;
     }
 
   });
@@ -223,6 +217,9 @@ Please pay at the earliest.`;
     `<div class="card"><h3>Due Today</h3>${dueHTML || "No dues today"}</div>` +
     `<div class="card"><h3>Overdue</h3>${overdueHTML || "No overdue payments"}</div>`;
 }
+
+
+
 window.confirmCall = (phone)=>{
   if(confirm("Call this borrower?")){
     window.location.href="tel:"+phone;
