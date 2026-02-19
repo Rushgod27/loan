@@ -340,24 +340,60 @@ function renderProfile(id){
     reader.readAsDataURL(e.target.files[0]);
   };
 
-  /* DOCUMENTS */
-  const docs=b.documents||[];
-  renderDocs(docs);
-  docInput.onchange=async e=>{
-    const files=[...e.target.files];
-    const newDocs=[...docs];
-    for(const f of files){
-      const reader=new FileReader();
-      reader.onload=async ev=>{
-        newDocs.push(ev.target.result);
-        await updateDoc(doc(db,"borrowers",id),{documents:newDocs});
-        renderDocs(newDocs);
-      };
-      reader.readAsDataURL(f);
-    }
-  };
-}
+/* DOCUMENTS REALTIME LISTENER */
 
+const docsQuery = query(
+  collection(db,"borrowerDocuments"),
+  where("borrowerId","==",id)
+);
+
+onSnapshot(docsQuery, snap => {
+
+  docList.innerHTML = "";
+
+  if(snap.empty){
+    docList.innerHTML = "No documents uploaded";
+    return;
+  }
+
+  snap.forEach(d => {
+
+    const data = d.data();
+
+    docList.innerHTML += `
+      <div style="margin-bottom:10px">
+        <a href="${data.fileBase64}" target="_blank">
+          📄 View Document
+        </a>
+      </div>
+    `;
+
+  });
+
+});
+
+/* DOCUMENT UPLOAD */
+
+docInput.onchange = async (e) => {
+
+  const files = [...e.target.files];
+
+  for(const file of files){
+
+    const compressed = await compressImage(file);
+
+    await addDoc(collection(db,"borrowerDocuments"),{
+      borrowerId: id,
+      agentId: uid,
+      fileBase64: compressed,
+      createdAt: Date.now()
+    });
+
+  }
+
+  docInput.value = "";
+
+};
 function renderDocs(list){
   docList.innerHTML="";
   list.forEach(d=>docList.innerHTML+=`<a href="${d}" target="_blank">📄 View Document</a><br>`);
