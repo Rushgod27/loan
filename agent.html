@@ -358,6 +358,61 @@ function renderProfile(id){
 
   profileSection.innerHTML = html;
 
+/* ===== PHOTO SAVE (Compressed Base64) ===== */
+
+const photoInput = document.getElementById("photoInput");
+const profileImg = document.getElementById("profileImg");
+
+profileImg.onclick = () => photoInput.click();
+
+photoInput.onchange = async e => {
+
+  const file = e.target.files[0];
+  if(!file) return;
+
+  const reader = new FileReader();
+
+  reader.onload = function(event){
+
+    const img = new Image();
+    img.src = event.target.result;
+
+    img.onload = async function(){
+
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+
+      const MAX_WIDTH = 400;
+      const scale = MAX_WIDTH / img.width;
+
+      canvas.width = MAX_WIDTH;
+      canvas.height = img.height * scale;
+
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+      const compressedBase64 = canvas.toDataURL("image/jpeg", 0.6);
+
+      try {
+        await updateDoc(doc(db,"borrowers",id),{
+          profileImage: compressedBase64
+        });
+
+        profileImg.src = compressedBase64;
+        alert("Profile Photo Saved ✅");
+
+      } catch(err){
+        console.error(err);
+        alert("Image too large. Try smaller image.");
+      }
+
+    };
+
+  };
+
+  reader.readAsDataURL(file);
+
+};
+
   /* ===== PHOTO UPDATE ===== */
 
   const photoInput = document.getElementById("photoInput");
