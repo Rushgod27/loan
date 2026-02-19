@@ -38,7 +38,7 @@ from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 import {
   collection, query, where, onSnapshot,
-  addDoc, doc, updateDoc, getDoc
+  addDoc, doc, updateDoc
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 let uid=null;
@@ -70,23 +70,9 @@ function startRealtime(){
 }
 
 function refresh(){
-
-  if(currentView === "dashboard"){
-    renderDashboard();
-    return;
-  }
-
-  if(currentView === "borrowers"){
-    renderBorrowers();
-    return;
-  }
-
-  if(currentView === "profile"){
-    if(currentProfileId){
-      renderProfile(currentProfileId);
-    }
-    return;
-  }
+  if(currentView==="dashboard")renderDashboard();
+  if(currentView==="borrowers")renderBorrowers();
+  if(currentView==="profile")renderProfile(currentProfileId);
 }
 
 /* NAVIGATION */
@@ -281,234 +267,93 @@ function renderBorrowerList(list){
   borrowerList.innerHTML=html;
 }
 
+/* PROFILE */
 function renderProfile(id){
+  const b=state.borrowers.find(x=>x.id===id); if(!b)return;
+  const photo=b.profileImage||"https://cdn-icons-png.flaticon.com/512/149/149071.png";
 
-  if(!id) return;
-
-  const b = state.borrowers.find(x=>x.id===id);
-  if(!b) return;
-
-  const photo = b.profileImage ||
-  "https://cdn-icons-png.flaticon.com/512/149/149071.png";
-
-  const docs = b.documents || [];
-
-  let html = `
+  let html=`
   <div class="card">
     <div style="text-align:center">
-      <img id="profileImg"
-           src="${photo}"
-           class="profile-big"
-           style="width:150px;height:150px;border-radius:50%;cursor:pointer;">
-      <input type="file"
-             id="photoInput"
-             accept="image/*"
-             hidden>
+      <img id="profileImg" src="${photo}" class="profile-big" onclick="photoInput.click()">
+      <input type="file" id="photoInput" accept="image/*" hidden>
     </div>
 
     <h3>${b.name}</h3>
-
     <div class="profile-actions">
       <a href="tel:${b.phone}" class="call-btn">📞 Call</a>
-      <a target="_blank"
-         href="https://wa.me/91${b.phone}"
-         class="wa-btn">💬 WhatsApp</a>
+      <a target="_blank" href="https://wa.me/91${b.phone}" class="wa-btn">💬 WhatsApp</a>
     </div>
 
-    <button class="btn btn-primary"
-            onclick="createLoanUI()">
-      + Create Loan
-    </button>
-
+    <button class="btn btn-primary" onclick="createLoanUI()">+ Create Loan</button>
     <div id="loanCreateBox"></div>
-  </div>
-  `;
-  
-  /* ===== LOANS ===== */
+  </div>`;
 
-  const loans = state.loans
-    .filter(l=>l.borrowerId===id)
-    .sort((a,b)=>{
-      if(a.status===b.status){
-        return b.startDate - a.startDate;
-      }
-      return a.status==="active" ? -1 : 1;
-    });
-
-  loans.forEach(loan=>{
+  state.loans.filter(l=>l.borrowerId===id).forEach(loan=>{
     html+=`
     <div class="card">
       <b>Loan ₹${loan.principal}</b><br>
       Installments: ${loan.count}<br>
       Start: ${new Date(loan.startDate).toLocaleDateString()}<br>
-      Status: ${loan.status}<br><br>
-
-      <button class="btn btn-success"
-              onclick="toggleInstallments('${loan.id}')">
-        View Installments
-      </button>
-
+      <button class="btn btn-success" onclick="toggleInstallments('${loan.id}')">View Installments</button>
       <div id="inst-${loan.id}"></div>
     </div>`;
   });
 
-  /* ===== DOCUMENTS ===== */
-
-  html += `
-  <div class="card">
+  html+=`<div class="card">
     <h3>Documents</h3>
+    <input type="file" id="docInput" multiple>
+    <div id="docList"></div>
+  </div>`;
 
-    <input type="file" id="docInput" multiple><br><br>
+  profileSection.innerHTML=html;
 
-    <div id="docList">
-      ${docs.map((d,i)=>
-        `<div>
-           <a href="${d}" download="document_${i+1}">Download</a> |
-           <a href="${d}" target="_blank">View</a>
-         </div>`
-      ).join("")}
-    </div>
-  </div>
-  `;
-
-  profileSection.innerHTML = html;
-
-/* =========================
-   PHOTO UPLOAD (SAFE)
-========================= */
-
-const photoInput = document.getElementById("photoInput");
-const profileImg = document.getElementById("profileImg");
-
-profileImg.onclick = () => photoInput.click();
-
-photoInput.onchange = async e => {
-
-  const file = e.target.files[0];
-  if(!file) return;
-
-  const reader = new FileReader();
-
-  reader.onload = function(event){
-
-    const img = new Image();
-    img.src = event.target.result;
-
-    img.onload = async function(){
-
-      const canvas = document.createElement("canvas");
-      const ctx = canvas.getContext("2d");
-
-      const MAX_WIDTH = 400;
-      const scale = MAX_WIDTH / img.width;
-
-      canvas.width = MAX_WIDTH;
-      canvas.height = img.height * scale;
-
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-      const compressedBase64 =
-        canvas.toDataURL("image/jpeg", 0.6);
-
-      if(compressedBase64.length > 300000){
-        alert("Image too large.");
-        return;
-      }
-
-      try{
-        await updateDoc(doc(db,"borrowers",id),{
-          profileImage: compressedBase64
-        });
-
-        profileImg.src = compressedBase64;
-
-        alert("Profile Photo Saved ✅");
-
-      }catch(err){
-        console.error(err);
-        alert("Save failed.");
-      }
-
+  /* PHOTO UPDATE */
+  photoInput.onchange=e=>{
+    const reader=new FileReader();
+    reader.onload=ev=>{
+      updateDoc(doc(db,"borrowers",id),{profileImage:ev.target.result});
     };
+    reader.readAsDataURL(e.target.files[0]);
   };
 
-  reader.readAsDataURL(file);
-};
+const docs = b.documents || [];
 
+html += `
+<div class="card">
+  <h3>Documents</h3>
 
-/* =========================
-   DOCUMENT UPLOAD (SAFE VERSION)
-========================= */
+  <input type="file" id="docInput" multiple><br><br>
 
-const docInput = document.getElementById("docInput");
-
-docInput.onchange = async e => {
-
+  <div id="docList">
+    ${docs.map((d,i)=>
+      `<div>
+        <a href="${d}" download="document_${i+1}.jpg">Download</a> |
+        <a href="${d}" target="_blank">View</a>
+      </div>`
+    ).join("")}
+  </div>
+</div>
+`;
+docInput.onchange = async e=>{
   const files = [...e.target.files];
+  const newDocs = docs.slice();
 
   for(const file of files){
 
     const reader = new FileReader();
 
-    reader.onload = function(event){
+    reader.onload = async ev=>{
+      newDocs.push(ev.target.result);
 
-      const img = new Image();
-      img.src = event.target.result;
-
-      img.onload = async function(){
-
-        const canvas = document.createElement("canvas");
-        const ctx = canvas.getContext("2d");
-
-        const MAX_WIDTH = 800;
-        const scale = MAX_WIDTH / img.width;
-
-        canvas.width = MAX_WIDTH;
-        canvas.height = img.height * scale;
-
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-        const compressedBase64 =
-          canvas.toDataURL("image/jpeg", 0.5);
-
-        if(compressedBase64.length > 800000){
-          alert("Document too large.");
-          return;
-        }
-
-        try{
-
-          // ALWAYS GET LATEST DATA
-          const borrowerRef =
-            doc(db,"borrowers",id);
-
-          const snapshot =
-            await getDoc(borrowerRef);
-
-          const existingDocs =
-            snapshot.data().documents || [];
-
-          const updatedDocs =
-            [...existingDocs, compressedBase64];
-
-          await updateDoc(borrowerRef,{
-            documents: updatedDocs
-          });
-
-          alert("Document Saved ✅");
-
-        }catch(err){
-          console.error(err);
-          alert("Document save failed.");
-        }
-
-      };
+      await updateDoc(doc(db,"borrowers",id),{
+        documents:newDocs
+      });
     };
 
     reader.readAsDataURL(file);
   }
 };
-        
 
 /* INSTALLMENTS */
 window.toggleInstallments = (loanId)=>{
