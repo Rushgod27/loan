@@ -358,7 +358,9 @@ function renderProfile(id){
 
   profileSection.innerHTML = html;
 
-/* ===== PHOTO SAVE (Compressed Base64) ===== */
+/* =========================
+   PHOTO UPLOAD (SAFE)
+========================= */
 
 const photoInput = document.getElementById("photoInput");
 const profileImg = document.getElementById("profileImg");
@@ -390,39 +392,44 @@ photoInput.onchange = async e => {
 
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-      const compressedBase64 = canvas.toDataURL("image/jpeg", 0.6);
+      const compressedBase64 =
+        canvas.toDataURL("image/jpeg", 0.6);
 
-      try {
+      if(compressedBase64.length > 300000){
+        alert("Image too large.");
+        return;
+      }
+
+      try{
         await updateDoc(doc(db,"borrowers",id),{
           profileImage: compressedBase64
         });
 
         profileImg.src = compressedBase64;
+
         alert("Profile Photo Saved ✅");
 
-      } catch(err){
+      }catch(err){
         console.error(err);
-        alert("Image too large. Try smaller image.");
+        alert("Save failed.");
       }
 
     };
-
   };
 
   reader.readAsDataURL(file);
-
 };
 
-  /* ===== DOCUMENT UPLOAD ===== */
-/* ===== DOCUMENT SAVE (Compressed) ===== */
+
+/* =========================
+   DOCUMENT UPLOAD (SAFE VERSION)
+========================= */
 
 const docInput = document.getElementById("docInput");
 
 docInput.onchange = async e => {
 
   const files = [...e.target.files];
-
-  let newDocs = docs.slice();
 
   for(const file of files){
 
@@ -438,7 +445,7 @@ docInput.onchange = async e => {
         const canvas = document.createElement("canvas");
         const ctx = canvas.getContext("2d");
 
-        const MAX_WIDTH = 800;   // document slightly larger than profile photo
+        const MAX_WIDTH = 800;
         const scale = MAX_WIDTH / img.width;
 
         canvas.width = MAX_WIDTH;
@@ -447,26 +454,37 @@ docInput.onchange = async e => {
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
         const compressedBase64 =
-          canvas.toDataURL("image/jpeg", 0.5); // more compression
+          canvas.toDataURL("image/jpeg", 0.5);
 
-        // prevent Firestore overflow
         if(compressedBase64.length > 800000){
-          alert("Document too large. Please upload smaller image.");
+          alert("Document too large.");
           return;
         }
 
-        newDocs.push(compressedBase64);
-
         try{
-          await updateDoc(doc(db,"borrowers",id),{
-            documents:newDocs
+
+          // ALWAYS GET LATEST DATA
+          const borrowerRef =
+            doc(db,"borrowers",id);
+
+          const snapshot =
+            await getDoc(borrowerRef);
+
+          const existingDocs =
+            snapshot.data().documents || [];
+
+          const updatedDocs =
+            [...existingDocs, compressedBase64];
+
+          await updateDoc(borrowerRef,{
+            documents: updatedDocs
           });
 
           alert("Document Saved ✅");
 
         }catch(err){
           console.error(err);
-          alert("Saving failed — document too big.");
+          alert("Document save failed.");
         }
 
       };
@@ -475,6 +493,7 @@ docInput.onchange = async e => {
     reader.readAsDataURL(file);
   }
 };
+        
 
 /* INSTALLMENTS */
 window.toggleInstallments = (loanId)=>{
