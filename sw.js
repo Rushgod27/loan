@@ -1,4 +1,4 @@
-const CACHE_NAME = "Loan-Management-App-v6";
+const CACHE_NAME = "Loan-Management-App-v7";
 
 const urlsToCache = [
   "./",
