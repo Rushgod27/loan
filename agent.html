@@ -281,13 +281,9 @@ function renderBorrowerList(list){
   borrowerList.innerHTML=html;
 }
 
-/* PROFILE */
 function renderProfile(id){
 
   if(!id) return;
-
-  const b = state.borrowers.find(x=>x.id===id);
-  if(!b) return;
 
   const b = state.borrowers.find(x=>x.id===id);
   if(!b) return;
@@ -327,7 +323,7 @@ function renderProfile(id){
     <div id="loanCreateBox"></div>
   </div>
   `;
-
+  
   /* ===== LOANS ===== */
 
   const loans = state.loans
