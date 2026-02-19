@@ -413,26 +413,6 @@ photoInput.onchange = async e => {
 
 };
 
-  /* ===== PHOTO UPDATE ===== */
-
-  const photoInput = document.getElementById("photoInput");
-  const profileImg = document.getElementById("profileImg");
-
-  profileImg.onclick = ()=> photoInput.click();
-
-  photoInput.onchange = e=>{
-    const file = e.target.files[0];
-    if(!file) return;
-
-    const reader = new FileReader();
-    reader.onload = async ev=>{
-      await updateDoc(doc(db,"borrowers",id),{
-        profileImage: ev.target.result
-      });
-    };
-    reader.readAsDataURL(file);
-  };
-
   /* ===== DOCUMENT UPLOAD ===== */
 
   const docInput = document.getElementById("docInput");
