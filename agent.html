@@ -70,9 +70,23 @@ function startRealtime(){
 }
 
 function refresh(){
-  if(currentView==="dashboard")renderDashboard();
-  if(currentView==="borrowers")renderBorrowers();
-  if(currentView==="profile")renderProfile(currentProfileId);
+
+  if(currentView === "dashboard"){
+    renderDashboard();
+    return;
+  }
+
+  if(currentView === "borrowers"){
+    renderBorrowers();
+    return;
+  }
+
+  if(currentView === "profile"){
+    if(currentProfileId){
+      renderProfile(currentProfileId);
+    }
+    return;
+  }
 }
 
 /* NAVIGATION */
@@ -269,6 +283,11 @@ function renderBorrowerList(list){
 
 /* PROFILE */
 function renderProfile(id){
+
+  if(!id) return;
+
+  const b = state.borrowers.find(x=>x.id===id);
+  if(!b) return;
 
   const b = state.borrowers.find(x=>x.id===id);
   if(!b) return;
