@@ -414,25 +414,67 @@ photoInput.onchange = async e => {
 };
 
   /* ===== DOCUMENT UPLOAD ===== */
+/* ===== DOCUMENT SAVE (Compressed) ===== */
 
-  const docInput = document.getElementById("docInput");
+const docInput = document.getElementById("docInput");
 
-  docInput.onchange = async e=>{
-    const files = [...e.target.files];
-    let newDocs = docs.slice();
+docInput.onchange = async e => {
 
-    for(const file of files){
-      const reader = new FileReader();
-      reader.onload = async ev=>{
-        newDocs.push(ev.target.result);
-        await updateDoc(doc(db,"borrowers",id),{
-          documents:newDocs
-        });
+  const files = [...e.target.files];
+
+  let newDocs = docs.slice();
+
+  for(const file of files){
+
+    const reader = new FileReader();
+
+    reader.onload = function(event){
+
+      const img = new Image();
+      img.src = event.target.result;
+
+      img.onload = async function(){
+
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+
+        const MAX_WIDTH = 800;   // document slightly larger than profile photo
+        const scale = MAX_WIDTH / img.width;
+
+        canvas.width = MAX_WIDTH;
+        canvas.height = img.height * scale;
+
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+        const compressedBase64 =
+          canvas.toDataURL("image/jpeg", 0.5); // more compression
+
+        // prevent Firestore overflow
+        if(compressedBase64.length > 800000){
+          alert("Document too large. Please upload smaller image.");
+          return;
+        }
+
+        newDocs.push(compressedBase64);
+
+        try{
+          await updateDoc(doc(db,"borrowers",id),{
+            documents:newDocs
+          });
+
+          alert("Document Saved ✅");
+
+        }catch(err){
+          console.error(err);
+          alert("Saving failed — document too big.");
+        }
+
       };
-      reader.readAsDataURL(file);
-    }
-  };
-}
+    };
+
+    reader.readAsDataURL(file);
+  }
+};
 
 /* INSTALLMENTS */
 window.toggleInstallments = (loanId)=>{
