@@ -295,17 +295,79 @@ window.confirmMarkPaid = async(id,loanId,borrowerId,amt)=>{
 
 /* BORROWERS */
 function renderBorrowers(){
-  borrowersSection.innerHTML=`
+
+  borrowersSection.innerHTML = `
     <div class="card">
       <input id="searchInput" placeholder="Search borrower">
+      <br><br>
+      <button class="btn btn-primary" onclick="showAddBorrower()">
+        + Add New Borrower
+      </button>
     </div>
-    <div id="borrowerList"></div>`;
+
+    <div id="addBorrowerBox"></div>
+    <div id="borrowerList"></div>
+  `;
+
   renderBorrowerList(state.borrowers);
-  searchInput.addEventListener("input",e=>{
-    const v=e.target.value.toLowerCase();
-    renderBorrowerList(state.borrowers.filter(b=>b.name.toLowerCase().includes(v)||b.phone.includes(v)));
-  });
+
+  const searchInput = document.getElementById("searchInput");
+
+  if (searchInput) {
+    searchInput.addEventListener("input", e=>{
+      const v = e.target.value.toLowerCase();
+
+      renderBorrowerList(
+        state.borrowers.filter(b =>
+          b.name.toLowerCase().includes(v) ||
+          b.phone.includes(v)
+        )
+      );
+    });
+  }
 }
+
+window.showAddBorrower = () => {
+
+  const box = document.getElementById("addBorrowerBox");
+
+  box.innerHTML = `
+    <div class="card">
+      <h3>Add New Borrower</h3>
+
+      <input id="newName" placeholder="Full Name"><br><br>
+      <input id="newPhone" placeholder="Phone Number"><br><br>
+
+      <button class="btn btn-success"
+              onclick="createBorrower()">
+        Save Borrower
+      </button>
+    </div>
+  `;
+};
+
+window.createBorrower = async () => {
+
+  const name = document.getElementById("newName").value.trim();
+  const phone = document.getElementById("newPhone").value.trim();
+
+  if(!name || !phone){
+    alert("All fields required");
+    return;
+  }
+
+  await addDoc(collection(db,"borrowers"),{
+    name,
+    nameLower: name.toLowerCase(),
+    phone,
+    agentId: uid,
+    createdAt: Date.now()
+  });
+
+  alert("Borrower Added Successfully ✅");
+
+  document.getElementById("addBorrowerBox").innerHTML="";
+};
 
 function renderBorrowerList(list){
   let html="";
@@ -321,7 +383,10 @@ function renderBorrowerList(list){
         </div>
       </div>`;
   });
-  borrowerList.innerHTML=html;
+const borrowerListEl = document.getElementById("borrowerList");
+if (borrowerListEl) {
+  borrowerListEl.innerHTML = html;
+}
 }
 
 /* PROFILE */
