@@ -10,29 +10,6 @@
 <meta name="theme-color" content="#4f46e5">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 
-<style>
-body{margin:0;font-family:system-ui;background:#f8fafc}
-.header{padding:18px;background:#4f46e5;color:#fff;font-weight:600;text-align:center}
-.nav{display:flex}
-.nav div{flex:1;padding:14px;text-align:center;background:#eef2ff;cursor:pointer}
-.nav .active{background:#4f46e5;color:#fff}
-.section-content{padding:16px}
-.hidden{display:none}
-.card{background:#fff;padding:15px;border-radius:12px;margin-bottom:15px;box-shadow:0 4px 12px rgba(0,0,0,0.05)}
-.borrower-card{cursor:pointer}
-.badge-active{background:#dcfce7;color:#16a34a;padding:4px 10px;border-radius:999px;font-size:12px;margin-left:auto}
-.profile-big{width:150px;height:150px;border-radius:50%;object-fit:cover;cursor:pointer}
-.profile-actions{display:flex;gap:10px;margin:10px 0}
-.call-btn,.wa-btn{padding:10px 18px;border-radius:999px;text-decoration:none;font-size:14px}
-.call-btn{background:#e0f2fe;color:#0284c7}
-.wa-btn{background:#dcfce7;color:#16a34a}
-.btn{padding:10px 16px;border:none;border-radius:8px;margin-top:8px;cursor:pointer}
-.btn-primary{background:#e0e7ff;color:#3730a3}
-.btn-success{background:#dcfce7;color:#166534}
-.inst-card{padding:10px;background:#f1f5f9;border-radius:8px;margin-top:8px}
-.logout-wrapper{padding:15px}
-.logout-btn{width:100%;padding:14px;border:none;border-radius:10px;background:#fee2e2;color:#991b1b;font-weight:600}
-</style>
 </head>
 
 <body>
@@ -64,7 +41,13 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 let uid=null;
-let state={borrowers:[],loans:[],installments:[],collections:[]};
+let state={
+  borrowers:[],
+  loans:[],
+  installments:[],
+  collections:[],
+  documents:[]   // 🔥 NEW
+};
 let currentView="dashboard";
 let currentProfileId=null;
 let openedLoanId=null;
@@ -77,24 +60,75 @@ onAuthStateChanged(auth,user=>{
 });
 
 function startRealtime(){
-  onSnapshot(query(collection(db,"borrowers"),where("agentId","==",uid)),s=>{
-    state.borrowers=[];s.forEach(d=>state.borrowers.push({id:d.id,...d.data()}));refresh();
-  });
-  onSnapshot(query(collection(db,"loans"),where("agentId","==",uid)),s=>{
-    state.loans=[];s.forEach(d=>state.loans.push({id:d.id,...d.data()}));refresh();
-  });
-  onSnapshot(query(collection(db,"installments"),where("agentId","==",uid)),s=>{
-    state.installments=[];s.forEach(d=>state.installments.push({id:d.id,...d.data()}));refresh();
-  });
-  onSnapshot(query(collection(db,"collections"),where("agentId","==",uid)),s=>{
-    state.collections=[];s.forEach(d=>state.collections.push({id:d.id,...d.data()}));refresh();
-  });
+
+  // BORROWERS
+  onSnapshot(
+    query(collection(db,"borrowers"),where("agentId","==",uid)),
+    s=>{
+      state.borrowers=[];
+      s.forEach(d=>state.borrowers.push({id:d.id,...d.data()}));
+      refresh();
+    }
+  );
+
+  // LOANS
+  onSnapshot(
+    query(collection(db,"loans"),where("agentId","==",uid)),
+    s=>{
+      state.loans=[];
+      s.forEach(d=>state.loans.push({id:d.id,...d.data()}));
+      refresh();
+    }
+  );
+
+  // INSTALLMENTS
+  onSnapshot(
+    query(collection(db,"installments"),where("agentId","==",uid)),
+    s=>{
+      state.installments=[];
+      s.forEach(d=>state.installments.push({id:d.id,...d.data()}));
+      refresh();
+    }
+  );
+
+  // COLLECTIONS
+  onSnapshot(
+    query(collection(db,"collections"),where("agentId","==",uid)),
+    s=>{
+      state.collections=[];
+      s.forEach(d=>state.collections.push({id:d.id,...d.data()}));
+      refresh();
+    }
+  );
+
+  // 🔥 DOCUMENTS (NEW COLLECTION)
+  onSnapshot(
+    query(collection(db,"documents"),where("agentId","==",uid)),
+    s=>{
+      state.documents=[];
+      s.forEach(d=>state.documents.push({id:d.id,...d.data()}));
+      refresh();
+    }
+  );
+
 }
 
 function refresh(){
-  if(currentView==="dashboard")renderDashboard();
-  if(currentView==="borrowers")renderBorrowers();
-  if(currentView==="profile")renderProfile(currentProfileId);
+
+  if(currentView==="dashboard"){
+    renderDashboard();
+    return;
+  }
+
+  if(currentView==="borrowers"){
+    renderBorrowers();
+    return;
+  }
+
+  if(currentView==="profile" && currentProfileId){
+    renderProfile(currentProfileId);
+  }
+
 }
 
 /* NAVIGATION */
@@ -292,13 +326,17 @@ function renderBorrowerList(list){
 
 /* PROFILE */
 function renderProfile(id){
-  const b=state.borrowers.find(x=>x.id===id); if(!b)return;
-  const photo=b.profileImage||"https://cdn-icons-png.flaticon.com/512/149/149071.png";
+
+  const b = state.borrowers.find(x=>x.id===id);
+  if(!b) return;
+
+  const photo = b.profileImage ||
+    "https://cdn-icons-png.flaticon.com/512/149/149071.png";
 
   let html=`
   <div class="card">
     <div style="text-align:center">
-      <img id="profileImg" src="${photo}" class="profile-big" onclick="photoInput.click()">
+      <img id="profileImg" src="${photo}" class="profile-big">
       <input type="file" id="photoInput" accept="image/*" hidden>
     </div>
 
@@ -312,55 +350,153 @@ function renderProfile(id){
     <div id="loanCreateBox"></div>
   </div>`;
 
-  state.loans.filter(l=>l.borrowerId===id).forEach(loan=>{
-    html+=`
-    <div class="card">
-      <b>Loan ₹${loan.principal}</b><br>
-      Installments: ${loan.count}<br>
-      Start: ${new Date(loan.startDate).toLocaleDateString()}<br>
-      <button class="btn btn-success" onclick="toggleInstallments('${loan.id}')">View Installments</button>
-      <div id="inst-${loan.id}"></div>
-    </div>`;
-  });
+  // LOANS
+  state.loans
+    .filter(l=>l.borrowerId===id)
+    .forEach(loan=>{
+      html+=`
+      <div class="card">
+        <b>Loan ₹${loan.principal}</b><br>
+        Installments: ${loan.count}<br>
+        Start: ${new Date(loan.startDate).toLocaleDateString()}<br>
+        <button class="btn btn-success"
+          onclick="toggleInstallments('${loan.id}')">
+          View Installments
+        </button>
+        <div id="inst-${loan.id}"></div>
+      </div>`;
+    });
 
-  html+=`<div class="card">
+  // DOCUMENT SECTION
+  html+=`
+  <div class="card">
     <h3>Documents</h3>
     <input type="file" id="docInput" multiple>
     <div id="docList"></div>
   </div>`;
 
-  profileSection.innerHTML=html;
+  profileSection.innerHTML = html;
+
+  /* ===== CALL DOCUMENT RENDER AFTER HTML LOAD ===== */
+  renderDocs(id);
+
+  /* ===== GET DOM ELEMENTS PROPERLY ===== */
+  const photoInput = document.getElementById("photoInput");
+  const profileImg = document.getElementById("profileImg");
+  const docInput = document.getElementById("docInput");
+
+  profileImg.onclick = () => photoInput.click();
 
   /* PHOTO UPDATE */
-  photoInput.onchange=e=>{
-    const reader=new FileReader();
-    reader.onload=ev=>{
-      updateDoc(doc(db,"borrowers",id),{profileImage:ev.target.result});
+  photoInput.onchange = e => {
+
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const img = new Image();
+    const reader = new FileReader();
+
+    reader.onload = event => img.src = event.target.result;
+
+    img.onload = async () => {
+
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+
+      const MAX_WIDTH = 400;
+      const scale = MAX_WIDTH / img.width;
+
+      canvas.width = MAX_WIDTH;
+      canvas.height = img.height * scale;
+
+      ctx.drawImage(img,0,0,canvas.width,canvas.height);
+
+      const compressed =
+        canvas.toDataURL("image/jpeg",0.6);
+
+      await updateDoc(doc(db,"borrowers",id),{
+        profileImage: compressed
+      });
+
+      alert("Photo Updated Successfully ✅");
     };
-    reader.readAsDataURL(e.target.files[0]);
+
+    reader.readAsDataURL(file);
   };
 
-  /* DOCUMENTS */
-  const docs=b.documents||[];
-  renderDocs(docs);
-  docInput.onchange=async e=>{
-    const files=[...e.target.files];
-    const newDocs=[...docs];
+  /* DOCUMENT UPLOAD */
+  docInput.onchange = async e => {
+
+    const files = [...e.target.files];
+
     for(const f of files){
-      const reader=new FileReader();
-      reader.onload=async ev=>{
-        newDocs.push(ev.target.result);
-        await updateDoc(doc(db,"borrowers",id),{documents:newDocs});
-        renderDocs(newDocs);
+
+      const reader = new FileReader();
+
+      reader.onload = async ev => {
+
+        const img = new Image();
+        img.src = ev.target.result;
+
+        img.onload = async () => {
+
+          const canvas = document.createElement("canvas");
+          const ctx = canvas.getContext("2d");
+
+          const MAX_WIDTH = 600;
+          const scale = MAX_WIDTH / img.width;
+
+          canvas.width = MAX_WIDTH;
+          canvas.height = img.height * scale;
+
+          ctx.drawImage(img,0,0,canvas.width,canvas.height);
+
+          const compressedFile =
+            canvas.toDataURL("image/jpeg",0.5);
+
+          await addDoc(collection(db,"documents"),{
+            borrowerId:id,
+            agentId:uid,
+            file:compressedFile,
+            createdAt:Date.now()
+          });
+
+          alert("Document Uploaded ✅");
+        };
       };
+
       reader.readAsDataURL(f);
     }
   };
 }
 
-function renderDocs(list){
-  docList.innerHTML="";
-  list.forEach(d=>docList.innerHTML+=`<a href="${d}" target="_blank">📄 View Document</a><br>`);
+
+/* ===== RENDER DOCUMENTS FUNCTION (OUTSIDE PROFILE) ===== */
+function renderDocs(borrowerId){
+
+  const docList = document.getElementById("docList");
+  if(!docList) return;
+
+  const list = state.documents
+    .filter(d=>d.borrowerId===borrowerId)
+    .sort((a,b)=>b.createdAt-a.createdAt);
+
+  docList.innerHTML = "";
+
+  if(list.length===0){
+    docList.innerHTML="No documents uploaded";
+    return;
+  }
+
+  list.forEach(d=>{
+    docList.innerHTML+=`
+      <div style="margin-bottom:10px">
+        <a href="${d.file}" target="_blank">
+          📄 View Document
+        </a>
+      </div>
+    `;
+  });
 }
 
 /* INSTALLMENTS */
