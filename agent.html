@@ -6,7 +6,7 @@
 <meta name="viewport" 
 content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
 
-<link rel="stylesheet" href="css/styles.css?v=17.4">
+<link rel="stylesheet" href="css/styles.css?v=17.3">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#4f46e5">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
@@ -22,11 +22,9 @@ content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, 
 </div>
 
 
-<div class="pages-wrapper" id="pagesWrapper">
-  <div id="dashboardSection" class="page"></div>
-  <div id="borrowersSection" class="page"></div>
-  <div id="profileSection" class="page"></div>
-</div>
+<div id="dashboardSection" class="section-content"></div>
+<div id="borrowersSection" class="section-content hidden"></div>
+<div id="profileSection" class="section-content hidden"></div>
 
 <div class="logout-wrapper">
 <button class="btn btn-danger" onclick="logout()">Logout</button>
@@ -51,6 +49,7 @@ let state={
   collections:[],
   documents:[]   // 🔥 NEW
 };
+let currentView="dashboard";
 let currentProfileId=null;
 let openedLoanId=null;
 
@@ -66,7 +65,6 @@ onAuthStateChanged(auth,user=>{
               "Agent";
 
   startRealtime();
-  goToPage(0);
 });
 
 function startRealtime(){
@@ -125,36 +123,60 @@ function startRealtime(){
 
 function refresh(){
 
-  // Always render all sections safely
-  renderDashboard();
-
-  if(currentPageIndex === 1){
-    renderBorrowers();
+  if(currentView==="dashboard"){
+    renderDashboard();
+    return;
   }
 
-  if(currentPageIndex === 2 && currentProfileId){
+  if(currentView==="borrowers"){
+    renderBorrowers();
+    return;
+  }
+
+  if(currentView==="profile" && currentProfileId){
     renderProfile(currentProfileId);
   }
-
+  
   setTimeout(()=>{
-    animateCounters();
-    renderSparkline();
-  },50);
+  animateCounters();
+  renderSparkline();
+},50);
+
 }
 
 /* NAVIGATION */
-window.showDashboard = ()=> goToPage(0);
+window.showDashboard=()=>{currentView="dashboard";setActive("Dashboard")}
+window.showBorrowers=()=>{currentView="borrowers";setActive("Borrowers")}
+window.showProfile=(id)=>{currentProfileId=id;currentView="profile";setActive("Profile")}
 
-window.showBorrowers = ()=>{
-  renderBorrowers();
-  goToPage(1);
-};
+function setActive(title){
 
-window.showProfile = (id)=>{
-  currentProfileId = id;
-  renderProfile(id);
-  goToPage(2);
-};
+  pageTitle.innerText = title;
+
+  dashboardSection.classList.add("hidden");
+  borrowersSection.classList.add("hidden");
+  profileSection.classList.add("hidden");
+
+  document.getElementById("tabDashboard")?.classList.remove("active");
+  document.getElementById("tabBorrowers")?.classList.remove("active");
+
+  if(title === "Dashboard"){
+    dashboardSection.classList.remove("hidden");
+    document.getElementById("tabDashboard")?.classList.add("active");
+  }
+
+  if(title === "Borrowers"){
+    borrowersSection.classList.remove("hidden");
+    document.getElementById("tabBorrowers")?.classList.add("active");
+  }
+
+  if(title === "Profile"){
+    profileSection.classList.remove("hidden");
+    document.getElementById("tabBorrowers")?.classList.add("active");
+  }
+
+  refresh();
+}
 
 /* DASHBOARD */
 function renderDashboard(){
@@ -1074,93 +1096,52 @@ async function processPayment(id, loanId, borrowerId, amt){
   }
 
 }
+/* ========================
+   REAL SWIPE ONLY ENGINE
+======================== */
 
-
-  /* =====================
-swipe engine 
-===================== */
-let currentPageIndex = 0;
 let startX = 0;
 let startY = 0;
-let currentTranslate = 0;
-let isDragging = false;
-
-const wrapper = document.getElementById("pagesWrapper");
-
-function updatePosition(){
-  wrapper.style.transform = `translateX(${currentTranslate}px)`;
-}
-
-function goToPage(index){
-  currentPageIndex = index;
-  currentTranslate = -index * window.innerWidth;
-
-  wrapper.style.transition = "transform .35s cubic-bezier(.4,0,.2,1)";
-  updatePosition();
-
-  updateHeaderTitle();
-}
-
-function updateHeaderTitle(){
-  const title = document.getElementById("pageTitle");
-
-  if(currentPageIndex === 0) title.innerText = "Dashboard";
-  if(currentPageIndex === 1) title.innerText = "Borrowers";
-  if(currentPageIndex === 2) title.innerText = "Profile";
-}
+let endX = 0;
+let endY = 0;
 
 document.addEventListener("touchstart", e=>{
   startX = e.touches[0].clientX;
   startY = e.touches[0].clientY;
-  isDragging = true;
-  wrapper.style.transition = "none";
 });
 
-document.addEventListener("touchmove", e=>{
-  if(!isDragging) return;
+document.addEventListener("touchend", e=>{
+  endX = e.changedTouches[0].clientX;
+  endY = e.changedTouches[0].clientY;
 
-  const currentX = e.touches[0].clientX;
-  const currentY = e.touches[0].clientY;
+  const diffX = endX - startX;
+  const diffY = endY - startY;
 
-  const diffX = currentX - startX;
-  const diffY = currentY - startY;
+  const horizontalDistance = Math.abs(diffX);
+  const verticalDistance = Math.abs(diffY);
 
-  // Prevent vertical scroll conflict
-  if(Math.abs(diffX) < Math.abs(diffY)) return;
+  const MIN_SWIPE_DISTANCE = 120;  // require large swipe
+  const MAX_VERTICAL_ALLOW = 50;   // prevent diagonal/scroll trigger
 
-  let newTranslate = (-currentPageIndex * window.innerWidth) + diffX;
+  // ✅ Only trigger if it's a strong horizontal swipe
+  if(
+    horizontalDistance > MIN_SWIPE_DISTANCE &&
+    verticalDistance < MAX_VERTICAL_ALLOW
+  ){
 
-  // Soft boundary resistance
-  const maxTranslate = 0;
-  const minTranslate = -(2 * window.innerWidth);
+    // Swipe Left
+    if(diffX < 0){
+      if(currentView === "dashboard") showBorrowers();
+    }
 
-  if(newTranslate > maxTranslate){
-    newTranslate = maxTranslate + (newTranslate - maxTranslate) / 4;
+    // Swipe Right
+    if(diffX > 0){
+      if(currentView === "borrowers") showDashboard();
+      else if(currentView === "profile") showBorrowers();
+    }
+
   }
-
-  if(newTranslate < minTranslate){
-    newTranslate = minTranslate + (newTranslate - minTranslate) / 4;
-  }
-
-  currentTranslate = newTranslate;
-  updatePosition();
 });
-
-document.addEventListener("touchend", ()=>{
-  isDragging = false;
-
-  const movedBy = currentTranslate + currentPageIndex * window.innerWidth;
-
-  if(movedBy < -100 && currentPageIndex < 2){
-    currentPageIndex++;
-  }
-  else if(movedBy > 100 && currentPageIndex > 0){
-    currentPageIndex--;
-  }
-
-  goToPage(currentPageIndex);
-});
-
 
 
 function handleLoanOutsideClick(e){
