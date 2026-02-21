@@ -432,6 +432,21 @@ button:hover,
 }
 
 
+.doc-btn{
+  background: #2563eb;
+  color: white;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: 0.3s ease;
+}
+
+.doc-btn:hover{
+  background: #1d4ed8;
+}
+
 /* =========================================
    DASHBOARD AVATAR – BIGGER VERSION
 ========================================= */
