@@ -5,13 +5,16 @@
 
 
 /* ======================================================
-   DESIGN TOKENS
+   THEME TOKENS
 ====================================================== */
 
 :root{
-
+  /* Light Mode */
   --bg:linear-gradient(180deg,#f8fafc 0%, #eef2f7 100%);
-  --surface:#ffffff;
+  --card:#ffffff;
+  --text:#0f172a;
+  --muted:#64748b;
+  --nav:rgba(255,255,255,0.92);
 
   --primary:#4f46e5;
   --primary-soft:#eef2ff;
@@ -19,13 +22,8 @@
   --success:#16a34a;
   --success-soft:#dcfce7;
 
-  --warning:#facc15;
-
   --danger:#dc2626;
   --danger-soft:#fee2e2;
-
-  --text:#0f172a;
-  --muted:#64748b;
 
   --radius-xl:32px;
   --radius-lg:24px;
@@ -515,42 +513,35 @@ button:hover,
   padding:30px 20px 130px;
 }
 
-/* ==============================
-   THEME SYSTEM
-============================== */
-
-:root{
-  --bg:#f5f7fb;
-  --card:#ffffff;
-  --text:#1f2937;
-  --muted:#6b7280;
-  --nav:#ffffff;
-}
+/* =============================
+dark theme 
+============================= */
 
 body{
+  margin:0;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
   background:var(--bg);
   color:var(--text);
-  transition:background .3s ease, color .3s ease;
+  transition:background .35s ease, color .35s ease;
 }
 
-.card{
+.card,
+.loan-card{
   background:var(--card);
-  transition:background .3s ease;
 }
 
 .bottom-nav{
   background:var(--nav);
-  transition:background .3s ease;
 }
 
 /* ===== DARK MODE ===== */
 
 body.dark-mode{
-  --bg:#0f172a;
+  --bg:linear-gradient(180deg,#0f172a 0%, #111827 100%);
   --card:#1e293b;
   --text:#f1f5f9;
   --muted:#94a3b8;
-  --nav:#111827;
+  --nav:rgba(17,24,39,0.95);
 }
 
 /* Header */
