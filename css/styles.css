@@ -72,62 +72,6 @@ input, select, textarea {
 
 
 /* ======================================================
-   WELCOME BANNER
-====================================================== */
-
-.welcome-banner{
-  margin:10px 22px 28px;
-  padding:28px;
-  border-radius:var(--radius-xl);
-
-  background:linear-gradient(135deg,#f8fafc,#eef2ff);
-  border:1px solid #e6eaf2;
-
-  position:relative;
-  overflow:hidden;
-
-  box-shadow:0 6px 22px rgba(15,23,42,.04);
-}
-
-.welcome-title{
-  font-size:22px;
-  font-weight:600;
-  margin-bottom:6px;
-}
-
-.welcome-sub{
-  font-size:14px;
-  color:var(--muted);
-}
-
-
-/* ======================================================
-   NAVIGATION
-====================================================== */
-
-.nav{
-  display:flex;
-  gap:10px;
-  padding:14px 20px;
-}
-
-.nav div{
-  flex:1;
-  padding:12px;
-  text-align:center;
-  border-radius:999px;
-  font-weight:500;
-  color:var(--muted);
-  transition:all .3s var(--transition);
-}
-
-.nav .active{
-  background:var(--primary-soft);
-  color:var(--primary);
-}
-
-
-/* ======================================================
    SECTION HEADER
 ====================================================== */
 
@@ -279,99 +223,6 @@ button:hover,
   border:1px solid #eef2f7;
 }
 
-.inst-amount{
-  font-size:20px;
-  font-weight:600;
-  margin-bottom:10px;
-}
-
-
-/* ======================================================
-   PROGRESS BAR
-====================================================== */
-
-.progress{
-  margin-top:14px;
-  height:7px;
-  background:#e2e8f0;
-  border-radius:999px;
-  overflow:hidden;
-}
-
-.progress-bar{
-  height:100%;
-  background:linear-gradient(90deg,#4f46e5,#6366f1);
-}
-
-
-/* ======================================================
-   HERO PROFILE PHOTO – PREMIUM GLOW
-====================================================== */
-
-.profile-photo-section{
-  text-align:center;
-  margin-bottom:40px;
-}
-
-.profile-photo-wrapper{
-  width:180px;
-  height:180px;
-  margin:0 auto 35px;
-  border-radius:50%;
-  position:relative;
-  cursor:pointer;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  transition:.35s var(--transition);
-}
-
-.profile-photo-wrapper::before{
-  content:"";
-  position:absolute;
-  inset:-6px;
-  border-radius:50%;
-  background:linear-gradient(135deg,#6366f1,#4f46e5,#818cf8);
-  opacity:.6;
-  animation:rotateGlow 10s linear infinite;
-}
-
-@keyframes rotateGlow{
-  from{transform:rotate(0deg);}
-  to{transform:rotate(360deg);}
-}
-
-.profile-photo-wrapper img{
-  width:100%;
-  height:100%;
-  border-radius:50%;
-  object-fit:cover;
-  position:relative;
-  z-index:1;
-  transition:.3s ease;
-}
-
-.camera-overlay{
-  position:absolute;
-  bottom:12px;
-  right:12px;
-  width:42px;
-  height:42px;
-  background:white;
-  border-radius:50%;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  color:#4f46e5;
-  box-shadow:0 6px 18px rgba(0,0,0,.15);
-  z-index:2;
-}
-
-.profile-photo-wrapper img.updating{
-  opacity:.4;
-}
-
-
 /* =========================================
    PREMIUM DROPDOWN – LOGIN PAGE
 ========================================= */
@@ -421,18 +272,6 @@ button:hover,
   color:#94a3b8;
 }
 
-.profile-big{
-  width:120px;
-  height:120px;
-  border-radius:50%;
-  object-fit:cover;
-  border:3px solid #4f46e5;
-  box-shadow:
-    0 0 0 5px #ffffff,
-    0 8px 20px rgba(0,0,0,0.15);
-  transition:0.3s ease;
-}
-
 
 .doc-btn{
   background: #2563eb;
@@ -447,51 +286,6 @@ button:hover,
 
 .doc-btn:hover{
   background: #1d4ed8;
-}
-
-/* =========================================
-   DASHBOARD AVATAR – BIGGER VERSION
-========================================= */
-
-.card-left{
-  display:flex;
-  align-items:center;
-  gap:16px;
-}
-
-.mini-avatar{
-  width:64px;              /* Was 46px */
-  height:64px;             /* Was 46px */
-  border-radius:50%;
-  overflow:hidden;
-  flex-shrink:0;
-
-  background:#f1f5f9;
-
-  border:3px solid white;
-  box-shadow:0 6px 18px rgba(15,23,42,.08);
-
-  transition:transform .25s cubic-bezier(.4,0,.2,1);
-}
-
-.mini-avatar img{
-  width:100%;
-  height:100%;
-  object-fit:cover;
-}
-}
-.clickable-avatar{
-  cursor:pointer;
-  transition:transform .25s ease;
-}
-
-.clickable-avatar:hover{
-  transform:scale(1.05);
-}
-
-.clickable-avatar:active{
-  transform:scale(.95);
-}
 
 /* =============================
    MODERN FLOATING BOTTOM NAV
@@ -536,23 +330,8 @@ button:hover,
   padding-bottom:120px;
 }
 
-.nav {
-  display: flex;
-  height: 50px;
-}
-
-.nav div {
-  flex: 1;
-  text-align: center;
-  padding: 12px 0;
-}
-
 .hidden {
   display: none !important;
-}
-
-.bottom-nav{
-  display:none !important;
 }
 
 .loan-completed {
