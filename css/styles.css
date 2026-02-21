@@ -491,6 +491,47 @@ button:hover,
   transform:scale(.95);
 }
 
+/* =============================
+   MODERN FLOATING BOTTOM NAV
+============================= */
+
+.bottom-nav{
+  position:fixed;
+  bottom:20px;
+  left:50%;
+  transform:translateX(-50%);
+  width:140px;
+  height:60px;
+  background:rgba(255,255,255,0.85);
+  backdrop-filter: blur(15px);
+  border-radius:40px;
+  display:flex;
+  justify-content:space-around;
+  align-items:center;
+  box-shadow:0 10px 30px rgba(0,0,0,0.15);
+  z-index:1000;
+}
+
+.tab{
+  width:45px;
+  height:45px;
+  border-radius:50%;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  font-size:22px;
+  transition:all 0.3s ease;
+  cursor:pointer;
+  color:#888;
+}
+
+.tab.active{
+  background:#4f46e5;
+  color:#fff;
+  transform:scale(1.05);
+}
+
+
 /* ======================================================
    MOBILE
 ====================================================== */
