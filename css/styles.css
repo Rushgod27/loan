@@ -166,6 +166,16 @@ input, select, textarea {
     transform:translateY(0);
   }
 }
+
+/* Proper spacing after KPI section */
+.dashboard-top{
+  margin-bottom: 28px;
+}
+
+/* Add consistent vertical spacing between cards */
+.section-content .card{
+  margin-bottom: 20px;
+}
 /* ======================================================
    CARD SYSTEM
 ====================================================== */
