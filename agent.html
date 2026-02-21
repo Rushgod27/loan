@@ -344,26 +344,39 @@ window.showAddBorrower = () => {
 
   const box = document.getElementById("addBorrowerBox");
 
+  // If already open → close it
+  if(box.innerHTML.trim() !== ""){
+    box.innerHTML = "";
+    return;
+  }
+
   box.innerHTML = `
-    <div class="card">
+    <div class="card" id="borrowerFormCard">
       <h3>Add New Borrower</h3>
 
       <input id="newName" placeholder="Full Name" 
        pattern="[A-Za-z ]+" 
        inputmode="text" />
 
-<br><br>
+      <br><br>
 
-<input id="newPhone" placeholder="Phone Number" 
+      <input id="newPhone" placeholder="Phone Number" 
        maxlength="10" 
        inputmode="numeric" />
       
+      <br><br>
+
       <button class="btn btn-success"
               onclick="createBorrower()">
         Save Borrower
       </button>
     </div>
   `;
+
+  // 🔥 Delay adding outside click listener
+  setTimeout(() => {
+    document.addEventListener("click", handleOutsideClick);
+  }, 50);
 };
 
 window.createBorrower = async () => {
@@ -917,6 +930,23 @@ Proceed?
 
   alert("Loan Created Successfully ✅");
 };
+
+function handleOutsideClick(e){
+
+  const box = document.getElementById("addBorrowerBox");
+  const formCard = document.getElementById("borrowerFormCard");
+  const addBtn = e.target.closest("button");
+
+  if(!formCard) return;
+
+  // If click is outside form
+  if(!formCard.contains(e.target)){
+    box.innerHTML = "";
+    document.removeEventListener("click", handleOutsideClick);
+  }
+}
+
+
 /* LOGOUT */
 window.logout=async()=>{
   await signOut(auth);
