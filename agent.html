@@ -13,13 +13,10 @@
 </head>
 
 <body>
+  <div class="swipe-bar" id="swipeBar"></div>
 
 <div class="header" id="pageTitle">Dashboard</div>
 
-<div class="nav">
-  <div id="navDashboard" class="active" onclick="showDashboard()">Dashboard</div>
-  <div id="navBorrowers" onclick="showBorrowers()">Borrowers</div>
-</div>
 
 <div id="dashboardSection" class="section-content"></div>
 <div id="borrowersSection" class="section-content hidden"></div>
@@ -137,16 +134,31 @@ window.showBorrowers=()=>{currentView="borrowers";setActive("Borrowers")}
 window.showProfile=(id)=>{currentProfileId=id;currentView="profile";setActive("Profile")}
 
 function setActive(title){
-  pageTitle.innerText=title;
+
+  pageTitle.innerText = title;
+
   dashboardSection.classList.add("hidden");
   borrowersSection.classList.add("hidden");
   profileSection.classList.add("hidden");
-  navDashboard.classList.remove("active");
-  navBorrowers.classList.remove("active");
 
-  if(title==="Dashboard"){dashboardSection.classList.remove("hidden");navDashboard.classList.add("active")}
-  if(title==="Borrowers"){borrowersSection.classList.remove("hidden");navBorrowers.classList.add("active")}
-  if(title==="Profile"){profileSection.classList.remove("hidden")}
+  document.getElementById("tabDashboard")?.classList.remove("active");
+  document.getElementById("tabBorrowers")?.classList.remove("active");
+
+  if(title === "Dashboard"){
+    dashboardSection.classList.remove("hidden");
+    document.getElementById("tabDashboard")?.classList.add("active");
+  }
+
+  if(title === "Borrowers"){
+    borrowersSection.classList.remove("hidden");
+    document.getElementById("tabBorrowers")?.classList.add("active");
+  }
+
+  if(title === "Profile"){
+    profileSection.classList.remove("hidden");
+    document.getElementById("tabBorrowers")?.classList.add("active");
+  }
+
   refresh();
 }
 
@@ -796,8 +808,14 @@ window.toggleInstallments = (loanId) => {
 
     return h;
   }
-  
-  window.markPaid = async(id,loanId,borrowerId,amt)=>{
+  box.innerHTML =
+    renderGroup("Due Today", dueToday, "#f59e0b") +
+    renderGroup("Overdue", overdue, "#ef4444") +
+    renderGroup("Pending", pending, "#2563eb") +
+    renderGroup("Completed", completed, "#16a34a");
+};
+
+window.markPaid = async(id,loanId,borrowerId,amt)=>{
 
   if(!confirm("Mark this installment as paid?")) return;
 
@@ -814,7 +832,6 @@ window.toggleInstallments = (loanId) => {
     date:Date.now()
   });
 
-  // 🔥 Auto complete loan if finished
   const loanInstallments = state.installments.filter(i => i.loanId === loanId);
 
   const allCompleted = loanInstallments.every(i =>
@@ -830,12 +847,6 @@ window.toggleInstallments = (loanId) => {
   alert("Payment recorded successfully ✅");
 };
 
-  box.innerHTML =
-    renderGroup("Due Today", dueToday, "#f59e0b") +
-    renderGroup("Overdue", overdue, "#ef4444") +
-    renderGroup("Pending", pending, "#2563eb") +
-    renderGroup("Completed", completed, "#16a34a");
-};
 /* CREATE LOAN */
 window.createLoanUI=()=>{
   loanCreateBox.innerHTML=`
@@ -935,57 +946,72 @@ function handleOutsideClick(e){
 
   const box = document.getElementById("addBorrowerBox");
   const formCard = document.getElementById("borrowerFormCard");
-  const addBtn = e.target.closest("button");
 
   if(!formCard) return;
 
-  // If click is outside form
   if(!formCard.contains(e.target)){
     box.innerHTML = "";
     document.removeEventListener("click", handleOutsideClick);
   }
 }
 
-/* =========================
-   SWIPE NAVIGATION
-========================= */
 
-let touchStartX = 0;
-let touchEndX = 0;
+/* ========================
+   ADVANCED SWIPE ENGINE
+======================== */
 
-document.addEventListener("touchstart", e => {
-  touchStartX = e.changedTouches[0].screenX;
+let startX = 0;
+let startY = 0;
+let currentX = 0;
+let isSwiping = false;
+
+const swipeBar = document.getElementById("swipeBar");
+
+document.addEventListener("touchstart", e=>{
+  startX = e.touches[0].clientX;
+  startY = e.touches[0].clientY;
+  isSwiping = true;
 });
 
-document.addEventListener("touchend", e => {
-  touchEndX = e.changedTouches[0].screenX;
-  handleSwipe();
+document.addEventListener("touchmove", e=>{
+  if(!isSwiping) return;
+
+  currentX = e.touches[0].clientX;
+
+  const diffX = currentX - startX;
+  const diffY = e.touches[0].clientY - startY;
+
+  // If vertical scroll is bigger, cancel swipe
+  if(Math.abs(diffY) > Math.abs(diffX)){
+    isSwiping = false;
+    swipeBar.style.width = "0%";
+    return;
+  }
+
+  let percent = Math.min(Math.abs(diffX)/window.innerWidth*100,100);
+  swipeBar.style.width = percent+"%";
 });
 
-function handleSwipe(){
+document.addEventListener("touchend", ()=>{
+  if(!isSwiping) return;
 
-  const diff = touchEndX - touchStartX;
+  isSwiping = false;
+  swipeBar.style.width = "0%";
 
-  // Minimum swipe distance
-  const threshold = 80;
+  const diff = currentX - startX;
+  const threshold = 100;
 
-  if(Math.abs(diff) < threshold) return;
+  if(navigator.vibrate) navigator.vibrate(25);
 
-  // 👉 Swipe Left → Borrowers
-  if(diff < 0){
-    if(currentView === "dashboard"){
-      showBorrowers();
-    }
+  if(diff < -threshold){
+    if(currentView === "dashboard") showBorrowers();
   }
 
-  // 👈 Swipe Right → Dashboard
-  if(diff > 0){
-    if(currentView === "borrowers"){
-      showDashboard();
-    }
+  if(diff > threshold){
+    if(currentView === "borrowers") showDashboard();
+    else if(currentView === "profile") showBorrowers();
   }
-
-}
+});
 
 
 /* LOGOUT */
@@ -995,5 +1021,11 @@ window.logout=async()=>{
 };
 
 </script>
+<div class="bottom-nav">
+  <div id="tabDashboard" onclick="showDashboard()">🏠<br>Dashboard</div>
+  <div id="tabBorrowers" onclick="showBorrowers()">👥<br>Borrowers</div>
+</div>
+
+
 </body>
 </html>
