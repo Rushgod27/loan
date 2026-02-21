@@ -1,10 +1,11 @@
 /* ======================================================
-   AGENT APP – PRO PREMIUM UI
-   Safe Version – Fully Compatible
+   LIQUID SOFT UI – PREMIUM LAYERED VERSION
+   Ultra Smooth • Soft Depth • Not Plain • Modern
 ====================================================== */
 
+
 /* ======================================================
-   ROOT COLORS
+   DESIGN TOKENS
 ====================================================== */
 
 :root{
@@ -15,27 +16,24 @@
   --primary:#4f46e5;
   --primary-soft:#eef2ff;
 
-  --success:#22c55e;
+  --success:#16a34a;
   --success-soft:#dcfce7;
 
-  --danger:#ef4444;
+  --warning:#facc15;
+
+  --danger:#dc2626;
   --danger-soft:#fee2e2;
-
-  --warning:#f59e0b;
-  --warning-soft:#fef3c7;
-
-  --info:#0284c7;
-  --info-soft:#e0f2fe;
 
   --text:#0f172a;
   --muted:#64748b;
 
-  --radius-xl:28px;
-  --radius-lg:20px;
-  --radius-md:14px;
+  --radius-xl:32px;
+  --radius-lg:24px;
+  --radius-md:18px;
 
   --transition:cubic-bezier(.4,0,.2,1);
 }
+
 
 /* ======================================================
    GLOBAL
@@ -50,13 +48,13 @@ body{
   color:var(--text);
 }
 
+.container,
 .section-content{
   padding:22px;
-  padding-bottom:120px;
-  transition:all .3s var(--transition);
 }
 
 .hidden{ display:none }
+
 
 /* ======================================================
    HEADER
@@ -64,268 +62,476 @@ body{
 
 .header{
   padding:22px 20px 14px;
-  font-size:20px;
   font-weight:600;
+  font-size:20px;
   text-align:center;
   background:transparent;
 }
+
+
+/* ======================================================
+   WELCOME BANNER
+====================================================== */
+
+.welcome-banner{
+  margin:10px 22px 28px;
+  padding:28px;
+  border-radius:var(--radius-xl);
+
+  background:linear-gradient(135deg,#f8fafc,#eef2ff);
+  border:1px solid #e6eaf2;
+
+  position:relative;
+  overflow:hidden;
+
+  box-shadow:0 6px 22px rgba(15,23,42,.04);
+}
+
+.welcome-title{
+  font-size:22px;
+  font-weight:600;
+  margin-bottom:6px;
+}
+
+.welcome-sub{
+  font-size:14px;
+  color:var(--muted);
+}
+
+
+/* ======================================================
+   NAVIGATION
+====================================================== */
+
+.nav{
+  display:flex;
+  gap:10px;
+  padding:14px 20px;
+}
+
+.nav div{
+  flex:1;
+  padding:12px;
+  text-align:center;
+  border-radius:999px;
+  font-weight:500;
+  color:var(--muted);
+  transition:all .3s var(--transition);
+}
+
+.nav .active{
+  background:var(--primary-soft);
+  color:var(--primary);
+}
+
+
+/* ======================================================
+   SECTION HEADER
+====================================================== */
+
+.section-header{
+  font-size:14px;
+  font-weight:600;
+  color:var(--muted);
+  margin:24px 0 14px;
+  padding-left:8px;
+  border-left:3px solid #e2e8f0;
+}
+
 
 /* ======================================================
    CARD SYSTEM
 ====================================================== */
 
-.card{
+.card,
+.loan-card{
   background:var(--surface);
   border-radius:var(--radius-xl);
-  padding:22px;
-  margin-bottom:22px;
+  padding:28px;
+  margin-bottom:28px;
 
-  border:1px solid rgba(0,0,0,0.04);
-  box-shadow:0 8px 28px rgba(15,23,42,.05);
+  border:1px solid rgba(15,23,42,0.05);
+  box-shadow:0 8px 28px rgba(15,23,42,.04);
 
-  transition:.3s var(--transition);
-  animation:fadeUp .3s ease;
+  transition:.35s var(--transition);
 }
 
-.card:active{
-  transform:scale(.98);
+.card:hover{
+  transform:translateY(-4px);
+  box-shadow:0 16px 40px rgba(15,23,42,.08);
 }
 
-@keyframes fadeUp{
-  from{opacity:0;transform:translateY(15px)}
-  to{opacity:1;transform:translateY(0)}
-}
 
 /* ======================================================
    INPUTS
 ====================================================== */
 
-input, select{
+input,
+select{
   width:100%;
-  padding:14px 16px;
+  padding:16px;
   border:none;
   border-radius:var(--radius-lg);
-  font-size:14px;
-  margin-bottom:14px;
+  font-size:15px;
+  margin-bottom:18px;
   background:#f1f5f9;
-  transition:.3s;
+  transition:.3s var(--transition);
 }
 
-input:focus, select:focus{
-  background:#fff;
-  outline:none;
+input:focus{
+  background:white;
   box-shadow:0 0 0 4px var(--primary-soft);
+  outline:none;
 }
+
 
 /* ======================================================
-   BUTTON SYSTEM
+   BUTTON SYSTEM (SOFT)
 ====================================================== */
 
-button, .btn{
-  padding:12px 18px;
+button,
+.btn{
+  padding:14px 22px;
   border-radius:999px;
   border:none;
   font-weight:500;
   font-size:14px;
   cursor:pointer;
-  transition:.2s;
+  transition:.3s var(--transition);
+  margin-top:8px;
 }
 
-button:active, .btn:active{
-  transform:scale(.93);
-}
-
-/* Primary */
+button,
 .btn-primary{
   background:var(--primary-soft);
   color:var(--primary);
 }
 
-/* Success */
 .btn-success{
-  background:var(--success);
-  color:white;
-  box-shadow:0 5px 15px rgba(34,197,94,.35);
+  background:var(--success-soft);
+  color:var(--success);
 }
 
-/* Danger */
 .btn-danger{
   background:var(--danger-soft);
   color:var(--danger);
 }
 
-/* Warning */
-.btn-warning{
-  background:var(--warning-soft);
-  color:#92400e;
+button:hover,
+.btn:hover{
+  transform:translateY(-2px);
 }
 
-/* Call */
-.call-btn{
-  background:var(--info-soft);
-  color:var(--info);
-  padding:10px 16px;
-  border-radius:999px;
-  text-decoration:none;
-  font-size:14px;
-}
-
-/* WhatsApp */
-.wa-btn{
-  background:var(--success-soft);
-  color:var(--success);
-  padding:10px 16px;
-  border-radius:999px;
-  text-decoration:none;
-  font-size:14px;
-}
-
-/* Document Button */
-.doc-btn{
-  background:var(--primary);
-  color:white;
-  padding:10px 16px;
-  border-radius:999px;
-}
 
 /* ======================================================
-   BORROWER CARD
+   CONTACT BUTTONS
 ====================================================== */
 
-.borrower-card{
-  position:relative;
-  cursor:pointer;
-  transition:.2s;
-}
-
-.borrower-card:hover{
-  transform:translateY(-3px);
-}
-
-.badge-active{
-  position:absolute;
-  right:18px;
-  top:18px;
-  background:var(--primary-soft);
-  color:var(--primary);
-  padding:4px 10px;
-  font-size:12px;
+.contact-btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  padding:12px 20px;
+  margin-top:10px;
+  margin-right:8px;
   border-radius:999px;
+  font-size:14px;
+  font-weight:500;
+  text-decoration:none;
+  transition:.25s var(--transition);
 }
+
+.call-btn{
+  background:#e0f2fe;
+  color:#0284c7;
+}
+
+.call-btn:hover{
+  background:#dbeafe;
+}
+
+.wa-btn{
+  background:#dcfce7;
+  color:#16a34a;
+}
+
+.wa-btn:hover{
+  background:#bbf7d0;
+}
+
+.contact-btn:active{
+  transform:scale(.96);
+}
+
 
 /* ======================================================
-   INSTALLMENT CARD
+   INSTALLMENT CARDS
 ====================================================== */
 
 .inst-card{
-  padding:16px;
-  border-radius:var(--radius-md);
-  margin-bottom:14px;
+  padding:20px;
+  border-radius:var(--radius-lg);
+  margin-bottom:16px;
   background:white;
   border:1px solid #eef2f7;
-  box-shadow:0 4px 12px rgba(0,0,0,.03);
 }
 
+.inst-amount{
+  font-size:20px;
+  font-weight:600;
+  margin-bottom:10px;
+}
+
+
 /* ======================================================
-   PROFILE PHOTO
+   PROGRESS BAR
 ====================================================== */
+
+.progress{
+  margin-top:14px;
+  height:7px;
+  background:#e2e8f0;
+  border-radius:999px;
+  overflow:hidden;
+}
+
+.progress-bar{
+  height:100%;
+  background:linear-gradient(90deg,#4f46e5,#6366f1);
+}
+
+
+/* ======================================================
+   HERO PROFILE PHOTO – PREMIUM GLOW
+====================================================== */
+
+.profile-photo-section{
+  text-align:center;
+  margin-bottom:40px;
+}
+
+.profile-photo-wrapper{
+  width:180px;
+  height:180px;
+  margin:0 auto 35px;
+  border-radius:50%;
+  position:relative;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  transition:.35s var(--transition);
+}
+
+.profile-photo-wrapper::before{
+  content:"";
+  position:absolute;
+  inset:-6px;
+  border-radius:50%;
+  background:linear-gradient(135deg,#6366f1,#4f46e5,#818cf8);
+  opacity:.6;
+  animation:rotateGlow 10s linear infinite;
+}
+
+@keyframes rotateGlow{
+  from{transform:rotate(0deg);}
+  to{transform:rotate(360deg);}
+}
+
+.profile-photo-wrapper img{
+  width:100%;
+  height:100%;
+  border-radius:50%;
+  object-fit:cover;
+  position:relative;
+  z-index:1;
+  transition:.3s ease;
+}
+
+.camera-overlay{
+  position:absolute;
+  bottom:12px;
+  right:12px;
+  width:42px;
+  height:42px;
+  background:white;
+  border-radius:50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:#4f46e5;
+  box-shadow:0 6px 18px rgba(0,0,0,.15);
+  z-index:2;
+}
+
+.profile-photo-wrapper img.updating{
+  opacity:.4;
+}
+
+
+/* =========================================
+   PREMIUM DROPDOWN – LOGIN PAGE
+========================================= */
+
+#roleSelect{
+  width:100%;
+  margin-top:18px;
+  padding:15px 18px;
+
+  border-radius:18px;
+  border:none;
+
+  font-size:15px;
+  font-weight:500;
+
+  background:#f1f5f9;
+  color:#111827;
+
+  cursor:pointer;
+
+  appearance:none;
+  -webkit-appearance:none;
+  -moz-appearance:none;
+
+  transition:all .25s cubic-bezier(.4,0,.2,1);
+
+  background-image:url("data:image/svg+xml;charset=UTF-8,%3Csvg width='16' height='16' viewBox='0 0 20 20' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M5 8L10 13L15 8' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;
+  background-position:right 15px center;
+  background-size:14px;
+}
+
+/* Hover */
+#roleSelect:hover{
+  background:#e2e8f0;
+}
+
+/* Focus Glow */
+#roleSelect:focus{
+  outline:none;
+  background:white;
+  box-shadow:0 0 0 4px rgba(79,70,229,0.15);
+}
+
+/* Disabled or Placeholder style */
+#roleSelect option[value=""]{
+  color:#94a3b8;
+}
 
 .profile-big{
   width:120px;
   height:120px;
   border-radius:50%;
   object-fit:cover;
-  border:4px solid #fff;
+  border:3px solid #4f46e5;
   box-shadow:
-    0 0 0 4px var(--primary-soft),
-    0 8px 25px rgba(0,0,0,.15);
-  transition:.3s;
+    0 0 0 5px #ffffff,
+    0 8px 20px rgba(0,0,0,0.15);
+  transition:0.3s ease;
 }
 
-.profile-big:active{
+
+.doc-btn{
+  background: #2563eb;
+  color: white;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: 0.3s ease;
+}
+
+.doc-btn:hover{
+  background: #1d4ed8;
+}
+
+/* =========================================
+   DASHBOARD AVATAR – BIGGER VERSION
+========================================= */
+
+.card-left{
+  display:flex;
+  align-items:center;
+  gap:16px;
+}
+
+.mini-avatar{
+  width:64px;              /* Was 46px */
+  height:64px;             /* Was 46px */
+  border-radius:50%;
+  overflow:hidden;
+  flex-shrink:0;
+
+  background:#f1f5f9;
+
+  border:3px solid white;
+  box-shadow:0 6px 18px rgba(15,23,42,.08);
+
+  transition:transform .25s cubic-bezier(.4,0,.2,1);
+}
+
+.mini-avatar img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+}
+}
+.clickable-avatar{
+  cursor:pointer;
+  transition:transform .25s ease;
+}
+
+.clickable-avatar:hover{
+  transform:scale(1.05);
+}
+
+.clickable-avatar:active{
   transform:scale(.95);
 }
 
-/* ======================================================
-   DOCUMENT IMAGES
-====================================================== */
-
-#docList img{
-  transition:.2s;
-}
-
-#docList img:active{
-  transform:scale(.95);
-}
-
-/* ======================================================
-   FLOATING BOTTOM NAV
-====================================================== */
+/* =============================
+   MODERN FLOATING BOTTOM NAV
+============================= */
 
 .bottom-nav{
   position:fixed;
   bottom:20px;
   left:50%;
   transform:translateX(-50%);
-  width:180px;
+  width:140px;
   height:60px;
-  background:rgba(255,255,255,0.9);
+  background:rgba(255,255,255,0.85);
   backdrop-filter: blur(15px);
   border-radius:40px;
   display:flex;
   justify-content:space-around;
   align-items:center;
-  box-shadow:0 12px 35px rgba(79,70,229,.25);
+  box-shadow:0 10px 30px rgba(0,0,0,0.15);
   z-index:1000;
 }
 
-.bottom-nav div{
-  font-size:18px;
+.tab{
+  width:45px;
+  height:45px;
+  border-radius:50%;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  font-size:22px;
+  transition:all 0.3s ease;
   cursor:pointer;
   color:#888;
-  transition:.3s;
 }
 
-.bottom-nav .active{
-  background:var(--primary);
-  color:white;
-  border-radius:50%;
-  width:44px;
-  height:44px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
+.tab.active{
+  background:#4f46e5;
+  color:#fff;
+  transform:scale(1.05);
 }
-
-/* ======================================================
-   LOGOUT BUTTON
-====================================================== */
-
-.logout-wrapper{
-  text-align:center;
-  padding-bottom:100px;
-}
-
-.logout-btn{
-  background:none;
-  border:none;
-  color:var(--primary);
-  font-size:16px;
-}
-
-/* ======================================================
-   SWIPE PROGRESS BAR
-====================================================== */
-
-.swipe-bar{
-  position:fixed;
-  top:0;
-  left:0;
-  height:3px;
-  width:0%;
-  background:var(--primary);
-  transition:width .2s;
-  z-index:2000;
+.section-content{
+  padding-bottom:120px;
 }
 
 /* ======================================================
@@ -333,5 +539,11 @@ button:active, .btn:active{
 ====================================================== */
 
 @media(max-width:768px){
-  .card{ padding:18px }
+
+  .container{ padding:16px }
+
+  button{
+    width:100%;
+  }
+
 }
