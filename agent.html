@@ -1291,10 +1291,10 @@ function openConfirm(message, onConfirm){
   };
 }
 
-function closeConfirm(){
+window.closeConfirm = function(){
   document.getElementById("confirmModal")
     .classList.add("hidden");
-}
+};
 
 
 </script>
