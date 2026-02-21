@@ -27,7 +27,7 @@ content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, 
 <div id="profileSection" class="section-content hidden"></div>
 
 <div class="logout-wrapper">
-  <button class="logout-btn" onclick="logout()">Logout</button>
+<button class="btn btn-danger" onclick="logout()">Logout</button>
 </div>
 
 <script type="module">
@@ -314,13 +314,22 @@ Please pay at the earliest.`;
     const waLink = 
 `https://wa.me/91${borrower.phone}?text=${encodeURIComponent(reminderMsg)}`;
 
-    const actionButtons = `
-      <button onclick="confirmCall('${borrower.phone}')">Call</button>
-      <button onclick="confirmReminder('${waLink}')">Send Reminder</button>
-      <button onclick="confirmMarkPaid('${inst.id}','${inst.loanId}','${inst.borrowerId}',${inst.amount})">
-        Mark Paid
-      </button>
-    `;
+const actionButtons = `
+  <button class="btn btn-info"
+    onclick="confirmCall('${borrower.phone}')">
+    📞 Call
+  </button>
+
+  <button class="btn btn-warning"
+    onclick="confirmReminder('${waLink}')">
+    🔔 Send Reminder
+  </button>
+
+  <button class="btn btn-success"
+    onclick="confirmMarkPaid('${inst.id}','${inst.loanId}','${inst.borrowerId}',${inst.amount}')">
+    ✅ Mark Paid
+  </button>
+`;
 
     const cardTemplate = `
       <div class="card">
