@@ -389,7 +389,22 @@ window.confirmReminder = (waLink)=>{
 };
 
 window.confirmMarkPaid = async(id,loanId,borrowerId,amt)=>{
-  if(!confirm("Mark this installment as paid?")) return;
+openConfirm("Mark this installment as paid?", async ()=>{
+  await updateDoc(doc(db,"installments",id),{
+    status:"completed"
+  });
+
+  await addDoc(collection(db,"collections"),{
+    loanId,
+    borrowerId,
+    agentId:uid,
+    amount:amt,
+    type:"installment",
+    date:Date.now()
+  });
+
+  showToast("Payment recorded successfully ✅");
+});
 
   await updateDoc(doc(db,"installments",id),{
     status:"completed"
@@ -537,7 +552,7 @@ window.createBorrower = async () => {
     createdAt: Date.now()
   });
 
-  alert("Borrower Added Successfully ✅");
+showToast("Borrower Added Successfully ✅");
 
   nameInput.value = "";
   phoneInput.value = "";
@@ -954,7 +969,22 @@ window.toggleInstallments = (loanId) => {
 
 window.markPaid = async(id,loanId,borrowerId,amt)=>{
 
-  if(!confirm("Mark this installment as paid?")) return;
+openConfirm("Mark this installment as paid?", async ()=>{
+  await updateDoc(doc(db,"installments",id),{
+    status:"completed"
+  });
+
+  await addDoc(collection(db,"collections"),{
+    loanId,
+    borrowerId,
+    agentId:uid,
+    amount:amt,
+    type:"installment",
+    date:Date.now()
+  });
+
+  showToast("Payment recorded successfully ✅");
+});
 
   await updateDoc(doc(db,"installments",id),{
     status:"completed"
@@ -1095,7 +1125,7 @@ Proceed?
 
   }
 
-  alert("Loan Created Successfully ✅");
+showToast("Loan Created Successfully ✅");
 };
 
 function handleOutsideClick(e){
@@ -1281,6 +1311,38 @@ window.addEventListener("DOMContentLoaded", function(){
 
 });
 
+
+function showToast(message){
+  const toast = document.getElementById("toast");
+  toast.innerText = message;
+  toast.classList.add("show");
+
+  setTimeout(()=>{
+    toast.classList.remove("show");
+  },3000);
+}
+
+
+function openConfirm(message, onConfirm){
+  const modal = document.getElementById("confirmModal");
+  const text = document.getElementById("confirmText");
+  const okBtn = document.getElementById("confirmOkBtn");
+
+  text.innerText = message;
+  modal.classList.remove("hidden");
+
+  okBtn.onclick = ()=>{
+    onConfirm();
+    closeConfirm();
+  };
+}
+
+function closeConfirm(){
+  document.getElementById("confirmModal")
+    .classList.add("hidden");
+}
+
+
 </script>
 
 <div class="bottom-nav">
@@ -1294,5 +1356,18 @@ window.addEventListener("DOMContentLoaded", function(){
 </div>
 
 
+
+<div id="confirmModal" class="confirm-modal hidden">
+  <div class="confirm-card">
+    <p id="confirmText"></p>
+    <div class="confirm-actions">
+      <button onclick="closeConfirm()" class="btn">Cancel</button>
+      <button id="confirmOkBtn" class="btn btn-success">Confirm</button>
+    </div>
+  </div>
+</div>
+
+
+<div id="toast"></div>
 </body>
 </html>
