@@ -488,48 +488,50 @@ function renderProfile(id){
     <div id="loanCreateBox"></div>
   </div>`;
 
-// ===== LOANS GROUPED =====
+// ===== LOANS GROUPED LIKE INSTALLMENTS =====
 
 const borrowerLoans = state.loans
-  .filter(l => l.borrowerId === id);
+  .filter(l => l.borrowerId === id)
+  .sort((a,b)=>b.createdAt - a.createdAt);
 
-// Separate active & completed
 const activeLoans = borrowerLoans.filter(l => l.status === "active");
 const completedLoans = borrowerLoans.filter(l => l.status !== "active");
 
-// ACTIVE FIRST
-if (activeLoans.length) {
-  html += `<div class="card"><h3>Active Loans</h3></div>`;
-  
-  activeLoans.forEach(loan => {
-    html += renderLoanCard(loan);
-  });
-}
+function renderLoanGroup(title, loans, isCompleted=false){
 
-function renderLoanCard(loan){
-  return `
-    <div class="card">
-      <b>Loan ₹${loan.principal}</b><br>
-      Installments: ${loan.count}<br>
-      Start: ${new Date(loan.startDate).toLocaleDateString()}<br>
-      Status: ${loan.status}<br>
-      <button class="btn btn-success"
-        onclick="toggleInstallments('${loan.id}')">
-        View Installments
-      </button>
-      <div id="inst-${loan.id}"></div>
+  if(!loans.length) return "";
+
+  let h = `
+    <div class="section-header">
+      ${title}
     </div>
   `;
+
+  loans.forEach(loan=>{
+    h += `
+      <div class="card ${isCompleted ? "loan-completed" : ""}">
+        <b>Loan ₹${loan.principal}</b><br>
+        Installments: ${loan.count}<br>
+        Start: ${new Date(loan.startDate).toLocaleDateString()}<br>
+        Status: ${loan.status}<br>
+
+        ${!isCompleted ? `
+          <button class="btn btn-success"
+            onclick="toggleInstallments('${loan.id}')">
+            View Installments
+          </button>
+        ` : ""}
+
+        <div id="inst-${loan.id}"></div>
+      </div>
+    `;
+  });
+
+  return h;
 }
 
-// COMPLETED BELOW
-if (completedLoans.length) {
-  html += `<div class="card"><h3>Completed Loans</h3></div>`;
-  
-  completedLoans.forEach(loan => {
-    html += renderLoanCard(loan);
-  });
-}
+html += renderLoanGroup("Active Loans", activeLoans, false);
+html += renderLoanGroup("Completed Loans", completedLoans, true);
 
   // DOCUMENT SECTION
 html += `
