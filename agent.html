@@ -479,11 +479,20 @@ function renderProfile(id){
 
     <h3>${b.name}</h3>
 <div class="profile-actions">
-  <a href="tel:${b.phone}" class="call-btn">📞 Call</a>
-  <a target="_blank" href="https://wa.me/91${b.phone}" class="wa-btn">💬 WhatsApp</a>
-  <button onclick="scrollToDocuments()" class="doc-btn">
+  <a href="tel:${b.phone}" class="call-btn contact-link">
+    📞 Call
+  </a>
+
+  <a target="_blank" 
+     href="https://wa.me/91${b.phone}" 
+     class="wa-btn contact-link">
+    💬 WhatsApp
+  </a>
+
+  <a onclick="scrollToDocuments()" 
+     class="doc-link contact-link">
     📄 Documents
-  </button>
+  </a>
 </div>
 
     <button class="btn btn-primary" onclick="createLoanUI()">+ Create Loan</button>
