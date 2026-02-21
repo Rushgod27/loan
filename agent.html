@@ -1021,9 +1021,15 @@ window.logout=async()=>{
 };
 
 </script>
+
 <div class="bottom-nav">
-  <div id="tabDashboard" onclick="showDashboard()">🏠<br>Dashboard</div>
-  <div id="tabBorrowers" onclick="showBorrowers()">👥<br>Borrowers</div>
+  <div id="tabDashboard" class="tab active" onclick="showDashboard()">
+    <span class="icon">🛖</span>
+  </div>
+
+  <div id="tabBorrowers" class="tab" onclick="showBorrowers()">
+    <span class="icon">🏦</span>
+  </div>
 </div>
 
 
