@@ -562,7 +562,16 @@ body{
   background:var(--nav);
 }
 
-/* ===== DARK MODE ===== */
+
+/* ===== FULL DARK THEME VARIABLES ===== */
+
+body.dark-mode{
+  --bg:linear-gradient(180deg,#0f172a 0%, #111827 100%);
+  --card:#1e293b;
+  --text:#f1f5f9;
+  --muted:#94a3b8;
+  --nav:rgba(17,24,39,0.95);
+}
 
 /* ===== DARK MODE SOFT BUTTONS ===== */
 
