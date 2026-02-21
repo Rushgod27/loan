@@ -107,6 +107,24 @@ input, select, textarea {
   box-shadow:0 16px 40px rgba(15,23,42,.08);
 }
 
+/* ===== PROFILE PHOTO WRAPPER ===== */
+
+.profile-photo-wrapper{
+  width:150px;
+  height:150px;
+  margin:0 auto 20px;
+  border-radius:50%;
+  padding:5px;
+  background:linear-gradient(135deg,#6366f1,#4f46e5,#818cf8);
+}
+
+.profile-photo-wrapper img{
+  width:100%;
+  height:100%;
+  border-radius:50%;
+  object-fit:cover;
+  display:block;
+}
 
 /* ======================================================
    INPUTS
@@ -212,7 +230,7 @@ button:hover,
 
 
 /* ======================================================
-   INSTALLMENT CARDS
+   INSTALLMENT and loan CARDS
 ====================================================== */
 
 .inst-card{
