@@ -269,10 +269,9 @@ input:focus{
 
 
 /* ======================================================
-   BUTTON SYSTEM (SOFT)
+   BUTTON SYSTEM – FUNCTIONAL COLOR CODED
 ====================================================== */
 
-button,
 .btn{
   padding:14px 22px;
   border-radius:999px;
@@ -282,29 +281,55 @@ button,
   cursor:pointer;
   transition:.3s var(--transition);
   margin-top:8px;
+  display:inline-flex;
+  justify-content:center;
+  align-items:center;
 }
 
-button,
+/* PRIMARY (Create Loan / Main Action) */
 .btn-primary{
-  background:var(--primary-soft);
-  color:var(--primary);
+  background:#4f46e5;
+  color:white;
 }
 
+/* SUCCESS (Mark Paid) */
 .btn-success{
-  background:var(--success-soft);
-  color:var(--success);
+  background:#16a34a;
+  color:white;
 }
 
+/* WARNING (Reminder / Due Alerts) */
+.btn-warning{
+  background:#f59e0b;
+  color:white;
+}
+
+/* INFO (Call) */
+.btn-info{
+  background:#2563eb;
+  color:white;
+}
+
+/* WHATSAPP */
+.btn-whatsapp{
+  background:#22c55e;
+  color:white;
+}
+
+/* DANGER */
 .btn-danger{
-  background:var(--danger-soft);
-  color:var(--danger);
+  background:#dc2626;
+  color:white;
 }
 
-button:hover,
 .btn:hover{
   transform:translateY(-2px);
+  opacity:.9;
 }
 
+.btn:active{
+  transform:scale(.96);
+}
 
 /* ======================================================
    CONTACT BUTTONS
