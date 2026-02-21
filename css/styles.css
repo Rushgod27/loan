@@ -555,6 +555,11 @@ button:hover,
   display:none !important;
 }
 
+.loan-completed {
+  opacity: 0.45;
+  background:#f8fafc;
+}
+
 /* ======================================================
    MOBILE
 ====================================================== */
