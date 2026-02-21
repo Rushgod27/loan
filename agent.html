@@ -1,1037 +1,482 @@
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<title>Agent App</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+/* ======================================================
+   LIQUID SOFT UI – PREMIUM LAYERED VERSION
+   Ultra Smooth • Soft Depth • Not Plain • Modern
+   Organized for Loan Agent Dashboard (Manoj's Project)
+====================================================== */
 
-<link rel="stylesheet" href="css/styles.css?v=40">
-<link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#4f46e5">
-<link rel="apple-touch-icon" href="icons/icon-192.png">
+/* ======================================================
+   1. DESIGN TOKENS & VARIABLES
+====================================================== */
+:root {
+  --bg: linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%);
+  --surface: #ffffff;
 
-</head>
+  --primary: #4f46e5;
+  --primary-soft: #eef2ff;
 
-<body>
-  <div class="swipe-bar" id="swipeBar"></div>
+  --success: #16a34a;
+  --success-soft: #dcfce7;
 
-<div class="header" id="pageTitle">Dashboard</div>
+  --warning: #facc15;
 
+  --danger: #dc2626;
+  --danger-soft: #fee2e2;
 
-<div id="dashboardSection" class="section-content"></div>
-<div id="borrowersSection" class="section-content hidden"></div>
-<div id="profileSection" class="section-content hidden"></div>
+  --text: #0f172a;
+  --muted: #64748b;
 
-<div class="logout-wrapper">
-  <button class="logout-btn" onclick="logout()">Logout</button>
-</div>
+  --radius-xl: 32px;
+  --radius-lg: 24px;
+  --radius-md: 18px;
 
-<script type="module">
-
-import { auth, db } from "./js/firebase.js";
-import { signOut, onAuthStateChanged }
-from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-
-import {
-  collection, query, where, onSnapshot,
-  addDoc, doc, updateDoc
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-
-let uid=null;
-let state={
-  borrowers:[],
-  loans:[],
-  installments:[],
-  collections:[],
-  documents:[]   // 🔥 NEW
-};
-let currentView="dashboard";
-let currentProfileId=null;
-let openedLoanId=null;
-
-/* AUTH */
-onAuthStateChanged(auth,user=>{
-  if(!user){location.href="index.html";return;}
-  uid=user.uid;
-  startRealtime();
-});
-
-function startRealtime(){
-
-  // BORROWERS
-  onSnapshot(
-    query(collection(db,"borrowers"),where("agentId","==",uid)),
-    s=>{
-      state.borrowers=[];
-      s.forEach(d=>state.borrowers.push({id:d.id,...d.data()}));
-      refresh();
-    }
-  );
-
-  // LOANS
-  onSnapshot(
-    query(collection(db,"loans"),where("agentId","==",uid)),
-    s=>{
-      state.loans=[];
-      s.forEach(d=>state.loans.push({id:d.id,...d.data()}));
-      refresh();
-    }
-  );
-
-  // INSTALLMENTS
-  onSnapshot(
-    query(collection(db,"installments"),where("agentId","==",uid)),
-    s=>{
-      state.installments=[];
-      s.forEach(d=>state.installments.push({id:d.id,...d.data()}));
-      refresh();
-    }
-  );
-
-  // COLLECTIONS
-  onSnapshot(
-    query(collection(db,"collections"),where("agentId","==",uid)),
-    s=>{
-      state.collections=[];
-      s.forEach(d=>state.collections.push({id:d.id,...d.data()}));
-      refresh();
-    }
-  );
-
-  // 🔥 DOCUMENTS (NEW COLLECTION)
-  onSnapshot(
-    query(collection(db,"documents"),where("agentId","==",uid)),
-    s=>{
-      state.documents=[];
-      s.forEach(d=>state.documents.push({id:d.id,...d.data()}));
-      refresh();
-    }
-  );
-
+  --transition: cubic-bezier(.4, 0, .2, 1);
 }
 
-function refresh(){
-
-  if(currentView==="dashboard"){
-    renderDashboard();
-    return;
-  }
-
-  if(currentView==="borrowers"){
-    renderBorrowers();
-    return;
-  }
-
-  if(currentView==="profile" && currentProfileId){
-    renderProfile(currentProfileId);
-  }
-
+/* ======================================================
+   2. GLOBAL RESET & BASE STYLES
+====================================================== */
+* {
+  box-sizing: border-box;
 }
 
-/* NAVIGATION */
-window.showDashboard=()=>{currentView="dashboard";setActive("Dashboard")}
-window.showBorrowers=()=>{currentView="borrowers";setActive("Borrowers")}
-window.showProfile=(id)=>{currentProfileId=id;currentView="profile";setActive("Profile")}
-
-function setActive(title){
-
-  pageTitle.innerText = title;
-
-  dashboardSection.classList.add("hidden");
-  borrowersSection.classList.add("hidden");
-  profileSection.classList.add("hidden");
-
-  document.getElementById("tabDashboard")?.classList.remove("active");
-  document.getElementById("tabBorrowers")?.classList.remove("active");
-
-  if(title === "Dashboard"){
-    dashboardSection.classList.remove("hidden");
-    document.getElementById("tabDashboard")?.classList.add("active");
-  }
-
-  if(title === "Borrowers"){
-    borrowersSection.classList.remove("hidden");
-    document.getElementById("tabBorrowers")?.classList.add("active");
-  }
-
-  if(title === "Profile"){
-    profileSection.classList.remove("hidden");
-    document.getElementById("tabBorrowers")?.classList.add("active");
-  }
-
-  refresh();
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--text);
 }
 
-/* DASHBOARD */
-function renderDashboard(){
-
-  const today = new Date();
-  today.setHours(0,0,0,0);
-
-  let overviewHTML = "";
-  let dueHTML = "";
-  let overdueHTML = "";
-
-  let todayCollection = 0;
-  let activeLoans = state.loans.filter(l=>l.status==="active").length;
-
-  /* ===== TODAY COLLECTION ===== */
-  state.collections.forEach(c=>{
-    const d = new Date(c.date);
-    d.setHours(0,0,0,0);
-    if(d.getTime()===today.getTime()){
-      todayCollection += c.amount;
-    }
-  });
-
-  overviewHTML = `
-    <div class="card">
-      <h3>Overview</h3>
-      <div>Total Borrowers: ${state.borrowers.length}</div>
-      <div>Active Loans: ${activeLoans}</div>
-      <div>Today's Collection: ₹${todayCollection}</div>
-    </div>
-  `;
-
-  /* ===== INSTALLMENTS LOOP ===== */
-  state.installments.forEach(inst =>{
-
-    if(inst.status!=="pending") return;
-
-    const due = new Date(inst.dueDate);
-    due.setHours(0,0,0,0);
-
-    const borrower = state.borrowers.find(b=>b.id===inst.borrowerId);
-    const loan = state.loans.find(l=>l.id===inst.loanId);
-
-    if(!borrower || !loan) return;
-
-    const photo = borrower.profileImage ||
-      "https://cdn-icons-png.flaticon.com/512/149/149071.png";
-
-    const daysLate = Math.floor((today - due)/86400000);
-
-    /* FULL REMINDER MESSAGE */
-const reminderMsg =
-`Hello ${borrower.name},
-
-Loan Amount: ₹${loan.principal}
-Total Loan With Interest: ₹${loan.totalAmount || loan.principal}
-Installment No: ${inst.number}
-Installment Amount: ₹${inst.amount}
-Due Date: ${due.toLocaleDateString()}
-
-${daysLate>0?`You are ${daysLate} days overdue.`:""}
-
-Please pay at the earliest.`;
-
-    const waLink = 
-`https://wa.me/91${borrower.phone}?text=${encodeURIComponent(reminderMsg)}`;
-
-    const actionButtons = `
-      <button onclick="confirmCall('${borrower.phone}')">Call</button>
-      <button onclick="confirmReminder('${waLink}')">Send Reminder</button>
-      <button onclick="confirmMarkPaid('${inst.id}','${inst.loanId}','${inst.borrowerId}',${inst.amount})">
-        Mark Paid
-      </button>
-    `;
-
-    const cardTemplate = `
-      <div class="card">
-        <div style="display:flex;align-items:center;gap:12px;">
-          <img src="${photo}" 
-               style="width:60px;height:60px;border-radius:50%;object-fit:cover;">
-          <div>
-            <b>${borrower.name}</b><br>
-            ₹${inst.amount}
-          </div>
-        </div>
-        <br>
-        ${actionButtons}
-      </div>
-    `;
-
-    /* DUE TODAY */
-    if(due.getTime()===today.getTime()){
-      dueHTML += cardTemplate.replace(
-        `₹${inst.amount}`,
-        `₹${inst.amount} • Due Today`
-      );
-    }
-
-    /* OVERDUE */
-    if(due < today){
-      overdueHTML += cardTemplate.replace(
-        `₹${inst.amount}`,
-        `₹${inst.amount} • ${daysLate} days overdue`
-      );
-    }
-
-  });
-
-  dashboardSection.innerHTML =
-    overviewHTML +
-    `<div class="card"><h3>Due Today</h3>${dueHTML || "No dues today"}</div>` +
-    `<div class="card"><h3>Overdue</h3>${overdueHTML || "No overdue payments"}</div>`;
-}
-window.confirmCall = (phone)=>{
-  if(confirm("Call this borrower?")){
-    window.location.href="tel:"+phone;
-  }
-};
-
-window.confirmReminder = (waLink)=>{
-  if(confirm("Send reminder message?")){
-    window.open(waLink,"_blank");
-  }
-};
-
-window.confirmMarkPaid = async(id,loanId,borrowerId,amt)=>{
-  if(!confirm("Mark this installment as paid?")) return;
-
-  await updateDoc(doc(db,"installments",id),{
-    status:"completed"
-  });
-
-  await addDoc(collection(db,"collections"),{
-    loanId,
-    borrowerId,
-    agentId:uid,
-    amount:amt,
-    type:"installment",
-    date:Date.now()
-  });
-
-  // 🔥 Auto complete loan if finished
-  const loanInstallments = state.installments.filter(i => i.loanId === loanId);
-
-  const allCompleted = loanInstallments.every(i =>
-    i.status === "completed" || i.id === id
-  );
-
-  if(allCompleted){
-    await updateDoc(doc(db,"loans",loanId),{
-      status:"completed"
-    });
-  }
-
-  alert("Payment recorded successfully ✅");
-};
-
-/* BORROWERS */
-function renderBorrowers(){
-
-  borrowersSection.innerHTML = `
-    <div class="card">
-      <input id="searchInput" placeholder="Search borrower">
-      <br><br>
-      <button class="btn btn-primary" onclick="showAddBorrower()">
-        + Add New Borrower
-      </button>
-    </div>
-
-    <div id="addBorrowerBox"></div>
-    <div id="borrowerList"></div>
-  `;
-
-  renderBorrowerList(state.borrowers);
-
-  const searchInput = document.getElementById("searchInput");
-
-  if (searchInput) {
-    searchInput.addEventListener("input", e=>{
-      const v = e.target.value.toLowerCase();
-
-      renderBorrowerList(
-        state.borrowers.filter(b =>
-          b.name.toLowerCase().includes(v) ||
-          b.phone.includes(v)
-        )
-      );
-    });
-  }
+.container,
+.section-content {
+  padding: 22px;
 }
 
-window.showAddBorrower = () => {
-
-  const box = document.getElementById("addBorrowerBox");
-
-  // If already open → close it
-  if(box.innerHTML.trim() !== ""){
-    box.innerHTML = "";
-    return;
-  }
-
-  box.innerHTML = `
-    <div class="card" id="borrowerFormCard">
-      <h3>Add New Borrower</h3>
-
-      <input id="newName" placeholder="Full Name" 
-       pattern="[A-Za-z ]+" 
-       inputmode="text" />
-
-      <br><br>
-
-      <input id="newPhone" placeholder="Phone Number" 
-       maxlength="10" 
-       inputmode="numeric" />
-      
-      <br><br>
-
-      <button class="btn btn-success"
-              onclick="createBorrower()">
-        Save Borrower
-      </button>
-    </div>
-  `;
-
-  // 🔥 Delay adding outside click listener
-  setTimeout(() => {
-    document.addEventListener("click", handleOutsideClick);
-  }, 50);
-};
-
-window.createBorrower = async () => {
-
-  const nameInput = document.getElementById("newName");
-  const phoneInput = document.getElementById("newPhone");
-
-  const name = nameInput.value.trim();
-  const phone = phoneInput.value.trim();
-
-  // 🔒 Name: letters and spaces only
-  const nameRegex = /^[A-Za-z ]+$/;
-
-  if (!nameRegex.test(name)) {
-    alert("Name should contain letters only.");
-    return;
-  }
-
-  // 🔒 Phone: exactly 10 digits
-  const phoneRegex = /^[0-9]{10}$/;
-
-  if (!phoneRegex.test(phone)) {
-    alert("Phone number must be exactly 10 digits.");
-    return;
-  }
-
-  // 🔍 Duplicate Check
-  const existing = state.borrowers.find(b => b.phone === phone);
-
-  if (existing) {
-    alert(`This number already exists under name: ${existing.name}`);
-    return;
-  }
-
-  // ✅ Save borrower
-  await addDoc(collection(db,"borrowers"),{
-    name,
-    nameLower: name.toLowerCase(),
-    phone,
-    agentId: uid,
-    createdAt: Date.now()
-  });
-
-  alert("Borrower Added Successfully ✅");
-
-  nameInput.value = "";
-  phoneInput.value = "";
-};
-
-function renderBorrowerList(list){
-  let html="";
-  list.forEach(b=>{
-    const activeLoan=state.loans.some(l=>l.borrowerId===b.id&&l.status==="active");
-    const photo=b.profileImage||"https://cdn-icons-png.flaticon.com/512/149/149071.png";
-    html+=`
-      <div class="card borrower-card" onclick="showProfile('${b.id}')">
-        <div style="display:flex;align-items:center;gap:12px">
-          <img src="${photo}" style="width:55px;height:55px;border-radius:50%;object-fit:cover">
-          <div><b>${b.name}</b><br>${b.phone}</div>
-          ${activeLoan?`<span class="badge-active">Active</span>`:""}
-        </div>
-      </div>`;
-  });
-const borrowerListEl = document.getElementById("borrowerList");
-if (borrowerListEl) {
-  borrowerListEl.innerHTML = html;
-}
+.hidden {
+  display: none;
 }
 
-/* PROFILE */
-function renderProfile(id){
-
-  const b = state.borrowers.find(x=>x.id===id);
-  if(!b) return;
-
-  const photo = b.profileImage ||
-    "https://cdn-icons-png.flaticon.com/512/149/149071.png";
-
-  let html=`
-  <div class="card">
-    <div style="text-align:center">
-      <img id="profileImg" src="${photo}" class="profile-big">
-      <input type="file" id="photoInput" accept="image/*" hidden>
-    </div>
-
-    <h3>${b.name}</h3>
-<div class="profile-actions">
-  <a href="tel:${b.phone}" class="call-btn">📞 Call</a>
-  <a target="_blank" href="https://wa.me/91${b.phone}" class="wa-btn">💬 WhatsApp</a>
-  <button onclick="scrollToDocuments()" class="doc-btn">
-    📄 Documents
-  </button>
-</div>
-
-    <button class="btn btn-primary" onclick="createLoanUI()">+ Create Loan</button>
-    <div id="loanCreateBox"></div>
-  </div>`;
-
-// ===== LOANS GROUPED =====
-
-const borrowerLoans = state.loans
-  .filter(l => l.borrowerId === id);
-
-// Separate active & completed
-const activeLoans = borrowerLoans.filter(l => l.status === "active");
-const completedLoans = borrowerLoans.filter(l => l.status !== "active");
-
-// ACTIVE FIRST
-if (activeLoans.length) {
-  html += `<div class="card"><h3>Active Loans</h3></div>`;
-  
-  activeLoans.forEach(loan => {
-    html += renderLoanCard(loan);
-  });
+/* ======================================================
+   3. HEADER & WELCOME BANNER
+====================================================== */
+.header {
+  padding: 22px 20px 14px;
+  font-weight: 600;
+  font-size: 20px;
+  text-align: center;
+  background: transparent;
 }
 
-function renderLoanCard(loan){
-  return `
-    <div class="card">
-      <b>Loan ₹${loan.principal}</b><br>
-      Installments: ${loan.count}<br>
-      Start: ${new Date(loan.startDate).toLocaleDateString()}<br>
-      Status: ${loan.status}<br>
-      <button class="btn btn-success"
-        onclick="toggleInstallments('${loan.id}')">
-        View Installments
-      </button>
-      <div id="inst-${loan.id}"></div>
-    </div>
-  `;
+.welcome-banner {
+  margin: 10px 22px 28px;
+  padding: 28px;
+  border-radius: var(--radius-xl);
+  background: linear-gradient(135deg, #f8fafc, #eef2ff);
+  border: 1px solid #e6eaf2;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 6px 22px rgba(15, 23, 42, .04);
 }
 
-// COMPLETED BELOW
-if (completedLoans.length) {
-  html += `<div class="card"><h3>Completed Loans</h3></div>`;
-  
-  completedLoans.forEach(loan => {
-    html += renderLoanCard(loan);
-  });
+.welcome-title {
+  font-size: 22px;
+  font-weight: 600;
+  margin-bottom: 6px;
 }
 
-  // DOCUMENT SECTION
-html += `
-  <div class="card" id="documentsSectionCard">
-    <h3>Documents</h3>
-    <input type="file" id="docInput" multiple>
-    <div id="docList"></div>
-  </div>
-`;
-
-  profileSection.innerHTML = html;
-
-  /* ===== CALL DOCUMENT RENDER AFTER HTML LOAD ===== */
-  renderDocs(id);
-
-  /* ===== GET DOM ELEMENTS PROPERLY ===== */
-  const photoInput = document.getElementById("photoInput");
-  const profileImg = document.getElementById("profileImg");
-  const docInput = document.getElementById("docInput");
-
-  profileImg.onclick = () => photoInput.click();
-
-  /* PHOTO UPDATE */
-  photoInput.onchange = e => {
-
-    const file = e.target.files[0];
-    if (!file) return;
-
-    const img = new Image();
-    const reader = new FileReader();
-
-    reader.onload = event => img.src = event.target.result;
-
-    img.onload = async () => {
-
-      const canvas = document.createElement("canvas");
-      const ctx = canvas.getContext("2d");
-
-      const MAX_WIDTH = 400;
-      const scale = MAX_WIDTH / img.width;
-
-      canvas.width = MAX_WIDTH;
-      canvas.height = img.height * scale;
-
-      ctx.drawImage(img,0,0,canvas.width,canvas.height);
-
-      const compressed =
-        canvas.toDataURL("image/jpeg",0.6);
-
-      await updateDoc(doc(db,"borrowers",id),{
-        profileImage: compressed
-      });
-
-      alert("Photo Updated Successfully ✅");
-    };
-
-    reader.readAsDataURL(file);
-  };
-
-  /* DOCUMENT UPLOAD */
-  docInput.onchange = async e => {
-
-    const files = [...e.target.files];
-
-    for(const f of files){
-
-      const reader = new FileReader();
-
-      reader.onload = async ev => {
-
-        const img = new Image();
-        img.src = ev.target.result;
-
-        img.onload = async () => {
-
-          const canvas = document.createElement("canvas");
-          const ctx = canvas.getContext("2d");
-
-          const MAX_WIDTH = 600;
-          const scale = MAX_WIDTH / img.width;
-
-          canvas.width = MAX_WIDTH;
-          canvas.height = img.height * scale;
-
-          ctx.drawImage(img,0,0,canvas.width,canvas.height);
-
-          const compressedFile =
-            canvas.toDataURL("image/jpeg",0.5);
-
-          await addDoc(collection(db,"documents"),{
-            borrowerId:id,
-            agentId:uid,
-            file:compressedFile,
-            createdAt:Date.now()
-          });
-
-          alert("Document Uploaded ✅");
-        };
-      };
-
-      reader.readAsDataURL(f);
-    }
-  };
+.welcome-sub {
+  font-size: 14px;
+  color: var(--muted);
 }
 
-window.scrollToDocuments = () => {
-
-  const section = document.getElementById("documentsSectionCard");
-
-  if(section){
-    section.scrollIntoView({
-      behavior: "smooth",
-      block: "start"
-    });
-  }
-
-};
-
-/* ===== RENDER DOCUMENTS FUNCTION (OUTSIDE PROFILE) ===== */
-function renderDocs(borrowerId){
-
-  const docList = document.getElementById("docList");
-  if(!docList) return;
-
-  const list = state.documents
-    .filter(d=>d.borrowerId===borrowerId)
-    .sort((a,b)=>b.createdAt-a.createdAt);
-
-  docList.innerHTML = "";
-
-  if(list.length===0){
-    docList.innerHTML="No documents uploaded";
-    return;
-  }
-
-docList.innerHTML = "";
-
-list.forEach((d) => {
-
-  const img = document.createElement("img");
-
-  img.src = d.file;
-  img.style.width = "100px";
-  img.style.height = "100px";
-  img.style.objectFit = "cover";
-  img.style.borderRadius = "8px";
-  img.style.cursor = "pointer";
-  img.style.marginBottom = "10px";
-
-  img.addEventListener("click", () => {
-    showDocModal(d.file);
-  });
-
-  docList.appendChild(img);
-});
-
-window.showDocModal = (file) => {
-
-  const modal = document.createElement("div");
-
-  modal.style.position = "fixed";
-  modal.style.top = "0";
-  modal.style.left = "0";
-  modal.style.width = "100%";
-  modal.style.height = "100%";
-  modal.style.background = "rgba(0,0,0,0.95)";
-  modal.style.display = "flex";
-  modal.style.flexDirection = "column";
-  modal.style.justifyContent = "center";
-  modal.style.alignItems = "center";
-  modal.style.zIndex = "9999";
-
-  modal.innerHTML = `
-    <img src="${file}" 
-         style="max-width:95%;max-height:80%;border-radius:8px;">
-    
-    <br>
-
-    <a href="${file}" 
-       download="document.jpg"
-       style="padding:10px 20px;
-              background:#16a34a;
-              color:white;
-              text-decoration:none;
-              border-radius:6px;
-              margin-top:10px;">
-      Download
-    </a>
-
-    <br>
-
-    <button style="margin-top:15px;
-                   padding:8px 16px;
-                   border:none;
-                   border-radius:6px;"
-            onclick="this.parentElement.remove()">
-      Close
-    </button>
-  `;
-
-  document.body.appendChild(modal);
-};
+/* ======================================================
+   4. NAVIGATION (TOP & BOTTOM)
+====================================================== */
+.nav {
+  display: flex;
+  gap: 10px;
+  padding: 14px 20px;
 }
 
-
-/* INSTALLMENTS */
-window.toggleInstallments = (loanId) => {
-
-  const box = document.getElementById("inst-" + loanId);
-
-  // ✅ Collapse previously opened loan
-  if (openedLoanId && openedLoanId !== loanId) {
-    const prevBox = document.getElementById("inst-" + openedLoanId);
-    if (prevBox) prevBox.innerHTML = "";
-  }
-
-  // ✅ Close if same clicked
-  if (openedLoanId === loanId) {
-    box.innerHTML = "";
-    openedLoanId = null;
-    return;
-  }
-
-  openedLoanId = loanId;
-
-  const today = new Date();
-  today.setHours(0,0,0,0);
-
-  const list = state.installments
-    .filter(i => i.loanId === loanId)
-    .sort((a,b)=>a.number-b.number);
-
-  const dueToday = [];
-  const overdue = [];
-  const pending = [];
-  const completed = [];
-
-  list.forEach(i => {
-
-    const due = new Date(i.dueDate);
-    due.setHours(0,0,0,0);
-
-    if (i.status === "completed") {
-      completed.push(i);
-    } 
-    else if (due.getTime() === today.getTime()) {
-      dueToday.push(i);
-    }
-    else if (due < today) {
-      overdue.push(i);
-    } 
-    else {
-      pending.push(i);
-    }
-  });
-
-  function renderGroup(title, arr, color){
-    if(!arr.length) return "";
-
-    let h = `<h4 style="margin-top:10px;color:${color};">${title}</h4>`;
-
-    arr.forEach(i=>{
-      h += `
-        <div class="inst-card">
-          Installment ${i.number}<br>
-          Amount: ₹${i.amount}<br>
-          Due: ${new Date(i.dueDate).toLocaleDateString()}<br>
-          Status: ${i.status}<br>
-          ${i.status==="pending" ? `
-            <button class="btn btn-success"
-              onclick="markPaid('${i.id}','${loanId}','${i.borrowerId}',${i.amount})">
-              Mark Paid
-            </button>` : ""}
-        </div>
-      `;
-    });
-
-    return h;
-  }
-  box.innerHTML =
-    renderGroup("Due Today", dueToday, "#f59e0b") +
-    renderGroup("Overdue", overdue, "#ef4444") +
-    renderGroup("Pending", pending, "#2563eb") +
-    renderGroup("Completed", completed, "#16a34a");
-};
-
-window.markPaid = async(id,loanId,borrowerId,amt)=>{
-
-  if(!confirm("Mark this installment as paid?")) return;
-
-  await updateDoc(doc(db,"installments",id),{
-    status:"completed"
-  });
-
-  await addDoc(collection(db,"collections"),{
-    loanId,
-    borrowerId,
-    agentId:uid,
-    amount:amt,
-    type:"installment",
-    date:Date.now()
-  });
-
-  const loanInstallments = state.installments.filter(i => i.loanId === loanId);
-
-  const allCompleted = loanInstallments.every(i =>
-    i.status === "completed" || i.id === id
-  );
-
-  if(allCompleted){
-    await updateDoc(doc(db,"loans",loanId),{
-      status:"completed"
-    });
-  }
-
-  alert("Payment recorded successfully ✅");
-};
-
-/* CREATE LOAN */
-window.createLoanUI=()=>{
-  loanCreateBox.innerHTML=`
-    <input id="loanAmt" type="number" placeholder="Principal Amount"><br><br>
-
-    <input id="loanInterest" type="number" placeholder="Upfront Interest %"><br><br>
-
-    <input id="loanCount" type="number" placeholder="Installments Count"><br><br>
-
-    <select id="loanInterval">
-      <option value="">Select Interval</option>
-      <option value="7">7 Days</option>
-      <option value="15">15 Days</option>
-      <option value="30">30 Days</option>
-    </select><br><br>
-
-    <input type="date" id="loanStart"><br><br>
-
-    <button class="btn btn-primary" onclick="createLoan()">Create Loan</button>
-  `;
-};
-
-window.createLoan = async () => {
-
-  const principal = Number(loanAmt.value);
-  const interest = Number(loanInterest.value) || 0;
-  const count = Number(loanCount.value);
-  const interval = Number(loanInterval.value);
-  const start = loanStart.value;
-
-  if (!principal || !count || !interval || !start) {
-    alert("All fields required.");
-    return;
-  }
-
-  const startTime = new Date(start).getTime();
-
-  /* 🔥 UPFRONT MODEL */
-
-  const interestAmount = (principal * interest) / 100;
-  const disbursedAmount = principal - interestAmount;
-  const installmentAmount = Number((principal / count).toFixed(2));
-
-  const preview = `
-Loan Preview (Upfront Interest Model):
-
-Principal: ₹${principal}
-Upfront Interest: ₹${interestAmount}
-Borrower Receives: ₹${disbursedAmount}
-Total Payable: ₹${principal}
-Installments: ${count}
-Each Installment: ₹${installmentAmount}
-Start Date: ${new Date(startTime).toLocaleDateString()}
-
-Proceed?
-  `;
-
-  if (!confirm(preview)) return;
-
-  /* CREATE LOAN */
-
-  const ref = await addDoc(collection(db, "loans"), {
-    borrowerId: currentProfileId,
-    agentId: uid,
-    principal,
-    interestPercent: interest,
-    interestAmount,
-    disbursedAmount,
-    totalAmount: principal, // 🔥 total is principal only
-    count,
-    interval,
-    startDate: startTime,
-    status: "active",
-    createdAt: Date.now()
-  });
-
-  /* CREATE INSTALLMENTS */
-
-  for (let i = 0; i < count; i++) {
-
-    await addDoc(collection(db, "installments"), {
-      loanId: ref.id,
-      borrowerId: currentProfileId,
-      agentId: uid,
-      number: i + 1,
-      amount: installmentAmount,
-      dueDate: startTime + ((i + 1) * interval * 86400000),
-      status: "pending"
-    });
-
-  }
-
-  alert("Loan Created Successfully ✅");
-};
-
-function handleOutsideClick(e){
-
-  const box = document.getElementById("addBorrowerBox");
-  const formCard = document.getElementById("borrowerFormCard");
-
-  if(!formCard) return;
-
-  if(!formCard.contains(e.target)){
-    box.innerHTML = "";
-    document.removeEventListener("click", handleOutsideClick);
-  }
+.nav div {
+  flex: 1;
+  padding: 12px;
+  text-align: center;
+  border-radius: 999px;
+  font-weight: 500;
+  color: var(--muted);
+  transition: all .3s var(--transition);
 }
 
+.nav .active {
+  background: var(--primary-soft);
+  color: var(--primary);
+}
 
-/* ========================
-   ADVANCED SWIPE ENGINE
-======================== */
+/* Floating Bottom Navigation */
+.bottom-nav {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 140px;
+  height: 60px;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(15px);
+  border-radius: 40px;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+}
 
-let startX = 0;
-let startY = 0;
-let currentX = 0;
-let isSwiping = false;
+.tab {
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 22px;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  color: #888;
+}
 
-const swipeBar = document.getElementById("swipeBar");
+.tab.active {
+  background: #4f46e5;
+  color: #fff;
+  transform: scale(1.05);
+}
 
-document.addEventListener("touchstart", e=>{
-  startX = e.touches[0].clientX;
-  startY = e.touches[0].clientY;
-  isSwiping = true;
-});
+.section-content {
+  padding-bottom: 120px;
+}
 
-document.addEventListener("touchmove", e=>{
-  if(!isSwiping) return;
+/* ======================================================
+   5. SECTION & CARD SYSTEM
+====================================================== */
+.section-header {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--muted);
+  margin: 24px 0 14px;
+  padding-left: 8px;
+  border-left: 3px solid #e2e8f0;
+}
 
-  currentX = e.touches[0].clientX;
+.card,
+.loan-card {
+  background: var(--surface);
+  border-radius: var(--radius-xl);
+  padding: 28px;
+  margin-bottom: 28px;
+  border: 1px solid rgba(15, 23, 42, 0.05);
+  box-shadow: 0 8px 28px rgba(15, 23, 42, .04);
+  transition: .35s var(--transition);
+}
 
-  const diffX = currentX - startX;
-  const diffY = e.touches[0].clientY - startY;
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 40px rgba(15, 23, 42, .08);
+}
 
-  // If vertical scroll is bigger, cancel swipe
-  if(Math.abs(diffY) > Math.abs(diffX)){
-    isSwiping = false;
-    swipeBar.style.width = "0%";
-    return;
+/* ======================================================
+   6. FORM ELEMENTS (INPUTS, SELECT, BUTTONS)
+====================================================== */
+input,
+select {
+  width: 100%;
+  padding: 16px;
+  border: none;
+  border-radius: var(--radius-lg);
+  font-size: 15px;
+  margin-bottom: 18px;
+  background: #f1f5f9;
+  transition: .3s var(--transition);
+}
+
+input:focus {
+  background: white;
+  box-shadow: 0 0 0 4px var(--primary-soft);
+  outline: none;
+}
+
+/* Premium Dropdown */
+#roleSelect {
+  width: 100%;
+  margin-top: 18px;
+  padding: 15px 18px;
+  border-radius: 18px;
+  border: none;
+  font-size: 15px;
+  font-weight: 500;
+  background: #f1f5f9;
+  color: #111827;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  transition: all .25s cubic-bezier(.4, 0, .2, 1);
+  background-image: url("image/svg+xml;charset=UTF-8,%3Csvg width='16' height='16' viewBox='0 0 20 20' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M5 8L10 13L15 8' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 15px center;
+  background-size: 14px;
+}
+
+#roleSelect:hover {
+  background: #e2e8f0;
+}
+
+#roleSelect:focus {
+  outline: none;
+  background: white;
+  box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.15);
+}
+
+#roleSelect option[value=""] {
+  color: #94a3b8;
+}
+
+button,
+.btn {
+  padding: 14px 22px;
+  border-radius: 999px;
+  border: none;
+  font-weight: 500;
+  font-size: 14px;
+  cursor: pointer;
+  transition: .3s var(--transition);
+  margin-top: 8px;
+}
+
+.btn-primary {
+  background: var(--primary-soft);
+  color: var(--primary);
+}
+
+.btn-success {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.btn-danger {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+button:hover,
+.btn:hover {
+  transform: translateY(-2px);
+}
+
+/* ======================================================
+   7. CONTACT & ACTION BUTTONS
+====================================================== */
+.contact-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 20px;
+  margin-top: 10px;
+  margin-right: 8px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: .25s var(--transition);
+}
+
+.call-btn {
+  background: #e0f2fe;
+  color: #0284c7;
+}
+
+.call-btn:hover {
+  background: #dbeafe;
+}
+
+.wa-btn {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.wa-btn:hover {
+  background: #bbf7d0;
+}
+
+.contact-btn:active {
+  transform: scale(.96);
+}
+
+.doc-btn {
+  background: #2563eb;
+  color: white;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: 0.3s ease;
+}
+
+.doc-btn:hover {
+  background: #1d4ed8;
+}
+
+/* ======================================================
+   8. CONTENT CARDS (INSTALLMENTS, PROGRESS)
+====================================================== */
+.inst-card {
+  padding: 20px;
+  border-radius: var(--radius-lg);
+  margin-bottom: 16px;
+  background: white;
+  border: 1px solid #eef2f7;
+}
+
+.inst-amount {
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.progress {
+  margin-top: 14px;
+  height: 7px;
+  background: #e2e8f0;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #4f46e5, #6366f1);
+}
+
+/* ======================================================
+   9. PROFILE & AVATARS (HERO + DASHBOARD)
+====================================================== */
+.profile-photo-section {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.profile-photo-wrapper {
+  width: 180px;
+  height: 180px;
+  margin: 0 auto 35px;
+  border-radius: 50%;
+  position: relative;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: .35s var(--transition);
+}
+
+.profile-photo-wrapper::before {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6366f1, #4f46e5, #818cf8);
+  opacity: .6;
+  animation: rotateGlow 10s linear infinite;
+}
+
+@keyframes rotateGlow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.profile-photo-wrapper img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  position: relative;
+  z-index: 1;
+  transition: .3s ease;
+}
+
+.camera-overlay {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  width: 42px;
+  height: 42px;
+  background: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #4f46e5;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, .15);
+  z-index: 2;
+}
+
+.profile-photo-wrapper img.updating {
+  opacity: .4;
+}
+
+.profile-big {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid #4f46e5;
+  box-shadow: 0 0 0 5px #ffffff, 0 8px 20px rgba(0, 0, 0, 0.15);
+  transition: 0.3s ease;
+}
+
+.card-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.mini-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: #f1f5f9;
+  border: 3px solid white;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, .08);
+  transition: transform .25s cubic-bezier(.4, 0, .2, 1);
+}
+
+.mini-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.clickable-avatar {
+  cursor: pointer;
+  transition: transform .25s ease;
+}
+
+.clickable-avatar:hover {
+  transform: scale(1.05);
+}
+
+.clickable-avatar:active {
+  transform: scale(.95);
+}
+
+/* ======================================================
+   10. RESPONSIVE MOBILE
+====================================================== */
+@media (max-width: 768px) {
+  .container {
+    padding: 16px;
   }
 
-  let percent = Math.min(Math.abs(diffX)/window.innerWidth*100,100);
-  swipeBar.style.width = percent+"%";
-});
-
-document.addEventListener("touchend", ()=>{
-  if(!isSwiping) return;
-
-  isSwiping = false;
-  swipeBar.style.width = "0%";
-
-  const diff = currentX - startX;
-  const threshold = 100;
-
-  if(navigator.vibrate) navigator.vibrate(25);
-
-  if(diff < -threshold){
-    if(currentView === "dashboard") showBorrowers();
+  button {
+    width: 100%;
   }
-
-  if(diff > threshold){
-    if(currentView === "borrowers") showDashboard();
-    else if(currentView === "profile") showBorrowers();
-  }
-});
-
-
-/* LOGOUT */
-window.logout=async()=>{
-  await signOut(auth);
-  window.location.replace("index.html");
-};
-
-</script>
-
-<div class="bottom-nav">
-  <div id="tabDashboard" class="tab active" onclick="showDashboard()">
-    <span class="icon">🛖</span>
-  </div>
-
-  <div id="tabBorrowers" class="tab" onclick="showBorrowers()">
-    <span class="icon">🏦</span>
-  </div>
-</div>
-
-
-</body>
-</html>
+}
