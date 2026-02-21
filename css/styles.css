@@ -107,15 +107,36 @@ input, select, textarea {
   box-shadow:0 16px 40px rgba(15,23,42,.08);
 }
 
-/* ===== PROFILE PHOTO WRAPPER ===== */
+/* ===============================
+   PREMIUM PROFILE PHOTO RING
+================================ */
 
 .profile-photo-wrapper{
-  width:150px;
-  height:150px;
-  margin:0 auto 20px;
+  width:160px;
+  height:160px;
+  margin:0 auto 25px;
   border-radius:50%;
-  padding:5px;
-  background:linear-gradient(135deg,#6366f1,#4f46e5,#818cf8);
+  padding:8px;
+
+background:conic-gradient(
+  from 0deg,
+  #6366f1,
+  #818cf8,
+  #4f46e5,
+  #6366f1
+);
+animation:spin 6s linear infinite;
+
+@keyframes spin{
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+  box-shadow:0 12px 30px rgba(79,70,229,.25);
 }
 
 .profile-photo-wrapper img{
@@ -124,6 +145,8 @@ input, select, textarea {
   border-radius:50%;
   object-fit:cover;
   display:block;
+
+  border:4px solid white;
 }
 
 /* ======================================================
@@ -227,7 +250,38 @@ button:hover,
 .contact-btn:active{
   transform:scale(.96);
 }
+/* PROFILE ACTION LINKS ALIGN */
 
+.profile-actions{
+  display:flex;
+  gap:12px;
+  flex-wrap:wrap;
+  margin-top:10px;
+}
+
+.contact-link{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  padding:10px 16px;
+  border-radius:999px;
+  font-size:14px;
+  font-weight:500;
+  text-decoration:none;
+  cursor:pointer;
+  transition:.25s ease;
+}
+
+/* Specific styles */
+
+.doc-link{
+  background:#eef2ff;
+  color:#4f46e5;
+}
+
+.doc-link:hover{
+  background:#e0e7ff;
+}
 
 /* ======================================================
    INSTALLMENT and loan CARDS
