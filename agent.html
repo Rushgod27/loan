@@ -137,7 +137,6 @@ function refresh(){
   setTimeout(()=>{
   animateCounters();
   renderSparkline();
-  renderPieChart(activeLoans, completedLoans);
 },50);
 
 }
@@ -1215,40 +1214,6 @@ function renderSparkline(){
 
   svg.appendChild(poly);
 }
-
-function renderPieChart(active, completed){
-
-  const canvas = document.getElementById("loanPie");
-  if(!canvas) return;
-
-  const ctx = canvas.getContext("2d");
-  const total = active + completed;
-
-  ctx.clearRect(0,0,200,200);
-
-  if(total === 0){
-    ctx.beginPath();
-    ctx.fillStyle="#e5e7eb";
-    ctx.arc(100,100,80,0,2*Math.PI);
-    ctx.fill();
-    return;
-  }
-
-  const activeAngle = (active/total)*2*Math.PI;
-
-  ctx.beginPath();
-  ctx.moveTo(100,100);
-  ctx.fillStyle="#6366f1";
-  ctx.arc(100,100,80,0,activeAngle);
-  ctx.fill();
-
-  ctx.beginPath();
-  ctx.moveTo(100,100);
-  ctx.fillStyle="#10b981";
-  ctx.arc(100,100,80,activeAngle,2*Math.PI);
-  ctx.fill();
-}
-
 
 /* LOGOUT */
 window.logout=async()=>{
