@@ -387,8 +387,9 @@ button:hover,
   padding:20px;
   border-radius:var(--radius-lg);
   margin-bottom:16px;
-  background:white;
-  border:1px solid #eef2f7;
+  background:var(--card);
+  border:1px solid rgba(0,0,0,0.05);
+  color:var(--text);
 }
 
 .loan-completed {
@@ -542,6 +543,10 @@ body.dark-mode{
   --text:#f1f5f9;
   --muted:#94a3b8;
   --nav:rgba(17,24,39,0.95);
+}
+
+body.dark-mode .inst-card{
+  background:#243042;
 }
 
 /* Header */
