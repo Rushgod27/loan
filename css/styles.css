@@ -333,6 +333,53 @@ input:focus{
   transform:scale(.97);
 }
 
+/* ===============================
+   CUSTOM FILE UPLOAD
+================================ */
+
+.file-upload{
+  background:#f1f5f9;
+  border-radius:999px;
+  padding:14px 18px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  font-size:14px;
+}
+
+.file-label{
+  background:#e2e8f0;
+  padding:8px 16px;
+  border-radius:999px;
+  cursor:pointer;
+  transition:.2s ease;
+}
+
+.file-label:hover{
+  background:#d1d5db;
+}
+
+#fileName{
+  color:var(--muted);
+  font-size:14px;
+}
+
+/* ===== DARK MODE ===== */
+
+body.dark-mode .file-upload{
+  background:#243042;
+}
+
+body.dark-mode .file-label{
+  background:rgba(255,255,255,0.1);
+  color:#f1f5f9;
+}
+
+body.dark-mode #fileName{
+  color:#cbd5e1;
+}
+
 /* ======================================================
    CONTACT BUTTONS
 ====================================================== */
