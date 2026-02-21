@@ -228,17 +228,6 @@ state.installments.forEach(i=>{
   let dueHTML = "";
   let overdueHTML = "";
 
-  let todayCollection = 0;
-  let activeLoans = state.loans.filter(l=>l.status==="active").length;
-
-  /* ===== TODAY COLLECTION ===== */
-  state.collections.forEach(c=>{
-    const d = new Date(c.date);
-    d.setHours(0,0,0,0);
-    if(d.getTime()===today.getTime()){
-      todayCollection += c.amount;
-    }
-  });
 
 overviewHTML = `
 <div class="dashboard-top">
@@ -370,9 +359,16 @@ Please pay at the earliest.`;
   });
 
   dashboardSection.innerHTML =
-    overviewHTML +
-    `<div class="card"><h3>Due Today</h3>${dueHTML || "No dues today"}</div>` +
-    `<div class="card"><h3>Overdue</h3>${overdueHTML || "No overdue payments"}</div>`;
+  overviewHTML +
+  `<div class="card"><h3>Due Today</h3>${dueHTML || "No dues today"}</div>` +
+  `<div class="card"><h3>Overdue</h3>${overdueHTML || "No overdue payments"}</div>`;
+
+/* Run animations AFTER render */
+setTimeout(()=>{
+  animateCounters();
+  renderSparkline();
+  renderPieChart(activeLoans, completedLoans);
+},100);
 }
 window.confirmCall = (phone)=>{
   if(confirm("Call this borrower?")){
@@ -1157,12 +1153,16 @@ function animateCounters(){
   document.querySelectorAll(".counter").forEach(el=>{
 
     const target = +el.getAttribute("data-count");
-    let count = 0;
 
+    if(el.dataset.animated === "true") return;
+    el.dataset.animated = "true";
+
+    let count = 0;
     const step = Math.ceil(target / 40);
 
     const interval = setInterval(()=>{
       count += step;
+
       if(count >= target){
         el.innerText = target;
         clearInterval(interval);
@@ -1222,11 +1222,19 @@ function renderPieChart(active, completed){
   if(!canvas) return;
 
   const ctx = canvas.getContext("2d");
-  const total = active+completed;
-
-  const activeAngle = (active/total)*2*Math.PI;
+  const total = active + completed;
 
   ctx.clearRect(0,0,200,200);
+
+  if(total === 0){
+    ctx.beginPath();
+    ctx.fillStyle="#e5e7eb";
+    ctx.arc(100,100,80,0,2*Math.PI);
+    ctx.fill();
+    return;
+  }
+
+  const activeAngle = (active/total)*2*Math.PI;
 
   ctx.beginPath();
   ctx.moveTo(100,100);
