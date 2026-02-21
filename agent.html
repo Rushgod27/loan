@@ -436,13 +436,13 @@ function renderProfile(id){
     });
 
   // DOCUMENT SECTION
-  html+=`
-  <div class="card">
-<div class="card" id="documentsSectionCard">
-  <h3>Documents</h3>
-  <input type="file" id="docInput" multiple>
-  <div id="docList"></div>
-</div>
+html += `
+  <div class="card" id="documentsSectionCard">
+    <h3>Documents</h3>
+    <input type="file" id="docInput" multiple>
+    <div id="docList"></div>
+  </div>
+`;
 
   profileSection.innerHTML = html;
 
