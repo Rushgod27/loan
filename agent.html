@@ -449,22 +449,48 @@ function renderProfile(id){
     <div id="loanCreateBox"></div>
   </div>`;
 
-  // LOANS
-  state.loans
-    .filter(l=>l.borrowerId===id)
-    .forEach(loan=>{
-      html+=`
-      <div class="card">
-        <b>Loan ₹${loan.principal}</b><br>
-        Installments: ${loan.count}<br>
-        Start: ${new Date(loan.startDate).toLocaleDateString()}<br>
-        <button class="btn btn-success"
-          onclick="toggleInstallments('${loan.id}')">
-          View Installments
-        </button>
-        <div id="inst-${loan.id}"></div>
-      </div>`;
-    });
+// ===== LOANS GROUPED =====
+
+const borrowerLoans = state.loans
+  .filter(l => l.borrowerId === id);
+
+// Separate active & completed
+const activeLoans = borrowerLoans.filter(l => l.status === "active");
+const completedLoans = borrowerLoans.filter(l => l.status !== "active");
+
+// ACTIVE FIRST
+if (activeLoans.length) {
+  html += `<div class="card"><h3>Active Loans</h3></div>`;
+  
+  activeLoans.forEach(loan => {
+    html += renderLoanCard(loan);
+  });
+}
+
+function renderLoanCard(loan){
+  return `
+    <div class="card">
+      <b>Loan ₹${loan.principal}</b><br>
+      Installments: ${loan.count}<br>
+      Start: ${new Date(loan.startDate).toLocaleDateString()}<br>
+      Status: ${loan.status}<br>
+      <button class="btn btn-success"
+        onclick="toggleInstallments('${loan.id}')">
+        View Installments
+      </button>
+      <div id="inst-${loan.id}"></div>
+    </div>
+  `;
+}
+
+// COMPLETED BELOW
+if (completedLoans.length) {
+  html += `<div class="card"><h3>Completed Loans</h3></div>`;
+  
+  completedLoans.forEach(loan => {
+    html += renderLoanCard(loan);
+  });
+}
 
   // DOCUMENT SECTION
 html += `
@@ -671,51 +697,86 @@ window.showDocModal = (file) => {
 
 
 /* INSTALLMENTS */
-window.toggleInstallments=(loanId)=>{
-  const box=document.getElementById("inst-"+loanId);
-  if(openedLoanId===loanId){box.innerHTML="";openedLoanId=null;return;}
-  openedLoanId=loanId;
+window.toggleInstallments = (loanId) => {
 
-  const list=state.installments.filter(i=>i.loanId===loanId).sort((a,b)=>a.number-b.number);
-  let html="";
-  list.forEach(i=>{
-    html+=`
-    <div class="inst-card">
-      Installment ${i.number}<br>
-      Amount: ₹${i.amount}<br>
-      Due: ${new Date(i.dueDate).toLocaleDateString()}<br>
-      Status: ${i.status}<br>
-      ${i.status==="pending"?`
-      <button class="btn btn-success"
-        onclick="markPaid('${i.id}','${loanId}','${i.borrowerId}',${i.amount})">
-        Mark Paid
-      </button>`:""}
-    </div>`;
+  const box = document.getElementById("inst-" + loanId);
+
+  // ✅ Collapse previously opened loan
+  if (openedLoanId && openedLoanId !== loanId) {
+    const prevBox = document.getElementById("inst-" + openedLoanId);
+    if (prevBox) prevBox.innerHTML = "";
+  }
+
+  // ✅ Close if same clicked
+  if (openedLoanId === loanId) {
+    box.innerHTML = "";
+    openedLoanId = null;
+    return;
+  }
+
+  openedLoanId = loanId;
+
+  const today = new Date();
+  today.setHours(0,0,0,0);
+
+  const list = state.installments
+    .filter(i => i.loanId === loanId)
+    .sort((a,b)=>a.number-b.number);
+
+  const dueToday = [];
+  const overdue = [];
+  const pending = [];
+  const completed = [];
+
+  list.forEach(i => {
+
+    const due = new Date(i.dueDate);
+    due.setHours(0,0,0,0);
+
+    if (i.status === "completed") {
+      completed.push(i);
+    } 
+    else if (due.getTime() === today.getTime()) {
+      dueToday.push(i);
+    }
+    else if (due < today) {
+      overdue.push(i);
+    } 
+    else {
+      pending.push(i);
+    }
   });
-  box.innerHTML=html;
+
+  function renderGroup(title, arr, color){
+    if(!arr.length) return "";
+
+    let h = `<h4 style="margin-top:10px;color:${color};">${title}</h4>`;
+
+    arr.forEach(i=>{
+      h += `
+        <div class="inst-card">
+          Installment ${i.number}<br>
+          Amount: ₹${i.amount}<br>
+          Due: ${new Date(i.dueDate).toLocaleDateString()}<br>
+          Status: ${i.status}<br>
+          ${i.status==="pending" ? `
+            <button class="btn btn-success"
+              onclick="markPaid('${i.id}','${loanId}','${i.borrowerId}',${i.amount})">
+              Mark Paid
+            </button>` : ""}
+        </div>
+      `;
+    });
+
+    return h;
+  }
+
+  box.innerHTML =
+    renderGroup("Due Today", dueToday, "#f59e0b") +
+    renderGroup("Overdue", overdue, "#ef4444") +
+    renderGroup("Pending", pending, "#2563eb") +
+    renderGroup("Completed", completed, "#16a34a");
 };
-
-/* MARK PAID */
-window.markPaid=async(id,loanId,borrowerId,amt)=>{
-
-  if(!confirm("Mark this installment as paid?")) return;
-
-  await updateDoc(doc(db,"installments",id),{
-    status:"completed"
-  });
-
-  await addDoc(collection(db,"collections"),{
-    loanId,
-    borrowerId,
-    agentId:uid,
-    amount:amt,
-    type:"installment",
-    date:Date.now()
-  });
-
-  alert("Payment recorded successfully");
-};
-
 /* CREATE LOAN */
 window.createLoanUI=()=>{
   loanCreateBox.innerHTML=`
