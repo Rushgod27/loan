@@ -406,10 +406,13 @@ function renderProfile(id){
     </div>
 
     <h3>${b.name}</h3>
-    <div class="profile-actions">
-      <a href="tel:${b.phone}" class="call-btn">📞 Call</a>
-      <a target="_blank" href="https://wa.me/91${b.phone}" class="wa-btn">💬 WhatsApp</a>
-    </div>
+<div class="profile-actions">
+  <a href="tel:${b.phone}" class="call-btn">📞 Call</a>
+  <a target="_blank" href="https://wa.me/91${b.phone}" class="wa-btn">💬 WhatsApp</a>
+  <button onclick="scrollToDocuments()" class="doc-btn">
+    📄 Documents
+  </button>
+</div>
 
     <button class="btn btn-primary" onclick="createLoanUI()">+ Create Loan</button>
     <div id="loanCreateBox"></div>
@@ -435,10 +438,11 @@ function renderProfile(id){
   // DOCUMENT SECTION
   html+=`
   <div class="card">
-    <h3>Documents</h3>
-    <input type="file" id="docInput" multiple>
-    <div id="docList"></div>
-  </div>`;
+<div class="card" id="documentsSectionCard">
+  <h3>Documents</h3>
+  <input type="file" id="docInput" multiple>
+  <div id="docList"></div>
+</div>
 
   profileSection.innerHTML = html;
 
@@ -535,6 +539,18 @@ function renderProfile(id){
   };
 }
 
+window.scrollToDocuments = () => {
+
+  const section = document.getElementById("documentsSectionCard");
+
+  if(section){
+    section.scrollIntoView({
+      behavior: "smooth",
+      block: "start"
+    });
+  }
+
+};
 
 /* ===== RENDER DOCUMENTS FUNCTION (OUTSIDE PROFILE) ===== */
 function renderDocs(borrowerId){
