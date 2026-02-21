@@ -530,7 +530,9 @@ button:hover,
   color:#fff;
   transform:scale(1.05);
 }
-
+.section-content{
+  padding-bottom:120px;
+}
 
 /* ======================================================
    MOBILE
