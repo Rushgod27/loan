@@ -51,9 +51,16 @@ let currentProfileId=null;
 let openedLoanId=null;
 
 /* AUTH */
+let agentName = "Agent";
+
 onAuthStateChanged(auth,user=>{
   if(!user){location.href="index.html";return;}
   uid=user.uid;
+
+  agentName = user.displayName || 
+              user.email?.split("@")[0] || 
+              "Agent";
+
   startRealtime();
 });
 
@@ -185,14 +192,37 @@ function renderDashboard(){
     }
   });
 
-  overviewHTML = `
-    <div class="card">
-      <h3>Overview</h3>
-      <div>Total Borrowers: ${state.borrowers.length}</div>
-      <div>Active Loans: ${activeLoans}</div>
-      <div>Today's Collection: ₹${todayCollection}</div>
+overviewHTML = `
+  <div class="welcome-hero">
+    
+    <div class="welcome-left">
+      <div class="welcome-text">
+        Hi, ${agentName} 👋
+      </div>
+      <div class="welcome-sub">
+        Here's your performance today
+      </div>
     </div>
-  `;
+
+    <div class="welcome-kpis">
+      <div class="kpi-box">
+        <div class="kpi-value">${state.borrowers.length}</div>
+        <div class="kpi-label">Borrowers</div>
+      </div>
+
+      <div class="kpi-box">
+        <div class="kpi-value">${activeLoans}</div>
+        <div class="kpi-label">Active Loans</div>
+      </div>
+
+      <div class="kpi-box">
+        <div class="kpi-value">₹${todayCollection}</div>
+        <div class="kpi-label">Today's Collection</div>
+      </div>
+    </div>
+
+  </div>
+`;
 
   /* ===== INSTALLMENTS LOOP ===== */
   state.installments.forEach(inst =>{
