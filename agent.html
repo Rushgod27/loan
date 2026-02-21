@@ -388,52 +388,14 @@ window.confirmReminder = (waLink)=>{
   }
 };
 
-window.confirmMarkPaid = async(id,loanId,borrowerId,amt)=>{
-openConfirm("Mark this installment as paid?", async ()=>{
-  await updateDoc(doc(db,"installments",id),{
-    status:"completed"
+window.markPaid = (id, loanId, borrowerId, amt)=>{
+  openConfirm("Mark this installment as paid?", async ()=>{
+    await processPayment(id, loanId, borrowerId, amt);
+    showToast("Payment recorded successfully ✅");
   });
-
-  await addDoc(collection(db,"collections"),{
-    loanId,
-    borrowerId,
-    agentId:uid,
-    amount:amt,
-    type:"installment",
-    date:Date.now()
-  });
-
-  showToast("Payment recorded successfully ✅");
-});
-
-  await updateDoc(doc(db,"installments",id),{
-    status:"completed"
-  });
-
-  await addDoc(collection(db,"collections"),{
-    loanId,
-    borrowerId,
-    agentId:uid,
-    amount:amt,
-    type:"installment",
-    date:Date.now()
-  });
-
-  // 🔥 Auto complete loan if finished
-  const loanInstallments = state.installments.filter(i => i.loanId === loanId);
-
-  const allCompleted = loanInstallments.every(i =>
-    i.status === "completed" || i.id === id
-  );
-
-  if(allCompleted){
-    await updateDoc(doc(db,"loans",loanId),{
-      status:"completed"
-    });
-  }
-
-  alert("Payment recorded successfully ✅");
 };
+
+
 
 /* BORROWERS */
 function renderBorrowers(){
@@ -967,52 +929,13 @@ window.toggleInstallments = (loanId) => {
     renderGroup("Completed", completed, "#16a34a");
 };
 
-window.markPaid = async(id,loanId,borrowerId,amt)=>{
-
-openConfirm("Mark this installment as paid?", async ()=>{
-  await updateDoc(doc(db,"installments",id),{
-    status:"completed"
+window.confirmMarkPaid = (id, loanId, borrowerId, amt)=>{
+  openConfirm("Mark this installment as paid?", async ()=>{
+    await processPayment(id, loanId, borrowerId, amt);
+    showToast("Payment recorded successfully ✅");
   });
-
-  await addDoc(collection(db,"collections"),{
-    loanId,
-    borrowerId,
-    agentId:uid,
-    amount:amt,
-    type:"installment",
-    date:Date.now()
-  });
-
-  showToast("Payment recorded successfully ✅");
-});
-
-  await updateDoc(doc(db,"installments",id),{
-    status:"completed"
-  });
-
-  await addDoc(collection(db,"collections"),{
-    loanId,
-    borrowerId,
-    agentId:uid,
-    amount:amt,
-    type:"installment",
-    date:Date.now()
-  });
-
-  const loanInstallments = state.installments.filter(i => i.loanId === loanId);
-
-  const allCompleted = loanInstallments.every(i =>
-    i.status === "completed" || i.id === id
-  );
-
-  if(allCompleted){
-    await updateDoc(doc(db,"loans",loanId),{
-      status:"completed"
-    });
-  }
-
-  alert("Payment recorded successfully ✅");
 };
+
 
 /* CREATE LOAN */
 window.createLoanUI = () => {
@@ -1142,6 +1065,37 @@ function handleOutsideClick(e){
 }
 
 
+/* ========================
+MARK PAID 
+======================== */
+async function processPayment(id, loanId, borrowerId, amt){
+
+  await updateDoc(doc(db,"installments",id),{
+    status:"completed"
+  });
+
+  await addDoc(collection(db,"collections"),{
+    loanId,
+    borrowerId,
+    agentId:uid,
+    amount:amt,
+    type:"installment",
+    date:Date.now()
+  });
+
+  const loanInstallments = state.installments.filter(i => i.loanId === loanId);
+
+  const allCompleted = loanInstallments.every(i =>
+    i.status === "completed" || i.id === id
+  );
+
+  if(allCompleted){
+    await updateDoc(doc(db,"loans",loanId),{
+      status:"completed"
+    });
+  }
+
+}
 /* ========================
    REAL SWIPE ONLY ENGINE
 ======================== */
