@@ -960,59 +960,49 @@ function handleOutsideClick(e){
 
 
 /* ========================
-   ADVANCED SWIPE ENGINE
+   REAL SWIPE ONLY ENGINE
 ======================== */
 
 let startX = 0;
 let startY = 0;
-let currentX = 0;
-let isSwiping = false;
-
-const swipeBar = document.getElementById("swipeBar");
+let endX = 0;
+let endY = 0;
 
 document.addEventListener("touchstart", e=>{
   startX = e.touches[0].clientX;
   startY = e.touches[0].clientY;
-  isSwiping = true;
 });
 
-document.addEventListener("touchmove", e=>{
-  if(!isSwiping) return;
+document.addEventListener("touchend", e=>{
+  endX = e.changedTouches[0].clientX;
+  endY = e.changedTouches[0].clientY;
 
-  currentX = e.touches[0].clientX;
+  const diffX = endX - startX;
+  const diffY = endY - startY;
 
-  const diffX = currentX - startX;
-  const diffY = e.touches[0].clientY - startY;
+  const horizontalDistance = Math.abs(diffX);
+  const verticalDistance = Math.abs(diffY);
 
-  // If vertical scroll is bigger, cancel swipe
-  if(Math.abs(diffY) > Math.abs(diffX)){
-    isSwiping = false;
-    swipeBar.style.width = "0%";
-    return;
-  }
+  const MIN_SWIPE_DISTANCE = 120;  // require large swipe
+  const MAX_VERTICAL_ALLOW = 50;   // prevent diagonal/scroll trigger
 
-  let percent = Math.min(Math.abs(diffX)/window.innerWidth*100,100);
-  swipeBar.style.width = percent+"%";
-});
+  // ✅ Only trigger if it's a strong horizontal swipe
+  if(
+    horizontalDistance > MIN_SWIPE_DISTANCE &&
+    verticalDistance < MAX_VERTICAL_ALLOW
+  ){
 
-document.addEventListener("touchend", ()=>{
-  if(!isSwiping) return;
+    // Swipe Left
+    if(diffX < 0){
+      if(currentView === "dashboard") showBorrowers();
+    }
 
-  isSwiping = false;
-  swipeBar.style.width = "0%";
+    // Swipe Right
+    if(diffX > 0){
+      if(currentView === "borrowers") showDashboard();
+      else if(currentView === "profile") showBorrowers();
+    }
 
-  const diff = currentX - startX;
-  const threshold = 100;
-
-  if(navigator.vibrate) navigator.vibrate(25);
-
-  if(diff < -threshold){
-    if(currentView === "dashboard") showBorrowers();
-  }
-
-  if(diff > threshold){
-    if(currentView === "borrowers") showDashboard();
-    else if(currentView === "profile") showBorrowers();
   }
 });
 
