@@ -6,7 +6,7 @@
 <meta name="viewport" 
 content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
 
-<link rel="stylesheet" href="css/styles.css?v=17.1">
+<link rel="stylesheet" href="css/styles.css?v=17.2">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#4f46e5">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
@@ -1224,7 +1224,7 @@ window.logout=async()=>{
    DARK MODE SYSTEM
 ========================= */
 
-function toggleTheme(){
+window.toggleTheme = function(){
 
   document.body.classList.toggle("dark-mode");
 
@@ -1232,19 +1232,27 @@ function toggleTheme(){
 
   localStorage.setItem("theme", isDark ? "dark" : "light");
 
-  document.getElementById("themeToggle").innerText = 
-    isDark ? "☀️" : "🌙";
-}
+  const btn = document.getElementById("themeToggle");
+  if(btn){
+    btn.innerText = isDark ? "☀️" : "🌙";
+  }
+};
 
-/* Load saved theme */
-(function(){
+/* Load saved theme safely */
+window.addEventListener("DOMContentLoaded", function(){
+
   const saved = localStorage.getItem("theme");
+  const btn = document.getElementById("themeToggle");
 
   if(saved === "dark"){
     document.body.classList.add("dark-mode");
-    document.getElementById("themeToggle").innerText = "☀️";
+    if(btn) btn.innerText = "☀️";
+  } else{
+    if(btn) btn.innerText = "🌙";
   }
-})();
+
+});
+
 </script>
 
 <div class="bottom-nav">
