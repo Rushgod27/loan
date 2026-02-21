@@ -335,9 +335,16 @@ window.showAddBorrower = () => {
     <div class="card">
       <h3>Add New Borrower</h3>
 
-      <input id="newName" placeholder="Full Name"><br><br>
-      <input id="newPhone" placeholder="Phone Number"><br><br>
+      <input id="newName" placeholder="Full Name" 
+       pattern="[A-Za-z ]+" 
+       inputmode="text" />
 
+<br><br>
+
+<input id="newPhone" placeholder="Phone Number" 
+       maxlength="10" 
+       inputmode="numeric" />
+      
       <button class="btn btn-success"
               onclick="createBorrower()">
         Save Borrower
@@ -348,14 +355,37 @@ window.showAddBorrower = () => {
 
 window.createBorrower = async () => {
 
-  const name = document.getElementById("newName").value.trim();
-  const phone = document.getElementById("newPhone").value.trim();
+  const nameInput = document.getElementById("newName");
+  const phoneInput = document.getElementById("newPhone");
 
-  if(!name || !phone){
-    alert("All fields required");
+  const name = nameInput.value.trim();
+  const phone = phoneInput.value.trim();
+
+  // 🔒 Name: letters and spaces only
+  const nameRegex = /^[A-Za-z ]+$/;
+
+  if (!nameRegex.test(name)) {
+    alert("Name should contain letters only.");
     return;
   }
 
+  // 🔒 Phone: exactly 10 digits
+  const phoneRegex = /^[0-9]{10}$/;
+
+  if (!phoneRegex.test(phone)) {
+    alert("Phone number must be exactly 10 digits.");
+    return;
+  }
+
+  // 🔍 Duplicate Check
+  const existing = state.borrowers.find(b => b.phone === phone);
+
+  if (existing) {
+    alert(`This number already exists under name: ${existing.name}`);
+    return;
+  }
+
+  // ✅ Save borrower
   await addDoc(collection(db,"borrowers"),{
     name,
     nameLower: name.toLowerCase(),
@@ -366,7 +396,8 @@ window.createBorrower = async () => {
 
   alert("Borrower Added Successfully ✅");
 
-  document.getElementById("addBorrowerBox").innerHTML="";
+  nameInput.value = "";
+  phoneInput.value = "";
 };
 
 function renderBorrowerList(list){
