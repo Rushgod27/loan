@@ -596,22 +596,6 @@ body.dark-mode #fileName{
   padding:30px 20px 130px;
 }
 
-
-.pages-wrapper{
-  display:flex;
-  width:300%;
-  height:calc(100vh - 110px);
-  will-change:transform;
-  touch-action:pan-y;
-}
-
-.page{
-  width:100vw;
-  flex-shrink:0;
-  overflow-y:auto;
-  -webkit-overflow-scrolling:touch;
-}
-
 /* =============================
 dark theme 
 ============================= */
