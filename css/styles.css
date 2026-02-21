@@ -28,6 +28,9 @@
   --radius-xl:32px;
   --radius-lg:24px;
   --radius-md:18px;
+  
+  --input-bg:#f1f5f9;
+  --input-border:#e2e8f0;
 
   --transition:cubic-bezier(.4,0,.2,1);
 }
@@ -253,12 +256,17 @@ input,
 select{
   width:100%;
   padding:16px;
-  border:none;
   border-radius:var(--radius-lg);
   font-size:15px;
   margin-bottom:18px;
-  background:#f1f5f9;
+  background:var(--input-bg);
+  color:var(--text);
+  border:1px solid var(--input-border);
   transition:.3s var(--transition);
+}
+
+input::placeholder{
+  color:var(--muted);
 }
 
 input:focus{
@@ -618,9 +626,17 @@ body.dark-mode{
   --text:#f1f5f9;
   --muted:#94a3b8;
   --nav:rgba(17,24,39,0.95);
+  --input-bg:#243042;
+  --input-border:rgba(255,255,255,0.08);
 }
 
 /* ===== DARK MODE SOFT BUTTONS ===== */
+
+
+body.dark-mode input:focus{
+  background:#2c3a4f;
+  box-shadow:0 0 0 2px rgba(99,102,241,0.4);
+}
 
 body.dark-mode .btn{
   background:rgba(255,255,255,0.06);
