@@ -277,8 +277,9 @@ window.confirmReminder = (waLink)=>{
 window.confirmMarkPaid = async(id,loanId,borrowerId,amt)=>{
   if(!confirm("Mark this installment as paid?")) return;
 
-  await updateDoc(doc(db,"installments",id),
-    {status:"completed"});
+  await updateDoc(doc(db,"installments",id),{
+    status:"completed"
+  });
 
   await addDoc(collection(db,"collections"),{
     loanId,
@@ -289,9 +290,21 @@ window.confirmMarkPaid = async(id,loanId,borrowerId,amt)=>{
     date:Date.now()
   });
 
-  alert("Payment recorded successfully");
-};
+  // 🔥 Auto complete loan if finished
+  const loanInstallments = state.installments.filter(i => i.loanId === loanId);
 
+  const allCompleted = loanInstallments.every(i =>
+    i.status === "completed" || i.id === id
+  );
+
+  if(allCompleted){
+    await updateDoc(doc(db,"loans",loanId),{
+      status:"completed"
+    });
+  }
+
+  alert("Payment recorded successfully ✅");
+};
 
 /* BORROWERS */
 function renderBorrowers(){
@@ -770,6 +783,39 @@ window.toggleInstallments = (loanId) => {
 
     return h;
   }
+  
+  window.markPaid = async(id,loanId,borrowerId,amt)=>{
+
+  if(!confirm("Mark this installment as paid?")) return;
+
+  await updateDoc(doc(db,"installments",id),{
+    status:"completed"
+  });
+
+  await addDoc(collection(db,"collections"),{
+    loanId,
+    borrowerId,
+    agentId:uid,
+    amount:amt,
+    type:"installment",
+    date:Date.now()
+  });
+
+  // 🔥 Auto complete loan if finished
+  const loanInstallments = state.installments.filter(i => i.loanId === loanId);
+
+  const allCompleted = loanInstallments.every(i =>
+    i.status === "completed" || i.id === id
+  );
+
+  if(allCompleted){
+    await updateDoc(doc(db,"loans",loanId),{
+      status:"completed"
+    });
+  }
+
+  alert("Payment recorded successfully ✅");
+};
 
   box.innerHTML =
     renderGroup("Due Today", dueToday, "#f59e0b") +
