@@ -133,6 +133,12 @@ function refresh(){
   if(currentView==="profile" && currentProfileId){
     renderProfile(currentProfileId);
   }
+  
+  setTimeout(()=>{
+  animateCounters();
+  renderSparkline();
+  renderPieChart(activeLoans, completedLoans);
+},50);
 
 }
 
@@ -175,6 +181,48 @@ function renderDashboard(){
 
   const today = new Date();
   today.setHours(0,0,0,0);
+  
+  /* =====================
+   KPI CALCULATIONS
+===================== */
+
+const activeBorrowers = state.borrowers.filter(b =>
+  state.loans.some(l => l.borrowerId === b.id && l.status === "active")
+).length;
+
+const completedLoans = state.loans.filter(l=>l.status==="completed").length;
+const activeLoans = state.loans.filter(l=>l.status==="active").length;
+
+let todayCollection = 0;
+let dueCount = 0;
+let overdueCount = 0;
+let next7Days = 0;
+
+const nextWeek = new Date(today.getTime() + 7*86400000);
+
+state.collections.forEach(c=>{
+  const d = new Date(c.date);
+  d.setHours(0,0,0,0);
+  if(d.getTime()===today.getTime()){
+    todayCollection += c.amount;
+  }
+});
+
+state.installments.forEach(i=>{
+  if(i.status!=="pending") return;
+
+  const due = new Date(i.dueDate);
+  due.setHours(0,0,0,0);
+
+  if(due.getTime()===today.getTime()) dueCount++;
+  if(due < today) overdueCount++;
+
+  if(due > today && due <= nextWeek) next7Days++;
+});
+
+
+
+
 
   let overviewHTML = "";
   let dueHTML = "";
@@ -193,36 +241,57 @@ function renderDashboard(){
   });
 
 overviewHTML = `
-  <div class="welcome-hero">
-    
-    <div class="welcome-left">
-      <div class="welcome-text">
-        Hi, ${agentName} 👋
-      </div>
-      <div class="welcome-sub">
-        Here's your performance today
-      </div>
+<div class="dashboard-top">
+
+  <div class="hero-card">
+    <div class="hero-text">
+      Hi ${agentName} 👋
+      <div class="hero-sub">Here's your 7-day performance</div>
+    </div>
+    <svg id="sparklineChart"></svg>
+  </div>
+
+  <div class="kpi-grid">
+
+    <div class="kpi-card kpi-blue">
+      <div class="kpi-number counter" data-count="${activeBorrowers}">0</div>
+      <div class="kpi-label">Active Borrowers</div>
     </div>
 
-    <div class="welcome-kpis">
-      <div class="kpi-box">
-        <div class="kpi-value">${state.borrowers.length}</div>
-        <div class="kpi-label">Borrowers</div>
-      </div>
+    <div class="kpi-card kpi-purple">
+      <div class="kpi-number counter" data-count="${activeLoans}">0</div>
+      <div class="kpi-label">Active Loans</div>
+    </div>
 
-      <div class="kpi-box">
-        <div class="kpi-value">${activeLoans}</div>
-        <div class="kpi-label">Active Loans</div>
-      </div>
+    <div class="kpi-card kpi-green">
+      <div class="kpi-number counter" data-count="${todayCollection}">0</div>
+      <div class="kpi-label">Today Collection</div>
+    </div>
 
-      <div class="kpi-box">
-        <div class="kpi-value">₹${todayCollection}</div>
-        <div class="kpi-label">Today's Collection</div>
-      </div>
+    <div class="kpi-card kpi-teal">
+      <div class="kpi-number counter" data-count="${next7Days}">0</div>
+      <div class="kpi-label">Next 7 Days</div>
+    </div>
+
+    <div class="kpi-card kpi-orange">
+      <div class="kpi-number counter" data-count="${dueCount}">0</div>
+      <div class="kpi-label">Due Today</div>
+    </div>
+
+    <div class="kpi-card kpi-red">
+      <div class="kpi-number counter" data-count="${overdueCount}">0</div>
+      <div class="kpi-label">Overdue</div>
     </div>
 
   </div>
+
+  <div class="chart-section">
+    <canvas id="loanPie" width="200" height="200"></canvas>
+  </div>
+
+</div>
 `;
+
 
   /* ===== INSTALLMENTS LOOP ===== */
   state.installments.forEach(inst =>{
@@ -1083,6 +1152,94 @@ function handleLoanOutsideClick(e){
   }
 }
 
+function animateCounters(){
+
+  document.querySelectorAll(".counter").forEach(el=>{
+
+    const target = +el.getAttribute("data-count");
+    let count = 0;
+
+    const step = Math.ceil(target / 40);
+
+    const interval = setInterval(()=>{
+      count += step;
+      if(count >= target){
+        el.innerText = target;
+        clearInterval(interval);
+      } else{
+        el.innerText = count;
+      }
+    },15);
+
+  });
+}
+
+function renderSparkline(){
+
+  const svg = document.getElementById("sparklineChart");
+  if(!svg) return;
+
+  svg.innerHTML = "";
+  svg.setAttribute("viewBox","0 0 200 60");
+
+  const points = [];
+
+  for(let i=6;i>=0;i--){
+    const day = new Date(Date.now() - i*86400000);
+    day.setHours(0,0,0,0);
+
+    const total = state.collections
+      .filter(c=>{
+        const d = new Date(c.date);
+        d.setHours(0,0,0,0);
+        return d.getTime()===day.getTime();
+      })
+      .reduce((s,c)=>s+c.amount,0);
+
+    points.push(total);
+  }
+
+  const max = Math.max(...points,1);
+
+  const coords = points.map((v,i)=>{
+    const x = i*(200/6);
+    const y = 60 - (v/max)*50;
+    return `${x},${y}`;
+  }).join(" ");
+
+  const poly = document.createElementNS("http://www.w3.org/2000/svg","polyline");
+  poly.setAttribute("points",coords);
+  poly.setAttribute("fill","none");
+  poly.setAttribute("stroke","#ffffff");
+  poly.setAttribute("stroke-width","3");
+
+  svg.appendChild(poly);
+}
+
+function renderPieChart(active, completed){
+
+  const canvas = document.getElementById("loanPie");
+  if(!canvas) return;
+
+  const ctx = canvas.getContext("2d");
+  const total = active+completed;
+
+  const activeAngle = (active/total)*2*Math.PI;
+
+  ctx.clearRect(0,0,200,200);
+
+  ctx.beginPath();
+  ctx.moveTo(100,100);
+  ctx.fillStyle="#6366f1";
+  ctx.arc(100,100,80,0,activeAngle);
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.moveTo(100,100);
+  ctx.fillStyle="#10b981";
+  ctx.arc(100,100,80,activeAngle,2*Math.PI);
+  ctx.fill();
+}
 
 
 /* LOGOUT */
