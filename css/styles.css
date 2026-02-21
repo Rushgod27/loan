@@ -551,6 +551,10 @@ button:hover,
   display: none !important;
 }
 
+.bottom-nav{
+  display:none !important;
+}
+
 /* ======================================================
    MOBILE
 ====================================================== */
