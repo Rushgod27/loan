@@ -652,7 +652,13 @@ html += renderLoanGroup("Completed Loans", completedLoans, true);
 html += `
   <div class="card" id="documentsSectionCard">
     <h3>Documents</h3>
-    <input type="file" id="docInput" multiple>
+<div class="file-upload">
+  <label for="docInput" class="file-label">
+    📄 Choose Files
+  </label>
+  <span id="fileName">No files selected</span>
+  <input type="file" id="docInput" multiple hidden>
+</div>
     <div id="docList"></div>
   </div>
 `;
@@ -666,6 +672,19 @@ html += `
   const photoInput = document.getElementById("photoInput");
   const profileImg = document.getElementById("profileImg");
   const docInput = document.getElementById("docInput");
+
+const fileNameText = document.getElementById("fileName");
+
+docInput.addEventListener("change", function(){
+  if(this.files.length === 0){
+    fileNameText.innerText = "No files selected";
+  } else if(this.files.length === 1){
+    fileNameText.innerText = this.files[0].name;
+  } else{
+    fileNameText.innerText = this.files.length + " files selected";
+  }
+});
+
 
   profileImg.onclick = () => photoInput.click();
 
