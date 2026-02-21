@@ -357,26 +357,28 @@ window.showAddBorrower = () => {
 
   const box = document.getElementById("addBorrowerBox");
 
-  // If already open → close it
+  // If open → close properly
   if(box.innerHTML.trim() !== ""){
     box.innerHTML = "";
+    document.removeEventListener("click", handleOutsideClick); // ✅ remove listener
     return;
   }
 
   box.innerHTML = `
     <div class="card" id="borrowerFormCard">
+
       <h3>Add New Borrower</h3>
 
-      <input id="newName" placeholder="Full Name" 
-       pattern="[A-Za-z ]+" 
-       inputmode="text" />
+      <input id="newName" placeholder="Full Name"
+        pattern="[A-Za-z ]+"
+        inputmode="text" />
 
       <br><br>
 
-      <input id="newPhone" placeholder="Phone Number" 
-       maxlength="10" 
-       inputmode="numeric" />
-      
+      <input id="newPhone" placeholder="Phone Number"
+        maxlength="10"
+        inputmode="numeric" />
+
       <br><br>
 
       <button class="btn btn-success"
@@ -386,11 +388,12 @@ window.showAddBorrower = () => {
     </div>
   `;
 
-  // 🔥 Delay adding outside click listener
-  setTimeout(() => {
+  // Delay to avoid immediate trigger
+  setTimeout(()=>{
     document.addEventListener("click", handleOutsideClick);
-  }, 50);
+  },50);
 };
+
 
 window.createBorrower = async () => {
 
@@ -862,26 +865,45 @@ window.markPaid = async(id,loanId,borrowerId,amt)=>{
 };
 
 /* CREATE LOAN */
-window.createLoanUI=()=>{
-  loanCreateBox.innerHTML=`
-    <input id="loanAmt" type="number" placeholder="Principal Amount"><br><br>
+window.createLoanUI = () => {
 
-    <input id="loanInterest" type="number" placeholder="Upfront Interest %"><br><br>
+  const box = document.getElementById("loanCreateBox");
 
-    <input id="loanCount" type="number" placeholder="Installments Count"><br><br>
+  // If already open → close
+  if(box.innerHTML.trim() !== ""){
+    box.innerHTML = "";
+    document.removeEventListener("click", handleLoanOutsideClick);
+    return;
+  }
 
-    <select id="loanInterval">
-      <option value="">Select Interval</option>
-      <option value="7">7 Days</option>
-      <option value="15">15 Days</option>
-      <option value="30">30 Days</option>
-    </select><br><br>
+  box.innerHTML = `
+    <div class="card" id="loanFormCard">
 
-    <input type="date" id="loanStart"><br><br>
+      <input id="loanAmt" type="number" placeholder="Principal Amount"><br><br>
 
-    <button class="btn btn-primary" onclick="createLoan()">Create Loan</button>
+      <input id="loanInterest" type="number" placeholder="Upfront Interest %"><br><br>
+
+      <input id="loanCount" type="number" placeholder="Installments Count"><br><br>
+
+      <select id="loanInterval">
+        <option value="">Select Interval</option>
+        <option value="7">7 Days</option>
+        <option value="15">15 Days</option>
+        <option value="30">30 Days</option>
+      </select><br><br>
+
+      <input type="date" id="loanStart"><br><br>
+
+      <button class="btn btn-primary" onclick="createLoan()">Create Loan</button>
+    </div>
   `;
+
+  // Delay to prevent immediate close
+  setTimeout(()=>{
+    document.addEventListener("click", handleLoanOutsideClick);
+  },50);
 };
+
 
 window.createLoan = async () => {
 
@@ -958,8 +980,8 @@ Proceed?
 
 function handleOutsideClick(e){
 
-  const box = document.getElementById("addBorrowerBox");
   const formCard = document.getElementById("borrowerFormCard");
+  const box = document.getElementById("addBorrowerBox");
 
   if(!formCard) return;
 
@@ -1016,6 +1038,21 @@ document.addEventListener("touchend", e=>{
 
   }
 });
+
+
+function handleLoanOutsideClick(e){
+
+  const box = document.getElementById("loanCreateBox");
+  const form = document.getElementById("loanFormCard");
+
+  if(!form) return;
+
+  if(!form.contains(e.target)){
+    box.innerHTML = "";
+    document.removeEventListener("click", handleLoanOutsideClick);
+  }
+}
+
 
 
 /* LOGOUT */
