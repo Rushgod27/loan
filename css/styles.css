@@ -268,13 +268,13 @@ input:focus{
 }
 
 /* ======================================================
-   BUTTON SYSTEM – PREMIUM VERSION
+   BUTTON SYSTEM – SOFT GLASS STYLE
 ====================================================== */
 
 .btn{
   padding:14px 22px;
   border-radius:999px;
-  border:none;
+  border:1px solid transparent;
   font-weight:500;
   font-size:14px;
   cursor:pointer;
@@ -284,42 +284,53 @@ input:focus{
   justify-content:center;
   align-items:center;
   gap:6px;
-  box-shadow:0 6px 18px rgba(0,0,0,0.08);
+  background:#f1f5f9;
 }
 
+/* PRIMARY */
 .btn-primary{
-  background:linear-gradient(135deg,#6366f1,#4f46e5);
-  color:white;
+  background:#eef2ff;
+  color:#4f46e5;
+  border-color:#e0e7ff;
 }
 
+/* SUCCESS */
 .btn-success{
-  background:linear-gradient(135deg,#22c55e,#16a34a);
-  color:white;
+  background:#dcfce7;
+  color:#16a34a;
+  border-color:#bbf7d0;
 }
 
+/* WARNING */
 .btn-warning{
-  background:linear-gradient(135deg,#fbbf24,#f59e0b);
-  color:white;
+  background:#fef3c7;
+  color:#d97706;
+  border-color:#fde68a;
 }
 
+/* INFO */
 .btn-info{
-  background:linear-gradient(135deg,#3b82f6,#2563eb);
-  color:white;
+  background:#dbeafe;
+  color:#2563eb;
+  border-color:#bfdbfe;
 }
 
+/* DANGER */
 .btn-danger{
-  background:linear-gradient(135deg,#ef4444,#dc2626);
-  color:white;
+  background:#fee2e2;
+  color:#dc2626;
+  border-color:#fecaca;
 }
 
+/* Hover */
 .btn:hover{
-  transform:translateY(-3px);
-  box-shadow:0 12px 22px rgba(0,0,0,0.15);
+  transform:translateY(-2px);
+  filter:brightness(.98);
 }
 
+/* Active */
 .btn:active{
   transform:scale(.97);
-  box-shadow:none;
 }
 
 /* ======================================================
@@ -553,24 +564,37 @@ body{
 
 /* ===== DARK MODE ===== */
 
-body.dark-mode{
-  --bg:linear-gradient(180deg,#0f172a 0%, #111827 100%);
-  --card:#1e293b;
-  --text:#f1f5f9;
-  --muted:#94a3b8;
-  --nav:rgba(17,24,39,0.95);
-}
-
-body.dark-mode .inst-card{
-  background:#243042;
-}
+/* ===== DARK MODE SOFT BUTTONS ===== */
 
 body.dark-mode .btn{
+  background:rgba(255,255,255,0.06);
+  border:1px solid rgba(255,255,255,0.08);
   box-shadow:none;
 }
 
+/* PRIMARY */
 body.dark-mode .btn-primary{
-  background:linear-gradient(135deg,#7c83ff,#6366f1);
+  color:#818cf8;
+}
+
+/* SUCCESS */
+body.dark-mode .btn-success{
+  color:#4ade80;
+}
+
+/* WARNING */
+body.dark-mode .btn-warning{
+  color:#fbbf24;
+}
+
+/* INFO */
+body.dark-mode .btn-info{
+  color:#60a5fa;
+}
+
+/* DANGER */
+body.dark-mode .btn-danger{
+  color:#f87171;
 }
 
 /* Header */
