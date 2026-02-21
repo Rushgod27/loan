@@ -471,7 +471,9 @@ function renderProfile(id){
   let html=`
   <div class="card">
     <div style="text-align:center">
-      <img id="profileImg" src="${photo}" class="profile-big">
+<div class="profile-photo-wrapper">
+  <img id="profileImg" src="${photo}">
+</div>
       <input type="file" id="photoInput" accept="image/*" hidden>
     </div>
 
