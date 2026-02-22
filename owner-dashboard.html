@@ -5,18 +5,19 @@
 <title>Owner Dashboard</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="stylesheet" href="css/styles.css">
-  <link rel="manifest" href="manifest.json">
+<link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#4f46e5">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
+
 <body>
 
 <div class="header">Owner Dashboard</div>
 
 <div class="container">
 
-<!-- 🔐 INVITE CODE -->
+<!-- INVITE CODE -->
 <div class="card">
   <h3>Your Agent Invite Code</h3>
   <div id="ownerCodeBox" class="code-box">Loading...</div>
@@ -37,22 +38,42 @@
     <input type="date" id="endDate">
     <select id="agentFilter"></select>
     <button onclick="applyFilter()">Apply</button>
+    <button onclick="clearFilter()">Reset</button>
   </div>
 </div>
 
-<!-- OVERVIEW -->
+<!-- KPI SECTION -->
 <div class="card">
-  <h3>Overview</h3>
-  <div>Total Loan: ₹ <span class="stat" id="totalLoan">0</span></div>
-  <div>Total Collection: ₹ <span class="stat" id="totalCollection">0</span></div>
-  <div>Outstanding: ₹ <span class="stat" id="outstanding">0</span></div>
-  <div>Top Agent: <span class="stat" id="topAgent">-</span></div>
+<h3>Performance KPIs</h3>
+<div class="grid">
+
+<div>Total Loan<br>₹ <span class="stat" id="kpiTotalLoan">0</span></div>
+<div>Total Collection<br>₹ <span class="stat" id="kpiTotalCollection">0</span></div>
+<div>Outstanding<br>₹ <span class="stat" id="kpiOutstanding">0</span></div>
+<div>Collection %<br><span class="stat" id="kpiPercent">0%</span></div>
+
+<div>This Year<br>₹ <span class="stat" id="kpiYear">0</span></div>
+<div>This Month<br>₹ <span class="stat" id="kpiMonth">0</span></div>
+<div>Today<br>₹ <span class="stat" id="kpiToday">0</span></div>
+<div>Total Due<br>₹ <span class="stat" id="kpiDue">0</span></div>
+
+<div>Top Collector<br><span class="stat" id="kpiTopAgent">-</span></div>
+<div>Total Agents<br><span class="stat" id="kpiTotalAgents">0</span></div>
+<div>Total Borrowers<br><span class="stat" id="kpiBorrowers">0</span></div>
+
+</div>
 </div>
 
 <!-- CHART -->
 <div class="card">
   <h3>Agent Performance</h3>
   <canvas id="agentChart"></canvas>
+</div>
+
+<!-- AGENT DETAILS -->
+<div class="card">
+  <h3>Agents & Borrowers</h3>
+  <div id="agentDetailsSection"></div>
 </div>
 
 <!-- DUE -->
@@ -74,293 +95,273 @@
 <script type="module">
 
 import { auth, db } from "./js/firebase.js";
-import { onAuthStateChanged, signOut } 
+import { onAuthStateChanged, signOut }
 from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 import {
-  collection, query, where, getDocs,
-  onSnapshot, updateDoc, deleteDoc,
-  doc, getDoc, serverTimestamp, deleteField
+collection, query, where, getDocs,
+onSnapshot, updateDoc, deleteDoc,
+doc, getDoc, serverTimestamp, deleteField
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 let ownerId=null;
 let agentsMap={};
 let chart;
 
-/* ================= AUTH ================= */
-
+/* AUTH */
 onAuthStateChanged(auth, async(user)=>{
-  if(!user){ location.href="index.html"; return; }
+if(!user){ location.href="index.html"; return; }
 
-  const snap = await getDoc(doc(db,"users",user.uid));
+const snap = await getDoc(doc(db,"users",user.uid));
+if(!snap.exists() || snap.data().role!=="owner"){
+await signOut(auth);
+location.href="index.html";
+return;
+}
 
-  if(!snap.exists() || snap.data().role!=="owner"){
-    await signOut(auth);
-    location.href="index.html";
-    return;
-  }
-
-  ownerId = user.uid;
-
-  await loadInviteCode();
-  listenAgentRequests();
-  await loadAgents();
-  setupRealtimeAnalytics();
+ownerId=user.uid;
+await loadInviteCode();
+listenAgentRequests();
+await loadAgents();
+setupRealtimeAnalytics();
 });
 
+/* LOGOUT */
 window.logoutUser = async()=>{
-
-  await signOut(auth);
-
-  // 🔥 Tell login page we just logged out
-  sessionStorage.setItem("justLoggedOut", "true");
-
-  // 🔥 Prevent back button restoring dashboard
-  window.location.replace("index.html");
+await signOut(auth);
+window.location.replace("index.html");
 };
 
-/* ================= INVITE CODE SYSTEM ================= */
-
+/* INVITE CODE */
 async function loadInviteCode(){
-
-  const ref=doc(db,"users",ownerId);
-  const snap=await getDoc(ref);
-
-  let code=snap.data().inviteCode;
-
-  if(!code){
-    code=generateCode("OWN");
-    await updateDoc(ref,{inviteCode:code});
-  }
-
-  document.getElementById("ownerCodeBox").innerText=code;
+const ref=doc(db,"users",ownerId);
+const snap=await getDoc(ref);
+let code=snap.data().inviteCode;
+if(!code){
+code="OWN"+Math.floor(100000+Math.random()*900000);
+await updateDoc(ref,{inviteCode:code});
+}
+ownerCodeBox.innerText=code;
 }
 
-window.regenerateCode = async()=>{
-
-  const newCode=generateCode("OWN");
-
-  await updateDoc(doc(db,"users",ownerId),{
-    inviteCode:newCode
-  });
-
-  document.getElementById("ownerCodeBox").innerText=newCode;
+window.regenerateCode=async()=>{
+const code="OWN"+Math.floor(100000+Math.random()*900000);
+await updateDoc(doc(db,"users",ownerId),{inviteCode:code});
+ownerCodeBox.innerText=code;
 };
 
-function generateCode(prefix){
-  const random=Math.floor(100000+Math.random()*900000);
-  return prefix+random;
-}
-
-/* ================= AGENT REQUESTS ================= */
-
+/* AGENT REQUESTS */
 function listenAgentRequests(){
+const q=query(collection(db,"users"),
+where("role","==","pending"),
+where("requestedRole","==","agent"),
+where("requestedTo","==",ownerId));
 
-  const q=query(
-    collection(db,"users"),
-    where("role","==","pending"),
-    where("requestedRole","==","agent"),
-    where("requestedTo","==",ownerId)
-  );
-
-  onSnapshot(q,(snap)=>{
-    const box=document.getElementById("agentRequests");
-    box.innerHTML="";
-
-    if(snap.empty){
-      box.innerHTML="<p>No agent requests</p>";
-      return;
-    }
-
-    snap.forEach(d=>{
-      const data=d.data();
-
-      box.innerHTML+=`
-      <div class="card-row">
-        <strong>${data.name}</strong><br>
-        ${data.email}
-        <br><br>
-        <button class="approve"
-          onclick="approveAgent('${d.id}')">
-          Approve
-        </button>
-        <button class="reject"
-          onclick="rejectAgent('${d.id}')">
-          Reject
-        </button>
-      </div>`;
-    });
-  });
+onSnapshot(q,snap=>{
+agentRequests.innerHTML="";
+if(snap.empty){agentRequests.innerHTML="<p>No agent requests</p>";return;}
+snap.forEach(d=>{
+const data=d.data();
+agentRequests.innerHTML+=`
+<div class="card-row">
+<strong>${data.name}</strong><br>${data.email}<br><br>
+<button onclick="approveAgent('${d.id}')">Approve</button>
+<button onclick="rejectAgent('${d.id}')">Reject</button>
+</div>`;
+});
+});
 }
 
 window.approveAgent=async(id)=>{
-  await updateDoc(doc(db,"users",id),{
-    role:"agent",
-    approvedBy:ownerId,
-    approvedAt:serverTimestamp(),
-    requestedRole:deleteField(),
-    requestedTo:deleteField()
-  });
+await updateDoc(doc(db,"users",id),{
+role:"agent",
+approvedBy:ownerId,
+approvedAt:serverTimestamp(),
+requestedRole:deleteField(),
+requestedTo:deleteField()
+});
 };
 
 window.rejectAgent=async(id)=>{
-  if(!confirm("Reject this agent request?"))return;
-  await deleteDoc(doc(db,"users",id));
+await deleteDoc(doc(db,"users",id));
 };
 
-/* ================= LOAD AGENTS ================= */
-
+/* LOAD AGENTS */
 async function loadAgents(){
+const snap=await getDocs(query(collection(db,"users"),
+where("role","==","agent"),
+where("approvedBy","==",ownerId)));
 
-  const snap=await getDocs(query(
-    collection(db,"users"),
-    where("role","==","agent"),
-    where("approvedBy","==",ownerId)
-  ));
+agentFilter.innerHTML=`<option value="all">All Agents</option>`;
+agentsMap={};
 
-  const select=document.getElementById("agentFilter");
-  select.innerHTML=`<option value="all">All Agents</option>`;
-  agentsMap={};
-
-  snap.forEach(d=>{
-    agentsMap[d.id]=d.data().name;
-    select.innerHTML+=
-      `<option value="${d.id}">${d.data().name}</option>`;
-  });
+snap.forEach(d=>{
+agentsMap[d.id]=d.data().name;
+agentFilter.innerHTML+=`<option value="${d.id}">${d.data().name}</option>`;
+});
 }
 
-/* ================= REALTIME ANALYTICS ================= */
-
+/* REALTIME */
 function setupRealtimeAnalytics(){
-
-  onSnapshot(query(collection(db,"loans"),
-  where("ownerId","==",ownerId)),()=>processData());
-
-  onSnapshot(query(collection(db,"collections"),
-  where("ownerId","==",ownerId)),()=>processData());
-
-  onSnapshot(query(collection(db,"installments"),
-  where("ownerId","==",ownerId)),()=>processData());
+onSnapshot(query(collection(db,"loans"),
+where("ownerId","==",ownerId)),()=>processData());
+onSnapshot(query(collection(db,"collections"),
+where("ownerId","==",ownerId)),()=>processData());
+onSnapshot(query(collection(db,"installments"),
+where("ownerId","==",ownerId)),()=>processData());
 }
 
+/* FILTER */
 window.applyFilter=()=>processData();
+window.clearFilter=()=>{
+startDate.value="";
+endDate.value="";
+agentFilter.value="all";
+processData();
+};
 
-/* ================= PROCESS DATA ================= */
-
+/* PROCESS DATA */
 async function processData(){
 
-  const start=document.getElementById("startDate").value;
-  const end=document.getElementById("endDate").value;
-  const agentFilter=document.getElementById("agentFilter").value||"all";
+const start=startDate.value;
+const end=endDate.value;
+const agent=agentFilter.value||"all";
 
-  const startTime=start?new Date(start).getTime():null;
-  const endTime=end?new Date(end).setHours(23,59,59,999):null;
+const startTime=start?new Date(start+"T00:00:00").getTime():null;
+const endTime=end?new Date(end+"T23:59:59").getTime():null;
 
-  const loanSnap=await getDocs(query(
-    collection(db,"loans"),
-    where("ownerId","==",ownerId)
-  ));
+const now=new Date();
+const yearStart=new Date(now.getFullYear(),0,1).getTime();
+const monthStart=new Date(now.getFullYear(),now.getMonth(),1).getTime();
+const todayStart=new Date(now.getFullYear(),now.getMonth(),now.getDate()).getTime();
 
-  let totalLoan=0;
+let totalLoan=0,totalCollection=0;
+let yearCollection=0,monthCollection=0,todayCollection=0;
+let totalDue=0;
+let agentPerf={};
+let borrowersSet=new Set();
 
-  loanSnap.forEach(d=>{
-    const data=d.data();
-    if(agentFilter!=="all" && data.agentId!==agentFilter) return;
-    if(startTime && data.createdAt<startTime) return;
-    if(endTime && data.createdAt>endTime) return;
-    totalLoan+=data.principal||0;
-  });
+/* LOANS */
+const loanSnap=await getDocs(query(collection(db,"loans"),
+where("ownerId","==",ownerId)));
 
-  const colSnap=await getDocs(query(
-    collection(db,"collections"),
-    where("ownerId","==",ownerId)
-  ));
+loanSnap.forEach(d=>{
+const data=d.data();
+if(agent!=="all"&&data.agentId!==agent)return;
+if(startTime&&data.createdAt<startTime)return;
+if(endTime&&data.createdAt>endTime)return;
+totalLoan+=data.principal||0;
+});
 
-  let totalCollection=0;
-  let agentPerf={};
+/* COLLECTIONS */
+const colSnap=await getDocs(query(collection(db,"collections"),
+where("ownerId","==",ownerId)));
 
-  colSnap.forEach(d=>{
-    const data=d.data();
-    if(agentFilter!=="all" && data.agentId!==agentFilter) return;
-    if(startTime && data.date<startTime) return;
-    if(endTime && data.date>endTime) return;
+colSnap.forEach(d=>{
+const data=d.data();
+if(agent!=="all"&&data.agentId!==agent)return;
+if(startTime&&data.date<startTime)return;
+if(endTime&&data.date>endTime)return;
 
-    totalCollection+=data.amount||0;
+totalCollection+=data.amount||0;
 
-    if(!agentPerf[data.agentId]) agentPerf[data.agentId]=0;
-    agentPerf[data.agentId]+=data.amount;
-  });
+if(data.date>=yearStart)yearCollection+=data.amount||0;
+if(data.date>=monthStart)monthCollection+=data.amount||0;
+if(data.date>=todayStart)todayCollection+=data.amount||0;
 
-  document.getElementById("totalLoan").innerText=totalLoan;
-  document.getElementById("totalCollection").innerText=totalCollection;
-  document.getElementById("outstanding")
-    .innerText=totalLoan-totalCollection;
+if(!agentPerf[data.agentId])agentPerf[data.agentId]=0;
+agentPerf[data.agentId]+=data.amount||0;
+});
 
-  let top="-",max=0;
-  Object.keys(agentPerf).forEach(a=>{
-    if(agentPerf[a]>max){
-      max=agentPerf[a];
-      top=agentsMap[a]||"-";
-    }
-  });
+/* INSTALLMENTS */
+const instSnap=await getDocs(query(collection(db,"installments"),
+where("ownerId","==",ownerId),
+where("status","==","pending")));
 
-  document.getElementById("topAgent").innerText=top;
+const today=new Date();
+today.setHours(0,0,0,0);
 
-  if(chart) chart.destroy();
+dueToday.innerHTML="";
+overdue.innerHTML="";
 
-  chart=new Chart(document.getElementById("agentChart"),{
-    type:"bar",
-    data:{
-      labels:Object.keys(agentPerf)
-        .map(a=>agentsMap[a]||"Agent"),
-      datasets:[{
-        label:"Collection",
-        data:Object.values(agentPerf)
-      }]
-    }
-  });
+instSnap.forEach(d=>{
+const data=d.data();
+if(agent!=="all"&&data.agentId!==agent)return;
 
-  /* DUE + OVERDUE */
+if(startTime&&data.dueDate<startTime)return;
+if(endTime&&data.dueDate>endTime)return;
 
-  const instSnap=await getDocs(query(
-    collection(db,"installments"),
-    where("ownerId","==",ownerId),
-    where("status","==","pending")
-  ));
+const dueDate=new Date(data.dueDate);
+dueDate.setHours(0,0,0,0);
 
-  const today=new Date();
-  today.setHours(0,0,0,0);
+if(dueDate>=today)totalDue+=data.amount||0;
 
-  dueToday.innerHTML="";
-  overdue.innerHTML="";
+if(dueDate.getTime()===today.getTime()){
+dueToday.innerHTML+=`<div class="success-box">₹${data.amount}</div>`;
+}
+if(dueDate<today){
+overdue.innerHTML+=`<div class="alert-box">₹${data.amount}</div>`;
+}
+});
 
-  instSnap.forEach(d=>{
-    const data=d.data();
-    const dueDate=new Date(data.dueDate);
-    dueDate.setHours(0,0,0,0);
+/* BORROWERS */
+const borrowerSnap=await getDocs(query(collection(db,"borrowers"),
+where("ownerId","==",ownerId)));
 
-    if(agentFilter!=="all" && data.agentId!==agentFilter) return;
+const agentBorrowers={};
+borrowerSnap.forEach(d=>{
+const data=d.data();
+if(agent!=="all"&&data.agentId!==agent)return;
+borrowersSet.add(d.id);
+if(!agentBorrowers[data.agentId])agentBorrowers[data.agentId]=[];
+agentBorrowers[data.agentId].push(data.name);
+});
 
-    if(dueDate.getTime()===today.getTime()){
-      dueToday.innerHTML+=
-        `<div class="success-box">₹${data.amount}</div>`;
-    }
+/* UPDATE KPIs */
+const outstanding=totalLoan-totalCollection;
+const percent=totalLoan?((totalCollection/totalLoan)*100).toFixed(1):0;
 
-    if(dueDate<today){
-      overdue.innerHTML+=
-        `<div class="alert-box">₹${data.amount}</div>`;
-    }
-  });
+kpiTotalLoan.innerText=totalLoan;
+kpiTotalCollection.innerText=totalCollection;
+kpiOutstanding.innerText=outstanding;
+kpiPercent.innerText=percent+"%";
+
+kpiYear.innerText=yearCollection;
+kpiMonth.innerText=monthCollection;
+kpiToday.innerText=todayCollection;
+kpiDue.innerText=totalDue;
+
+let top="-",max=0;
+Object.keys(agentPerf).forEach(a=>{
+if(agentPerf[a]>max){max=agentPerf[a];top=agentsMap[a]||"-";}
+});
+
+kpiTopAgent.innerText=top;
+kpiTotalAgents.innerText=Object.keys(agentsMap).length;
+kpiBorrowers.innerText=borrowersSet.size;
+
+/* CHART */
+if(chart)chart.destroy();
+chart=new Chart(agentChart,{
+type:"bar",
+data:{
+labels:Object.keys(agentPerf).map(a=>agentsMap[a]||"Agent"),
+datasets:[{label:"Collection",data:Object.values(agentPerf)}]
+}
+});
+
+/* AGENT DETAILS */
+agentDetailsSection.innerHTML="";
+Object.keys(agentBorrowers).forEach(a=>{
+agentDetailsSection.innerHTML+=`
+<div class="card-row">
+<strong>${agentsMap[a]||"Agent"}</strong><br>
+Borrowers: ${agentBorrowers[a].join(", ")}
+</div>`;
+});
 
 }
 
-if("serviceWorker" in navigator){
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/sw.js")
-      .then(() => console.log("PWA Ready"))
-      .catch(err => console.log("SW Error", err));
-  });
-}
 </script>
 </body>
 </html>
