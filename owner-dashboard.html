@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <title>Owner Dashboard</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="css/styles.css">
 <link rel="stylesheet" href="css/owner.css">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#4f46e5">
@@ -14,9 +13,9 @@
 
 <body>
 
-<div class="header owner-header">
+<div class="owner-header">
   <span>Owner Dashboard 👑</span>
-  <button id="themeToggle" onclick="toggleTheme()">🌙</button>
+  <button id="themeToggle">🌙</button>
 </div>
 
 <div class="container">
@@ -25,70 +24,63 @@
 <div class="owner-hero">
   <div>
     <div class="owner-hero-title">Welcome Back 👑</div>
-    <div class="owner-hero-sub">Here’s your business overview</div>
+    <div class="owner-hero-sub">Here's your complete performance overview</div>
   </div>
-</div>
-
-<!-- INVITE -->
-<div class="card">
-  <h3>Your Agent Invite Code</h3>
-  <div id="ownerCodeBox" class="code-box">Loading...</div>
-  <button onclick="regenerateCode()">Regenerate Code</button>
 </div>
 
 <!-- FILTER -->
 <div class="card">
   <h3>Filters</h3>
-  <div class="grid">
+  <div class="filter-grid">
     <input type="date" id="startDate">
     <input type="date" id="endDate">
     <select id="agentFilter"></select>
-    <button onclick="applyFilter()">Apply</button>
-    <button onclick="clearFilter()">Reset</button>
+    <button id="applyFilterBtn">Apply</button>
+    <button id="clearFilterBtn">Reset</button>
   </div>
 </div>
 
 <!-- KPI -->
 <div class="owner-kpi-grid">
 
-  <div class="owner-kpi owner-blue">
-    <div class="owner-kpi-number" id="kpiTotalLoan">0</div>
-    <div class="owner-kpi-label">Total Loan</div>
+  <div class="owner-kpi blue">
+    <div class="kpi-number" id="kpiTotalLoan">0</div>
+    <div class="kpi-label">Total Loan</div>
   </div>
 
-  <div class="owner-kpi owner-purple">
-    <div class="owner-kpi-number" id="kpiTotalCollection">0</div>
-    <div class="owner-kpi-label">Total Collection</div>
+  <div class="owner-kpi purple">
+    <div class="kpi-number" id="kpiTotalCollection">0</div>
+    <div class="kpi-label">Total Collection</div>
   </div>
 
-  <div class="owner-kpi owner-green">
-    <div class="owner-kpi-number" id="kpiOutstanding">0</div>
-    <div class="owner-kpi-label">Outstanding</div>
+  <div class="owner-kpi green">
+    <div class="kpi-number" id="kpiOutstanding">0</div>
+    <div class="kpi-label">Outstanding</div>
   </div>
 
-  <div class="owner-kpi owner-orange">
-    <div class="owner-kpi-number" id="kpiPercent">0%</div>
-    <div class="owner-kpi-label">Collection %</div>
+  <div class="owner-kpi orange">
+    <div class="kpi-number" id="kpiPercent">0%</div>
+    <div class="kpi-label">Collection %</div>
   </div>
 
-  <div class="owner-kpi owner-teal">
-    <div class="owner-kpi-number" id="kpiYear">0</div>
-    <div class="owner-kpi-label">This Year</div>
+  <div class="owner-kpi teal">
+    <div class="kpi-number" id="kpiYear">0</div>
+    <div class="kpi-label">This Year</div>
   </div>
 
-  <div class="owner-kpi owner-indigo">
-    <div class="owner-kpi-number" id="kpiMonth">0</div>
-    <div class="owner-kpi-label">This Month</div>
+  <div class="owner-kpi indigo">
+    <div class="kpi-number" id="kpiMonth">0</div>
+    <div class="kpi-label">This Month</div>
   </div>
 
-  <div class="owner-kpi owner-yellow">
-    <div class="owner-kpi-number" id="kpiToday">0</div>
-    <div class="owner-kpi-label">Today</div>
+  <div class="owner-kpi yellow">
+    <div class="kpi-number" id="kpiToday">0</div>
+    <div class="kpi-label">Today</div>
   </div>
 
-  <div class="owner-kpi owner-red">
-    <div class="owner-kpi-number" id="kpiDue">0</div>
-    <div class="owner-kpi-label">Total Due</div>
+  <div class="owner-kpi red">
+    <div class="kpi-number" id="kpiDue">0</div>
+    <div class="kpi-label">Total Due</div>
   </div>
 
 </div>
@@ -117,165 +109,159 @@
   <div id="overdue"></div>
 </div>
 
-<button class="logout" onclick="logoutUser()">Logout</button>
+<button class="logout" id="logoutBtn">Logout</button>
 
 </div>
 
 <script type="module">
 
 import { auth, db } from "./js/firebase.js";
-import { onAuthStateChanged, signOut }
+import { onAuthStateChanged, signOut } 
 from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
-import {
-collection, query, where, getDocs,
-doc, getDoc
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { collection, query, where, getDocs, doc, getDoc } 
+from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 let ownerId=null;
-let agentsMap={};
 let chart;
+let agentsMap={};
+
+const agentFilter=document.getElementById("agentFilter");
 
 onAuthStateChanged(auth, async(user)=>{
- if(!user){ location.href="index.html"; return; }
+  if(!user){ location.href="index.html"; return; }
 
- const snap = await getDoc(doc(db,"users",user.uid));
- if(!snap.exists() || snap.data().role!=="owner"){
-  await signOut(auth);
-  location.href="index.html";
-  return;
- }
+  const snap=await getDoc(doc(db,"users",user.uid));
+  if(!snap.exists()||snap.data().role!=="owner"){
+    await signOut(auth);
+    location.href="index.html";
+    return;
+  }
 
- ownerId=user.uid;
- await loadAgents();
- processData();
+  ownerId=user.uid;
+  await loadAgents();
+  processData();
 });
 
-window.logoutUser = async()=>{
- await signOut(auth);
- window.location.replace("index.html");
+document.getElementById("logoutBtn").onclick=async()=>{
+  await signOut(auth);
+  location.href="index.html";
+};
+
+document.getElementById("applyFilterBtn").onclick=processData;
+
+document.getElementById("clearFilterBtn").onclick=()=>{
+  startDate.value="";
+  endDate.value="";
+  agentFilter.value="all";
+  processData();
 };
 
 async function loadAgents(){
- const snap=await getDocs(query(collection(db,"users"),
-  where("role","==","agent"),
-  where("approvedBy","==",ownerId)));
+  const snap=await getDocs(query(collection(db,"users"),
+   where("role","==","agent"),
+   where("approvedBy","==",ownerId)));
 
- agentFilter.innerHTML=`<option value="all">All Agents</option>`;
- agentsMap={};
-
- snap.forEach(d=>{
-  agentsMap[d.id]=d.data().name;
-  agentFilter.innerHTML+=`<option value="${d.id}">${d.data().name}</option>`;
- });
+  agentFilter.innerHTML=`<option value="all">All Agents</option>`;
+  snap.forEach(d=>{
+    agentsMap[d.id]=d.data().name;
+    agentFilter.innerHTML+=`<option value="${d.id}">${d.data().name}</option>`;
+  });
 }
-
-window.applyFilter=()=>processData();
-window.clearFilter=()=>{
- startDate.value="";
- endDate.value="";
- agentFilter.value="all";
- processData();
-};
 
 async function processData(){
 
- const agent=agentFilter.value||"all";
+  const agent=agentFilter.value||"all";
+  let totalLoan=0,totalCollection=0,totalDue=0;
+  let agentPerf={};
+  let borrowerHtml="";
 
- let totalLoan=0,totalCollection=0,totalDue=0;
- let borrowersHtml="";
- let agentPerf={};
+  const loanSnap=await getDocs(query(collection(db,"loans"),
+   where("ownerId","==",ownerId)));
 
- const loanSnap=await getDocs(query(collection(db,"loans"),
-  where("ownerId","==",ownerId)));
+  loanSnap.forEach(d=>{
+    const data=d.data();
+    if(agent!=="all"&&data.agentId!==agent)return;
+    totalLoan+=data.principal||0;
+  });
 
- loanSnap.forEach(d=>{
-  const data=d.data();
-  if(agent!=="all"&&data.agentId!==agent)return;
-  totalLoan+=data.principal||0;
- });
+  const colSnap=await getDocs(query(collection(db,"collections"),
+   where("ownerId","==",ownerId)));
 
- const colSnap=await getDocs(query(collection(db,"collections"),
-  where("ownerId","==",ownerId)));
+  colSnap.forEach(d=>{
+    const data=d.data();
+    if(agent!=="all"&&data.agentId!==agent)return;
+    totalCollection+=data.amount||0;
+    if(!agentPerf[data.agentId])agentPerf[data.agentId]=0;
+    agentPerf[data.agentId]+=data.amount||0;
+  });
 
- colSnap.forEach(d=>{
-  const data=d.data();
-  if(agent!=="all"&&data.agentId!==agent)return;
-  totalCollection+=data.amount||0;
+  const instSnap=await getDocs(query(collection(db,"installments"),
+   where("ownerId","==",ownerId)));
 
-  if(!agentPerf[data.agentId])agentPerf[data.agentId]=0;
-  agentPerf[data.agentId]+=data.amount||0;
- });
+  const today=new Date(); today.setHours(0,0,0,0);
+  dueToday.innerHTML="";
+  overdue.innerHTML="";
 
- const instSnap=await getDocs(query(collection(db,"installments"),
-  where("ownerId","==",ownerId)));
+  instSnap.forEach(d=>{
+    const data=d.data();
+    if(agent!=="all"&&data.agentId!==agent)return;
+    if(data.status==="pending"){
+      const due=new Date(data.dueDate);
+      due.setHours(0,0,0,0);
+      if(due>=today)totalDue+=data.amount||0;
+      if(due.getTime()===today.getTime())
+        dueToday.innerHTML+=`<div class="success-box">₹${data.amount}</div>`;
+      if(due<today)
+        overdue.innerHTML+=`<div class="alert-box">₹${data.amount}</div>`;
+    }
+  });
 
- const today=new Date(); today.setHours(0,0,0,0);
- dueToday.innerHTML=""; overdue.innerHTML="";
+  const borrowerSnap=await getDocs(query(collection(db,"borrowers"),
+   where("ownerId","==",ownerId)));
 
- instSnap.forEach(d=>{
-  const data=d.data();
-  if(agent!=="all"&&data.agentId!==agent)return;
+  borrowerSnap.forEach(d=>{
+    const data=d.data();
+    if(agent!=="all"&&data.agentId!==agent)return;
+    borrowerHtml+=`<div class="borrower-item">${data.name}</div>`;
+  });
 
-  const dueDate=new Date(data.dueDate);
-  dueDate.setHours(0,0,0,0);
+  document.getElementById("borrowersSection").innerHTML=
+    borrowerHtml||"No borrowers found";
 
-  if(data.status==="pending"){
-   if(dueDate>=today) totalDue+=data.amount||0;
+  const outstanding=totalLoan-totalCollection;
+  const percent=totalLoan?((totalCollection/totalLoan)*100).toFixed(1):0;
 
-   if(dueDate.getTime()===today.getTime()){
-    dueToday.innerHTML+=`<div class="success-box">₹${data.amount}</div>`;
-   }
-   if(dueDate<today){
-    overdue.innerHTML+=`<div class="alert-box">₹${data.amount}</div>`;
-   }
-  }
- });
+  kpiTotalLoan.innerText=totalLoan;
+  kpiTotalCollection.innerText=totalCollection;
+  kpiOutstanding.innerText=outstanding;
+  kpiPercent.innerText=percent+"%";
+  kpiDue.innerText=totalDue;
 
- const borrowerSnap=await getDocs(query(collection(db,"borrowers"),
-  where("ownerId","==",ownerId)));
-
- borrowerSnap.forEach(d=>{
-  const data=d.data();
-  if(agent!=="all"&&data.agentId!==agent)return;
-  borrowersHtml+=`<div class="card-row">${data.name}</div>`;
- });
-
- borrowersSection.innerHTML=borrowersHtml||"No borrowers found";
-
- const outstanding=totalLoan-totalCollection;
- const percent=totalLoan?((totalCollection/totalLoan)*100).toFixed(1):0;
-
- kpiTotalLoan.innerText=totalLoan;
- kpiTotalCollection.innerText=totalCollection;
- kpiOutstanding.innerText=outstanding;
- kpiPercent.innerText=percent+"%";
- kpiDue.innerText=totalDue;
-
- if(chart)chart.destroy();
- chart=new Chart(agentChart,{
-  type:"bar",
-  data:{
-   labels:Object.keys(agentPerf).map(a=>agentsMap[a]||"Agent"),
-   datasets:[{label:"Collection",data:Object.values(agentPerf)}]
-  }
- });
+  if(chart)chart.destroy();
+  chart=new Chart(agentChart,{
+    type:"bar",
+    data:{
+      labels:Object.keys(agentPerf).map(a=>agentsMap[a]||"Agent"),
+      datasets:[{label:"Collection",data:Object.values(agentPerf)}]
+    }
+  });
 }
 
 /* DARK MODE */
-window.toggleTheme=function(){
- document.body.classList.toggle("owner-dark");
- const isDark=document.body.classList.contains("owner-dark");
- localStorage.setItem("ownerTheme",isDark?"dark":"light");
- document.getElementById("themeToggle").innerText=isDark?"☀️":"🌙";
+const toggle=document.getElementById("themeToggle");
+
+toggle.onclick=()=>{
+  document.body.classList.toggle("owner-dark");
+  const isDark=document.body.classList.contains("owner-dark");
+  localStorage.setItem("ownerTheme",isDark?"dark":"light");
+  toggle.innerText=isDark?"☀️":"🌙";
 };
 
-window.addEventListener("DOMContentLoaded",()=>{
- if(localStorage.getItem("ownerTheme")==="dark"){
+if(localStorage.getItem("ownerTheme")==="dark"){
   document.body.classList.add("owner-dark");
-  document.getElementById("themeToggle").innerText="☀️";
- }
-});
+  toggle.innerText="☀️";
+}
 
 </script>
 </body>
