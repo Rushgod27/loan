@@ -969,14 +969,15 @@ window.createLoanUI = () => {
        pattern="[0-9]*"
        placeholder="Installments Count">
       
-      <select id="loanInterval">
-        <option value="">Select Interval</option>
-        <option value="7">7 Days</option>
-        <option value="15">15 Days</option>
-        <option value="30">30 Days</option>
-      </select><br><br>
+<select id="loanInterval">
+  <option value="">Select Interval</option>
+  <option value="1">1 Day</option>
+  <option value="7">7 Days</option>
+  <option value="15">15 Days</option>
+  <option value="30">30 Days</option>
+</select>
 
-      <input type="date" id="loanStart"><br><br>
+      <input type="date" id="loanStart">
 
       <button class="btn btn-primary" onclick="createLoan()">Create Loan</button>
     </div>
