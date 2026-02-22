@@ -947,10 +947,18 @@ window.createLoanUI = () => {
 
 <input id="loanAmt" type="text" inputmode="numeric" placeholder="Principal Amount">
 
-      <input id="loanInterest" type="number" placeholder="Upfront Interest %"><br><br>
+<input id="loanInterest"
+       type="text"
+       inputmode="numeric"
+       pattern="[0-9]*"
+       placeholder="Upfront Interest %">
 
-      <input id="loanCount" type="number" placeholder="Installments Count"><br><br>
-
+<input id="loanCount"
+       type="text"
+       inputmode="numeric"
+       pattern="[0-9]*"
+       placeholder="Installments Count">
+      
       <select id="loanInterval">
         <option value="">Select Interval</option>
         <option value="7">7 Days</option>
@@ -983,10 +991,25 @@ window.createLoan = async () => {
   const interval = Number(loanInterval.value);
   const start = loanStart.value;
 
-  if (!principal || !count || !interval || !start) {
-    showToast("All fields required ⚠️");
-    return;
-  }
+  if (!principal || !count || !interval || !start){
+  showToast("All fields required ⚠️");
+  return;
+}
+
+if (interest < 0 || interest > 100){
+  showToast("Interest must be between 0 and 100 ⚠️");
+  return;
+}
+
+if (count > 365){
+  showToast("Installments too high ⚠️");
+  return;
+}
+
+if (count < 1){
+  showToast("Installments must be at least 1 ⚠️");
+  return;
+}
 
   const startTime = new Date(start).getTime();
 
@@ -1097,8 +1120,8 @@ function formatNumberIndian(x){
 
 document.addEventListener("input", function(e){
 
+  // PRINCIPAL (Indian format)
   if(e.target.id === "loanAmt"){
-
     let value = e.target.value.replace(/\D/g,"");
 
     if(value === ""){
@@ -1109,9 +1132,31 @@ document.addEventListener("input", function(e){
     e.target.value = formatNumberIndian(value);
   }
 
+  // UPFRONT INTEREST
+  if(e.target.id === "loanInterest"){
+    let value = e.target.value.replace(/\D/g,"");
+
+    // Optional: cap interest to 100 automatically
+    if(Number(value) > 100){
+      value = "100";
+    }
+
+    e.target.value = value;
+  }
+
+  // INSTALLMENT COUNT
+  if(e.target.id === "loanCount"){
+    let value = e.target.value.replace(/\D/g,"");
+
+    // Optional hard cap to avoid crazy numbers
+    if(Number(value) > 365){
+      value = "365";
+    }
+
+    e.target.value = value;
+  }
+
 });
-
-
 
 function openLoanPreview(data, onConfirm){
 
@@ -1156,10 +1201,21 @@ function openLoanPreview(data, onConfirm){
 
   document.body.appendChild(modal);
 
-  document.getElementById("previewConfirmBtn").onclick = ()=>{
+  const confirmBtn = document.getElementById("previewConfirmBtn");
+
+confirmBtn.onclick = async ()=>{
+  try{
+    confirmBtn.disabled = true;
+    confirmBtn.innerText = "Creating...";
+    await onConfirm();
     modal.remove();
-    onConfirm();
-  };
+  }catch(err){
+    console.error(err);
+    showToast("Something went wrong ❌");
+    confirmBtn.disabled = false;
+    confirmBtn.innerText = "Confirm";
+  }
+};
 }
 
 /* ========================
@@ -1294,7 +1350,7 @@ function renderSparkline(){
     points.push(total);
   }
 
-  const max = Math.max(...points,1);
+const max = Math.max(1, ...points);
 
   const coords = points.map((v,i)=>{
     const x = i*(200/6);
