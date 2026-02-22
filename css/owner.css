@@ -1,232 +1,83 @@
-/* ==============================
-   OWNER DASHBOARD DESIGN SYSTEM
-============================== */
+/* ================= OWNER HERO ================= */
 
-body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  background: linear-gradient(135deg,#eef2ff,#f8fafc);
-  color: #111827;
-  transition: background .3s ease, color .3s ease;
-}
-
-/* ================= HEADER ================= */
-
-.owner-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 18px 20px;
-  font-size: 20px;
-  font-weight: 600;
-  background: white;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.05);
-}
-
-.owner-header button {
-  border: none;
-  background: #f3f4f6;
-  padding: 6px 12px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 16px;
-  transition: .2s ease;
-}
-
-.owner-header button:hover {
-  background: #e5e7eb;
-}
-
-/* ================= CONTAINER ================= */
-
-.container {
-  padding: 18px;
-  max-width: 1200px;
-  margin: auto;
-}
-
-/* ================= CARD ================= */
-
-.card {
-  background: white;
-  border-radius: 18px;
-  padding: 22px;
-  margin-bottom: 22px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.05);
-  transition: transform .2s ease;
-}
-
-.card:hover {
-  transform: translateY(-3px);
-}
-
-.card h3 {
-  margin-top: 0;
-  margin-bottom: 20px;
-}
-
-/* ================= KPI GRID FIX ================= */
-
-.card .grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
-}
-
-.card .grid > div {
-  background: linear-gradient(145deg,#ffffff,#f3f4f6);
-  padding: 16px;
-  border-radius: 14px;
-  box-shadow: 0 4px 14px rgba(0,0,0,0.05);
-  font-size: 14px;
-  color: #64748b;
-  transition: .2s ease;
-}
-
-.card .grid > div:hover {
-  transform: translateY(-2px);
-}
-
-/* KPI Number */
-.stat {
-  display: block;
-  margin-top: 8px;
-  font-size: 22px;
-  font-weight: 600;
-  color: #4f46e5;
-}
-
-/* ================= BUTTONS ================= */
-
-button {
-  border: none;
-  padding: 10px 14px;
-  border-radius: 10px;
-  cursor: pointer;
-  background: #4f46e5;
+.owner-hero{
+  background: linear-gradient(135deg,#6366f1,#4f46e5);
+  padding: 26px;
+  border-radius: 28px;
   color: white;
-  font-weight: 500;
-  transition: 0.2s;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:28px;
 }
 
-button:hover {
-  opacity: 0.9;
+.owner-hero-title{
+  font-size:20px;
+  font-weight:600;
 }
 
-button.logout {
-  background: #ef4444;
-  width: 100%;
-  margin-top: 25px;
+.owner-hero-sub{
+  font-size:14px;
+  opacity:.85;
 }
 
-.primary {
-  background: #4f46e5;
+/* ================= KPI GRID ================= */
+
+.owner-kpi-grid{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:16px;
+  margin-top:20px;
 }
 
-button.secondary {
-  background: #e5e7eb;
-  color: #111827;
+.owner-kpi{
+  padding:22px;
+  border-radius:24px;
+  color:white;
+  transition:.25s ease;
 }
 
-/* ================= INPUTS ================= */
-
-input,
-select {
-  padding: 10px;
-  border-radius: 8px;
-  border: 1px solid #e5e7eb;
-  background: white;
-  font-size: 14px;
+.owner-kpi:hover{
+  transform:translateY(-4px);
 }
 
-/* ================= INFO BOXES ================= */
-
-.success-box {
-  background: #dcfce7;
-  padding: 8px 12px;
-  border-radius: 8px;
-  margin: 6px 0;
-  font-size: 14px;
+.owner-kpi-number{
+  font-size:22px;
+  font-weight:600;
 }
 
-.alert-box {
-  background: #fee2e2;
-  padding: 8px 12px;
-  border-radius: 8px;
-  margin: 6px 0;
-  font-size: 14px;
+.owner-kpi-label{
+  font-size:14px;
+  margin-top:4px;
+  opacity:.9;
 }
 
-/* ================= LIST ROW ================= */
+/* ===== COLORS LIKE AGENT ===== */
 
-.card-row {
-  padding: 10px 0;
-  border-bottom: 1px solid #f1f5f9;
-}
+.owner-blue{ background:#3b82f6; }
+.owner-purple{ background:#6366f1; }
+.owner-green{ background:#10b981; }
+.owner-orange{ background:#f97316; }
+.owner-teal{ background:#14b8a6; }
+.owner-indigo{ background:#6366f1; }
+.owner-yellow{ background:#f59e0b; }
+.owner-red{ background:#ef4444; }
 
-/* ================= CHART FIX ================= */
+/* ================= BORROWER CARD ================= */
 
-canvas {
-  margin-top: 10px;
-}
-
-/* ================= MOBILE OPTIMIZATION ================= */
-
-@media (max-width: 768px) {
-  .card .grid {
-    grid-template-columns: 1fr;
-  }
+.borrower-card{
+  padding:16px;
+  border-radius:16px;
+  background:var(--card);
+  margin-bottom:12px;
 }
 
 /* ================= DARK MODE ================= */
 
-.owner-dark {
-  background: #0f172a;
-  color: #f1f5f9;
+.owner-dark .owner-hero{
+  background:linear-gradient(135deg,#4338ca,#312e81);
 }
 
-.owner-dark .owner-header {
-  background: #1e293b;
-  box-shadow: none;
-  color: #f1f5f9;
-}
-
-.owner-dark .card {
-  background: #1e293b;
-  box-shadow: none;
-}
-
-.owner-dark .card .grid > div {
-  background: linear-gradient(145deg,#1e293b,#0f172a);
-  box-shadow: none;
-  color: #94a3b8;
-}
-
-.owner-dark .stat {
-  color: #818cf8;
-}
-
-.owner-dark button {
-  background: #6366f1;
-}
-
-.owner-dark button.logout {
-  background: #dc2626;
-}
-
-.owner-dark input,
-.owner-dark select {
-  background: #0f172a;
-  border: 1px solid #334155;
-  color: white;
-}
-
-.owner-dark .success-box {
-  background: #14532d;
-  color: #bbf7d0;
-}
-
-.owner-dark .alert-box {
-  background: #7f1d1d;
-  color: #fecaca;
+.owner-dark .borrower-card{
+  background:#1e293b;
 }
