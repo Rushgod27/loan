@@ -14,26 +14,28 @@
 <body>
 
 <div class="header owner-header">
-  <span>Owner Dashboard</span>
+  <span>Owner Dashboard 👑</span>
   <button id="themeToggle" onclick="toggleTheme()">🌙</button>
 </div>
 
 <div class="container">
 
-<!-- INVITE CODE -->
+<!-- HERO -->
+<div class="owner-hero">
+  <div>
+    <div class="owner-hero-title">Welcome Back 👑</div>
+    <div class="owner-hero-sub">Here’s your business overview</div>
+  </div>
+</div>
+
+<!-- INVITE -->
 <div class="card">
   <h3>Your Agent Invite Code</h3>
   <div id="ownerCodeBox" class="code-box">Loading...</div>
-  <button class="primary" onclick="regenerateCode()">Regenerate Code</button>
+  <button onclick="regenerateCode()">Regenerate Code</button>
 </div>
 
-<!-- AGENT REQUESTS -->
-<div class="card">
-  <h3>Agent Requests</h3>
-  <div id="agentRequests"></div>
-</div>
-
-<!-- FILTERS -->
+<!-- FILTER -->
 <div class="card">
   <h3>Filters</h3>
   <div class="grid">
@@ -45,26 +47,49 @@
   </div>
 </div>
 
-<!-- KPI SECTION -->
-<div class="card">
-<h3>Performance KPIs</h3>
-<div class="grid">
+<!-- KPI -->
+<div class="owner-kpi-grid">
 
-<div>Total Loan<br>₹ <span class="stat" id="kpiTotalLoan">0</span></div>
-<div>Total Collection<br>₹ <span class="stat" id="kpiTotalCollection">0</span></div>
-<div>Outstanding<br>₹ <span class="stat" id="kpiOutstanding">0</span></div>
-<div>Collection %<br><span class="stat" id="kpiPercent">0%</span></div>
+  <div class="owner-kpi owner-blue">
+    <div class="owner-kpi-number" id="kpiTotalLoan">0</div>
+    <div class="owner-kpi-label">Total Loan</div>
+  </div>
 
-<div>This Year<br>₹ <span class="stat" id="kpiYear">0</span></div>
-<div>This Month<br>₹ <span class="stat" id="kpiMonth">0</span></div>
-<div>Today<br>₹ <span class="stat" id="kpiToday">0</span></div>
-<div>Total Due<br>₹ <span class="stat" id="kpiDue">0</span></div>
+  <div class="owner-kpi owner-purple">
+    <div class="owner-kpi-number" id="kpiTotalCollection">0</div>
+    <div class="owner-kpi-label">Total Collection</div>
+  </div>
 
-<div>Top Collector<br><span class="stat" id="kpiTopAgent">-</span></div>
-<div>Total Agents<br><span class="stat" id="kpiTotalAgents">0</span></div>
-<div>Total Borrowers<br><span class="stat" id="kpiBorrowers">0</span></div>
+  <div class="owner-kpi owner-green">
+    <div class="owner-kpi-number" id="kpiOutstanding">0</div>
+    <div class="owner-kpi-label">Outstanding</div>
+  </div>
 
-</div>
+  <div class="owner-kpi owner-orange">
+    <div class="owner-kpi-number" id="kpiPercent">0%</div>
+    <div class="owner-kpi-label">Collection %</div>
+  </div>
+
+  <div class="owner-kpi owner-teal">
+    <div class="owner-kpi-number" id="kpiYear">0</div>
+    <div class="owner-kpi-label">This Year</div>
+  </div>
+
+  <div class="owner-kpi owner-indigo">
+    <div class="owner-kpi-number" id="kpiMonth">0</div>
+    <div class="owner-kpi-label">This Month</div>
+  </div>
+
+  <div class="owner-kpi owner-yellow">
+    <div class="owner-kpi-number" id="kpiToday">0</div>
+    <div class="owner-kpi-label">Today</div>
+  </div>
+
+  <div class="owner-kpi owner-red">
+    <div class="owner-kpi-number" id="kpiDue">0</div>
+    <div class="owner-kpi-label">Total Due</div>
+  </div>
+
 </div>
 
 <!-- CHART -->
@@ -73,10 +98,10 @@
   <canvas id="agentChart"></canvas>
 </div>
 
-<!-- AGENT DETAILS -->
+<!-- BORROWERS -->
 <div class="card">
-  <h3>Agents & Borrowers</h3>
-  <div id="agentDetailsSection"></div>
+  <h3>Borrowers</h3>
+  <div id="borrowersSection"></div>
 </div>
 
 <!-- DUE -->
@@ -103,282 +128,152 @@ from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 import {
 collection, query, where, getDocs,
-onSnapshot, updateDoc, deleteDoc,
-doc, getDoc, serverTimestamp, deleteField
+doc, getDoc
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 let ownerId=null;
 let agentsMap={};
 let chart;
 
-/* AUTH */
 onAuthStateChanged(auth, async(user)=>{
-if(!user){ location.href="index.html"; return; }
+ if(!user){ location.href="index.html"; return; }
 
-const snap = await getDoc(doc(db,"users",user.uid));
-if(!snap.exists() || snap.data().role!=="owner"){
-await signOut(auth);
-location.href="index.html";
-return;
-}
+ const snap = await getDoc(doc(db,"users",user.uid));
+ if(!snap.exists() || snap.data().role!=="owner"){
+  await signOut(auth);
+  location.href="index.html";
+  return;
+ }
 
-ownerId=user.uid;
-await loadInviteCode();
-listenAgentRequests();
-await loadAgents();
-setupRealtimeAnalytics();
+ ownerId=user.uid;
+ await loadAgents();
+ processData();
 });
 
-/* LOGOUT */
 window.logoutUser = async()=>{
-await signOut(auth);
-window.location.replace("index.html");
+ await signOut(auth);
+ window.location.replace("index.html");
 };
 
-/* INVITE CODE */
-async function loadInviteCode(){
-const ref=doc(db,"users",ownerId);
-const snap=await getDoc(ref);
-let code=snap.data().inviteCode;
-if(!code){
-code="OWN"+Math.floor(100000+Math.random()*900000);
-await updateDoc(ref,{inviteCode:code});
-}
-ownerCodeBox.innerText=code;
-}
-
-window.regenerateCode=async()=>{
-const code="OWN"+Math.floor(100000+Math.random()*900000);
-await updateDoc(doc(db,"users",ownerId),{inviteCode:code});
-ownerCodeBox.innerText=code;
-};
-
-/* AGENT REQUESTS */
-function listenAgentRequests(){
-const q=query(collection(db,"users"),
-where("role","==","pending"),
-where("requestedRole","==","agent"),
-where("requestedTo","==",ownerId));
-
-onSnapshot(q,snap=>{
-agentRequests.innerHTML="";
-if(snap.empty){agentRequests.innerHTML="<p>No agent requests</p>";return;}
-snap.forEach(d=>{
-const data=d.data();
-agentRequests.innerHTML+=`
-<div class="card-row">
-<strong>${data.name}</strong><br>${data.email}<br><br>
-<button onclick="approveAgent('${d.id}')">Approve</button>
-<button onclick="rejectAgent('${d.id}')">Reject</button>
-</div>`;
-});
-});
-}
-
-window.approveAgent=async(id)=>{
-await updateDoc(doc(db,"users",id),{
-role:"agent",
-approvedBy:ownerId,
-approvedAt:serverTimestamp(),
-requestedRole:deleteField(),
-requestedTo:deleteField()
-});
-};
-
-window.rejectAgent=async(id)=>{
-await deleteDoc(doc(db,"users",id));
-};
-
-/* LOAD AGENTS */
 async function loadAgents(){
-const snap=await getDocs(query(collection(db,"users"),
-where("role","==","agent"),
-where("approvedBy","==",ownerId)));
+ const snap=await getDocs(query(collection(db,"users"),
+  where("role","==","agent"),
+  where("approvedBy","==",ownerId)));
 
-agentFilter.innerHTML=`<option value="all">All Agents</option>`;
-agentsMap={};
+ agentFilter.innerHTML=`<option value="all">All Agents</option>`;
+ agentsMap={};
 
-snap.forEach(d=>{
-agentsMap[d.id]=d.data().name;
-agentFilter.innerHTML+=`<option value="${d.id}">${d.data().name}</option>`;
-});
+ snap.forEach(d=>{
+  agentsMap[d.id]=d.data().name;
+  agentFilter.innerHTML+=`<option value="${d.id}">${d.data().name}</option>`;
+ });
 }
 
-/* REALTIME */
-function setupRealtimeAnalytics(){
-onSnapshot(query(collection(db,"loans"),
-where("ownerId","==",ownerId)),()=>processData());
-onSnapshot(query(collection(db,"collections"),
-where("ownerId","==",ownerId)),()=>processData());
-onSnapshot(query(collection(db,"installments"),
-where("ownerId","==",ownerId)),()=>processData());
-}
-
-/* FILTER */
 window.applyFilter=()=>processData();
 window.clearFilter=()=>{
-startDate.value="";
-endDate.value="";
-agentFilter.value="all";
-processData();
+ startDate.value="";
+ endDate.value="";
+ agentFilter.value="all";
+ processData();
 };
 
-/* PROCESS DATA */
 async function processData(){
 
-const start=startDate.value;
-const end=endDate.value;
-const agent=agentFilter.value||"all";
+ const agent=agentFilter.value||"all";
 
-const startTime=start?new Date(start+"T00:00:00").getTime():null;
-const endTime=end?new Date(end+"T23:59:59").getTime():null;
+ let totalLoan=0,totalCollection=0,totalDue=0;
+ let borrowersHtml="";
+ let agentPerf={};
 
-const now=new Date();
-const yearStart=new Date(now.getFullYear(),0,1).getTime();
-const monthStart=new Date(now.getFullYear(),now.getMonth(),1).getTime();
-const todayStart=new Date(now.getFullYear(),now.getMonth(),now.getDate()).getTime();
+ const loanSnap=await getDocs(query(collection(db,"loans"),
+  where("ownerId","==",ownerId)));
 
-let totalLoan=0,totalCollection=0;
-let yearCollection=0,monthCollection=0,todayCollection=0;
-let totalDue=0;
-let agentPerf={};
-let borrowersSet=new Set();
+ loanSnap.forEach(d=>{
+  const data=d.data();
+  if(agent!=="all"&&data.agentId!==agent)return;
+  totalLoan+=data.principal||0;
+ });
 
-/* LOANS */
-const loanSnap=await getDocs(query(collection(db,"loans"),
-where("ownerId","==",ownerId)));
+ const colSnap=await getDocs(query(collection(db,"collections"),
+  where("ownerId","==",ownerId)));
 
-loanSnap.forEach(d=>{
-const data=d.data();
-if(agent!=="all"&&data.agentId!==agent)return;
-if(startTime&&data.createdAt<startTime)return;
-if(endTime&&data.createdAt>endTime)return;
-totalLoan+=data.principal||0;
-});
+ colSnap.forEach(d=>{
+  const data=d.data();
+  if(agent!=="all"&&data.agentId!==agent)return;
+  totalCollection+=data.amount||0;
 
-/* COLLECTIONS */
-const colSnap=await getDocs(query(collection(db,"collections"),
-where("ownerId","==",ownerId)));
+  if(!agentPerf[data.agentId])agentPerf[data.agentId]=0;
+  agentPerf[data.agentId]+=data.amount||0;
+ });
 
-colSnap.forEach(d=>{
-const data=d.data();
-if(agent!=="all"&&data.agentId!==agent)return;
-if(startTime&&data.date<startTime)return;
-if(endTime&&data.date>endTime)return;
+ const instSnap=await getDocs(query(collection(db,"installments"),
+  where("ownerId","==",ownerId)));
 
-totalCollection+=data.amount||0;
+ const today=new Date(); today.setHours(0,0,0,0);
+ dueToday.innerHTML=""; overdue.innerHTML="";
 
-if(data.date>=yearStart)yearCollection+=data.amount||0;
-if(data.date>=monthStart)monthCollection+=data.amount||0;
-if(data.date>=todayStart)todayCollection+=data.amount||0;
+ instSnap.forEach(d=>{
+  const data=d.data();
+  if(agent!=="all"&&data.agentId!==agent)return;
 
-if(!agentPerf[data.agentId])agentPerf[data.agentId]=0;
-agentPerf[data.agentId]+=data.amount||0;
-});
+  const dueDate=new Date(data.dueDate);
+  dueDate.setHours(0,0,0,0);
 
-/* INSTALLMENTS */
-const instSnap=await getDocs(query(collection(db,"installments"),
-where("ownerId","==",ownerId),
-where("status","==","pending")));
+  if(data.status==="pending"){
+   if(dueDate>=today) totalDue+=data.amount||0;
 
-const today=new Date();
-today.setHours(0,0,0,0);
+   if(dueDate.getTime()===today.getTime()){
+    dueToday.innerHTML+=`<div class="success-box">₹${data.amount}</div>`;
+   }
+   if(dueDate<today){
+    overdue.innerHTML+=`<div class="alert-box">₹${data.amount}</div>`;
+   }
+  }
+ });
 
-dueToday.innerHTML="";
-overdue.innerHTML="";
+ const borrowerSnap=await getDocs(query(collection(db,"borrowers"),
+  where("ownerId","==",ownerId)));
 
-instSnap.forEach(d=>{
-const data=d.data();
-if(agent!=="all"&&data.agentId!==agent)return;
+ borrowerSnap.forEach(d=>{
+  const data=d.data();
+  if(agent!=="all"&&data.agentId!==agent)return;
+  borrowersHtml+=`<div class="card-row">${data.name}</div>`;
+ });
 
-if(startTime&&data.dueDate<startTime)return;
-if(endTime&&data.dueDate>endTime)return;
+ borrowersSection.innerHTML=borrowersHtml||"No borrowers found";
 
-const dueDate=new Date(data.dueDate);
-dueDate.setHours(0,0,0,0);
+ const outstanding=totalLoan-totalCollection;
+ const percent=totalLoan?((totalCollection/totalLoan)*100).toFixed(1):0;
 
-if(dueDate>=today)totalDue+=data.amount||0;
+ kpiTotalLoan.innerText=totalLoan;
+ kpiTotalCollection.innerText=totalCollection;
+ kpiOutstanding.innerText=outstanding;
+ kpiPercent.innerText=percent+"%";
+ kpiDue.innerText=totalDue;
 
-if(dueDate.getTime()===today.getTime()){
-dueToday.innerHTML+=`<div class="success-box">₹${data.amount}</div>`;
-}
-if(dueDate<today){
-overdue.innerHTML+=`<div class="alert-box">₹${data.amount}</div>`;
-}
-});
-
-/* BORROWERS */
-const borrowerSnap=await getDocs(query(collection(db,"borrowers"),
-where("ownerId","==",ownerId)));
-
-const agentBorrowers={};
-borrowerSnap.forEach(d=>{
-const data=d.data();
-if(agent!=="all"&&data.agentId!==agent)return;
-borrowersSet.add(d.id);
-if(!agentBorrowers[data.agentId])agentBorrowers[data.agentId]=[];
-agentBorrowers[data.agentId].push(data.name);
-});
-
-/* UPDATE KPIs */
-const outstanding=totalLoan-totalCollection;
-const percent=totalLoan?((totalCollection/totalLoan)*100).toFixed(1):0;
-
-kpiTotalLoan.innerText=totalLoan;
-kpiTotalCollection.innerText=totalCollection;
-kpiOutstanding.innerText=outstanding;
-kpiPercent.innerText=percent+"%";
-
-kpiYear.innerText=yearCollection;
-kpiMonth.innerText=monthCollection;
-kpiToday.innerText=todayCollection;
-kpiDue.innerText=totalDue;
-
-let top="-",max=0;
-Object.keys(agentPerf).forEach(a=>{
-if(agentPerf[a]>max){max=agentPerf[a];top=agentsMap[a]||"-";}
-});
-
-kpiTopAgent.innerText=top;
-kpiTotalAgents.innerText=Object.keys(agentsMap).length;
-kpiBorrowers.innerText=borrowersSet.size;
-
-/* CHART */
-if(chart)chart.destroy();
-chart=new Chart(agentChart,{
-type:"bar",
-data:{
-labels:Object.keys(agentPerf).map(a=>agentsMap[a]||"Agent"),
-datasets:[{label:"Collection",data:Object.values(agentPerf)}]
-}
-});
-
-/* AGENT DETAILS */
-agentDetailsSection.innerHTML="";
-Object.keys(agentBorrowers).forEach(a=>{
-agentDetailsSection.innerHTML+=`
-<div class="card-row">
-<strong>${agentsMap[a]||"Agent"}</strong><br>
-Borrowers: ${agentBorrowers[a].join(", ")}
-</div>`;
-});
-
+ if(chart)chart.destroy();
+ chart=new Chart(agentChart,{
+  type:"bar",
+  data:{
+   labels:Object.keys(agentPerf).map(a=>agentsMap[a]||"Agent"),
+   datasets:[{label:"Collection",data:Object.values(agentPerf)}]
+  }
+ });
 }
 
 /* DARK MODE */
-window.toggleTheme = function(){
-  document.body.classList.toggle("owner-dark");
-  const isDark = document.body.classList.contains("owner-dark");
-  localStorage.setItem("ownerTheme", isDark ? "dark" : "light");
-  document.getElementById("themeToggle").innerText = isDark ? "☀️" : "🌙";
+window.toggleTheme=function(){
+ document.body.classList.toggle("owner-dark");
+ const isDark=document.body.classList.contains("owner-dark");
+ localStorage.setItem("ownerTheme",isDark?"dark":"light");
+ document.getElementById("themeToggle").innerText=isDark?"☀️":"🌙";
 };
 
-window.addEventListener("DOMContentLoaded", function(){
-  const saved = localStorage.getItem("ownerTheme");
-  if(saved === "dark"){
-    document.body.classList.add("owner-dark");
-    document.getElementById("themeToggle").innerText="☀️";
-  }
+window.addEventListener("DOMContentLoaded",()=>{
+ if(localStorage.getItem("ownerTheme")==="dark"){
+  document.body.classList.add("owner-dark");
+  document.getElementById("themeToggle").innerText="☀️";
+ }
 });
 
 </script>
