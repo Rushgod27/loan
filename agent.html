@@ -964,6 +964,10 @@ window.createLoanUI = () => {
     </div>
   `;
 
+// Prevent clicks inside form from bubbling to document
+document.getElementById("loanFormCard")
+  .addEventListener("click", e => e.stopPropagation());
+  
   // Delay to prevent immediate close
   setTimeout(()=>{
     document.addEventListener("click", handleLoanOutsideClick);
@@ -1232,6 +1236,7 @@ function handleLoanOutsideClick(e){
 
   if(!form) return;
 
+  // Only close if click is completely outside form
   if(!form.contains(e.target)){
     box.innerHTML = "";
     document.removeEventListener("click", handleLoanOutsideClick);
