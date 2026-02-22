@@ -328,8 +328,9 @@ const actionButtons = `
     const cardTemplate = `
       <div class="card">
         <div style="display:flex;align-items:center;gap:12px;">
-          <img src="${photo}" 
-               style="width:60px;height:60px;border-radius:50%;object-fit:cover;">
+<img src="${photo}" 
+     onclick="showProfile('${borrower.id}')"
+     style="width:60px;height:60px;border-radius:50%;object-fit:cover;cursor:pointer;">
           <div>
             <b>${borrower.name}</b><br>
             ₹${inst.amount}
@@ -370,15 +371,20 @@ setTimeout(()=>{
 },100);
 }
 window.confirmCall = (phone)=>{
-  if(confirm("Call this borrower?")){
-    window.location.href="tel:"+phone;
-  }
+
+  openConfirm("Call this borrower?", ()=>{
+    window.location.href = "tel:" + phone;
+  });
+
 };
 
 window.confirmReminder = (waLink)=>{
-  if(confirm("Send reminder message?")){
+
+  openConfirm("Send reminder message?", ()=>{
     window.open(waLink,"_blank");
-  }
+    showToast("Reminder Sent ✅");
+  });
+
 };
 
 window.markPaid = (id, loanId, borrowerId, amt)=>{
@@ -474,43 +480,47 @@ window.createBorrower = async () => {
   const name = nameInput.value.trim();
   const phone = phoneInput.value.trim();
 
-  // 🔒 Name: letters and spaces only
   const nameRegex = /^[A-Za-z ]+$/;
-
-  if (!nameRegex.test(name)) {
-    alert("Name should contain letters only.");
-    return;
-  }
-
-  // 🔒 Phone: exactly 10 digits
   const phoneRegex = /^[0-9]{10}$/;
 
-  if (!phoneRegex.test(phone)) {
-    alert("Phone number must be exactly 10 digits.");
+  // 🔒 Validation using Toast (no alert)
+  if (!nameRegex.test(name)) {
+    showToast("Name should contain letters only ⚠️");
     return;
   }
 
-  // 🔍 Duplicate Check
+  if (!phoneRegex.test(phone)) {
+    showToast("Phone number must be exactly 10 digits ⚠️");
+    return;
+  }
+
   const existing = state.borrowers.find(b => b.phone === phone);
 
   if (existing) {
-    alert(`This number already exists under name: ${existing.name}`);
+    showToast(`Number already exists under ${existing.name} ❗`);
     return;
   }
 
-  // ✅ Save borrower
-  await addDoc(collection(db,"borrowers"),{
-    name,
-    nameLower: name.toLowerCase(),
-    phone,
-    agentId: uid,
-    createdAt: Date.now()
+  // 🔥 CONFIRM BEFORE SAVING
+  openConfirm(`Add borrower "${name}"?`, async ()=>{
+
+    await addDoc(collection(db,"borrowers"),{
+      name,
+      nameLower: name.toLowerCase(),
+      phone,
+      agentId: uid,
+      createdAt: Date.now()
+    });
+
+    showToast("Borrower Added Successfully ✅");
+
+    nameInput.value = "";
+    phoneInput.value = "";
+
+    // Optional: close form automatically
+    document.getElementById("addBorrowerBox").innerHTML = "";
   });
 
-showToast("Borrower Added Successfully ✅");
-
-  nameInput.value = "";
-  phoneInput.value = "";
 };
 
 function renderBorrowerList(list){
@@ -1368,9 +1378,13 @@ const max = Math.max(1, ...points);
 }
 
 /* LOGOUT */
-window.logout=async()=>{
-  await signOut(auth);
-  window.location.replace("index.html");
+window.logout = ()=>{
+
+  openConfirm("Are you sure you want to logout?", async ()=>{
+    await signOut(auth);
+    window.location.replace("index.html");
+  });
+
 };
 
 
