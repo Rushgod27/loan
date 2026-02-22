@@ -136,12 +136,6 @@ function refresh(){
   if(currentView==="profile" && currentProfileId){
     renderProfile(currentProfileId);
   }
-  
-  setTimeout(()=>{
-  animateCounters();
-  renderSparkline();
-},50);
-
 }
 
 /* NAVIGATION */
@@ -373,7 +367,6 @@ const actionButtons = `
 setTimeout(()=>{
   animateCounters();
   renderSparkline();
-  renderPieChart(activeLoans, completedLoans);
 },100);
 }
 window.confirmCall = (phone)=>{
@@ -952,7 +945,7 @@ window.createLoanUI = () => {
   box.innerHTML = `
     <div class="card" id="loanFormCard">
 
-      <input id="loanAmt" type="number" placeholder="Principal Amount"><br><br>
+<input id="loanAmt" type="text" inputmode="numeric" placeholder="Principal Amount">
 
       <input id="loanInterest" type="number" placeholder="Upfront Interest %"><br><br>
 
@@ -980,75 +973,61 @@ window.createLoanUI = () => {
 
 window.createLoan = async () => {
 
-  const principal = Number(loanAmt.value);
+  const principal = Number(loanAmt.value.replace(/,/g,""));
   const interest = Number(loanInterest.value) || 0;
   const count = Number(loanCount.value);
   const interval = Number(loanInterval.value);
   const start = loanStart.value;
 
   if (!principal || !count || !interval || !start) {
-    alert("All fields required.");
+    showToast("All fields required ⚠️");
     return;
   }
 
   const startTime = new Date(start).getTime();
 
-  /* 🔥 UPFRONT MODEL */
-
   const interestAmount = (principal * interest) / 100;
   const disbursedAmount = principal - interestAmount;
   const installmentAmount = Number((principal / count).toFixed(2));
 
-  const preview = `
-Loan Preview (Upfront Interest Model):
-
-Principal: ₹${principal}
-Upfront Interest: ₹${interestAmount}
-Borrower Receives: ₹${disbursedAmount}
-Total Payable: ₹${principal}
-Installments: ${count}
-Each Installment: ₹${installmentAmount}
-Start Date: ${new Date(startTime).toLocaleDateString()}
-
-Proceed?
-  `;
-
-  if (!confirm(preview)) return;
-
-  /* CREATE LOAN */
-
-  const ref = await addDoc(collection(db, "loans"), {
-    borrowerId: currentProfileId,
-    agentId: uid,
+  // 🔥 OPEN PREVIEW INSTEAD OF CREATING DIRECTLY
+  openLoanPreview({
     principal,
-    interestPercent: interest,
     interestAmount,
     disbursedAmount,
-    totalAmount: principal, // 🔥 total is principal only
     count,
-    interval,
-    startDate: startTime,
-    status: "active",
-    createdAt: Date.now()
-  });
+    installmentAmount
+  }, async ()=>{
 
-  /* CREATE INSTALLMENTS */
-
-  for (let i = 0; i < count; i++) {
-
-    await addDoc(collection(db, "installments"), {
-      loanId: ref.id,
+    const ref = await addDoc(collection(db, "loans"), {
       borrowerId: currentProfileId,
       agentId: uid,
-      number: i + 1,
-      amount: installmentAmount,
-      dueDate: startTime + ((i + 1) * interval * 86400000),
-      status: "pending"
+      principal,
+      interestPercent: interest,
+      interestAmount,
+      disbursedAmount,
+      totalAmount: principal,
+      count,
+      interval,
+      startDate: startTime,
+      status: "active",
+      createdAt: Date.now()
     });
 
-  }
+    for (let i = 0; i < count; i++) {
+      await addDoc(collection(db, "installments"), {
+        loanId: ref.id,
+        borrowerId: currentProfileId,
+        agentId: uid,
+        number: i + 1,
+        amount: installmentAmount,
+        dueDate: startTime + ((i + 1) * interval * 86400000),
+        status: "pending"
+      });
+    }
 
-showToast("Loan Created Successfully ✅");
+    showToast("Loan Created Successfully ✅");
+  });
 };
 
 function handleOutsideClick(e){
@@ -1083,11 +1062,11 @@ async function processPayment(id, loanId, borrowerId, amt){
     date:Date.now()
   });
 
-  const loanInstallments = state.installments.filter(i => i.loanId === loanId);
+  const loanInstallments = state.installments
+  .filter(i => i.loanId === loanId)
+  .map(i => i.id === id ? {...i, status:"completed"} : i);
 
-  const allCompleted = loanInstallments.every(i =>
-    i.status === "completed" || i.id === id
-  );
+const allCompleted = loanInstallments.every(i => i.status === "completed");
 
   if(allCompleted){
     await updateDoc(doc(db,"loans",loanId),{
@@ -1097,7 +1076,90 @@ async function processPayment(id, loanId, borrowerId, amt){
 
 }
 /* ========================
-   REAL SWIPE ONLY ENGINE
+NUMBER FORMATTING 
+======================== */
+function formatNumberIndian(x){
+  x = x.replace(/,/g,"");
+
+  const lastThree = x.slice(-3);
+  const otherNumbers = x.slice(0,-3);
+
+  if(otherNumbers !== ""){
+    return otherNumbers.replace(/\B(?=(\d{2})+(?!\d))/g,",") + "," + lastThree;
+  }
+
+  return lastThree;
+}
+
+document.addEventListener("input", function(e){
+
+  if(e.target.id === "loanAmt"){
+
+    let value = e.target.value.replace(/\D/g,"");
+
+    if(value === ""){
+      e.target.value = "";
+      return;
+    }
+
+    e.target.value = formatNumberIndian(value);
+  }
+
+});
+
+
+
+function openLoanPreview(data, onConfirm){
+
+  const modal = document.createElement("div");
+  modal.className = "preview-modal";
+
+  modal.innerHTML = `
+    <div class="preview-card">
+      <h2>Loan Preview</h2>
+
+      <div class="preview-row">
+        <span>Principal</span>
+        <b>₹${data.principal.toLocaleString("en-IN")}</b>
+      </div>
+
+      <div class="preview-row">
+        <span>Upfront Interest</span>
+        <b>₹${data.interestAmount.toLocaleString("en-IN")}</b>
+      </div>
+
+      <div class="preview-row">
+        <span>Borrower Receives</span>
+        <b>₹${data.disbursedAmount.toLocaleString("en-IN")}</b>
+      </div>
+
+      <div class="preview-row">
+        <span>Installments</span>
+        <b>${data.count}</b>
+      </div>
+
+      <div class="preview-row">
+        <span>Each Installment</span>
+        <b>₹${data.installmentAmount.toLocaleString("en-IN")}</b>
+      </div>
+
+      <div class="preview-actions">
+        <button class="btn" onclick="this.closest('.preview-modal').remove()">Cancel</button>
+        <button class="btn btn-success" id="previewConfirmBtn">Confirm</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  document.getElementById("previewConfirmBtn").onclick = ()=>{
+    modal.remove();
+    onConfirm();
+  };
+}
+
+/* ========================
+   REAL SWIPE ENGINE – STABLE
 ======================== */
 
 let startX = 0;
@@ -1105,12 +1167,32 @@ let startY = 0;
 let endX = 0;
 let endY = 0;
 
-document.addEventListener("touchstart", e=>{
+document.addEventListener("touchstart", e => {
+
+  // 🚫 Don't swipe when touching inputs, buttons or forms
+  const tag = e.target.tagName;
+  if(tag === "INPUT" || tag === "BUTTON" || tag === "SELECT" || tag === "TEXTAREA"){
+    startX = 0;
+    startY = 0;
+    return;
+  }
+
+  // 🚫 Don't swipe when modals are open
+  if(
+    document.querySelector(".preview-modal") ||
+    !document.getElementById("confirmModal").classList.contains("hidden")
+  ){
+    return;
+  }
+
   startX = e.touches[0].clientX;
   startY = e.touches[0].clientY;
 });
 
-document.addEventListener("touchend", e=>{
+document.addEventListener("touchend", e => {
+
+  if(startX === 0 && startY === 0) return;
+
   endX = e.changedTouches[0].clientX;
   endY = e.changedTouches[0].clientY;
 
@@ -1120,30 +1202,29 @@ document.addEventListener("touchend", e=>{
   const horizontalDistance = Math.abs(diffX);
   const verticalDistance = Math.abs(diffY);
 
-  const MIN_SWIPE_DISTANCE = 120;  // require large swipe
-  const MAX_VERTICAL_ALLOW = 50;   // prevent diagonal/scroll trigger
+  const MIN_SWIPE_DISTANCE = 150;  // stronger swipe
+  const MAX_VERTICAL_ALLOW = 40;   // very small vertical tolerance
 
-  // ✅ Only trigger if it's a strong horizontal swipe
   if(
     horizontalDistance > MIN_SWIPE_DISTANCE &&
     verticalDistance < MAX_VERTICAL_ALLOW
   ){
 
-    // Swipe Left
+    // 👉 Swipe Left
     if(diffX < 0){
       if(currentView === "dashboard") showBorrowers();
     }
 
-    // Swipe Right
+    // 👈 Swipe Right
     if(diffX > 0){
       if(currentView === "borrowers") showDashboard();
       else if(currentView === "profile") showBorrowers();
     }
-
   }
+
+  startX = 0;
+  startY = 0;
 });
-
-
 function handleLoanOutsideClick(e){
 
   const box = document.getElementById("loanCreateBox");
