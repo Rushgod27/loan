@@ -5,6 +5,7 @@
 <title>Owner Dashboard</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="stylesheet" href="css/styles.css">
+<link rel="stylesheet" href="css/owner.css">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#4f46e5">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
@@ -13,7 +14,10 @@
 
 <body>
 
-<div class="header">Owner Dashboard</div>
+<div class="header owner-header">
+  <span>Owner Dashboard</span>
+  <button id="themeToggle" onclick="toggleTheme()">🌙</button>
+</div>
 
 <div class="container">
 
@@ -361,6 +365,22 @@ Borrowers: ${agentBorrowers[a].join(", ")}
 });
 
 }
+
+/* DARK MODE */
+window.toggleTheme = function(){
+  document.body.classList.toggle("owner-dark");
+  const isDark = document.body.classList.contains("owner-dark");
+  localStorage.setItem("ownerTheme", isDark ? "dark" : "light");
+  document.getElementById("themeToggle").innerText = isDark ? "☀️" : "🌙";
+};
+
+window.addEventListener("DOMContentLoaded", function(){
+  const saved = localStorage.getItem("ownerTheme");
+  if(saved === "dark"){
+    document.body.classList.add("owner-dark");
+    document.getElementById("themeToggle").innerText="☀️";
+  }
+});
 
 </script>
 </body>
