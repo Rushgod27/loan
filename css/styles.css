@@ -596,6 +596,47 @@ body.dark-mode #fileName{
   padding:30px 20px 130px;
 }
 
+
+/* =========================
+   LOAN PREVIEW MODAL
+========================= */
+
+.preview-modal{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.6);
+  display:flex;
+  justify-content:center;
+  align-items:flex-end;
+  z-index:7000;
+}
+
+.preview-card{
+  width:100%;
+  max-width:450px;
+  background:var(--card);
+  padding:28px;
+  border-radius:28px 28px 0 0;
+  animation:slideUp .3s ease;
+}
+
+.preview-row{
+  display:flex;
+  justify-content:space-between;
+  margin-bottom:14px;
+  font-size:14px;
+}
+
+.preview-actions{
+  display:flex;
+  gap:12px;
+  margin-top:20px;
+}
+
+.preview-actions button{
+  flex:1;
+}
+
 /* =============================
 dark theme 
 ============================= */
