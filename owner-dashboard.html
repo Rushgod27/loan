@@ -260,7 +260,107 @@ window.clearFilter=()=>{
 
 /* PROCESS */
 async function processData(){
- // (same logic you already had — unchanged, just shortened here for clarity)
+
+ const start = startDate.value;
+ const end = endDate.value;
+ const agentId = agentFilter.value || "all";
+
+ const startTime = start ? new Date(start).getTime() : null;
+ const endTime = end ? new Date(end).setHours(23,59,59,999) : null;
+
+ const loanSnap = await getDocs(query(
+   collection(db,"loans"),
+   where("ownerId","==",ownerId)
+ ));
+
+ let totalLoan = 0;
+
+ loanSnap.forEach(d=>{
+   const data = d.data();
+   if(agentId!=="all" && data.agentId!==agentId) return;
+   if(startTime && data.createdAt < startTime) return;
+   if(endTime && data.createdAt > endTime) return;
+   totalLoan += data.principal || 0;
+ });
+
+ const colSnap = await getDocs(query(
+   collection(db,"collections"),
+   where("ownerId","==",ownerId)
+ ));
+
+ let totalCollection = 0;
+ let yearCollection = 0;
+ let monthCollection = 0;
+ let todayCollection = 0;
+ let agentPerf = {};
+
+ const now = new Date();
+ const year = now.getFullYear();
+ const month = now.getMonth();
+ const today = new Date().setHours(0,0,0,0);
+
+ colSnap.forEach(d=>{
+   const data=d.data();
+   if(agentId!=="all" && data.agentId!==agentId) return;
+   if(startTime && data.date<startTime) return;
+   if(endTime && data.date>endTime) return;
+
+   totalCollection += data.amount || 0;
+
+   const dateObj = new Date(data.date);
+
+   if(dateObj.getFullYear()===year) yearCollection+=data.amount;
+   if(dateObj.getMonth()===month) monthCollection+=data.amount;
+   if(new Date(data.date).setHours(0,0,0,0)===today)
+      todayCollection+=data.amount;
+
+   if(!agentPerf[data.agentId]) agentPerf[data.agentId]=0;
+   agentPerf[data.agentId]+=data.amount;
+ });
+
+ const outstanding = totalLoan - totalCollection;
+ const percent = totalLoan ? ((totalCollection/totalLoan)*100).toFixed(1) : 0;
+
+ // DUE COUNT
+ const instSnap = await getDocs(query(
+   collection(db,"installments"),
+   where("ownerId","==",ownerId),
+   where("status","==","pending")
+ ));
+
+ let dueCount = 0;
+
+ instSnap.forEach(d=>{
+   const data = d.data();
+   if(agentId!=="all" && data.agentId!==agentId) return;
+
+   dueCount += data.amount || 0;
+ });
+
+ // UPDATE UI
+ kpiTotalLoan.innerText = totalLoan;
+ kpiTotalCollection.innerText = totalCollection;
+ kpiOutstanding.innerText = outstanding;
+ kpiPercent.innerText = percent + "%";
+ kpiYear.innerText = yearCollection;
+ kpiMonth.innerText = monthCollection;
+ kpiToday.innerText = todayCollection;
+ kpiDue.innerText = dueCount;
+
+ // CHART
+ if(chart) chart.destroy();
+
+ chart=new Chart(agentChart,{
+   type:"bar",
+   data:{
+     labels:Object.keys(agentPerf).map(a=>agentsMap[a]||"Agent"),
+     datasets:[{
+       label:"Collection",
+       data:Object.values(agentPerf)
+     }]
+   }
+ });
+
 }
 
 </script>
