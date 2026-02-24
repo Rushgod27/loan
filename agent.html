@@ -42,6 +42,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 let uid=null;
+let ownerId=null;
 let state={
   borrowers:[],
   loans:[],
@@ -56,16 +57,30 @@ let openedLoanId=null;
 /* AUTH */
 let agentName = "Agent";
 
-onAuthStateChanged(auth,user=>{
-  if(!user){location.href="index.html";return;}
-  uid=user.uid;
+import { getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-  agentName = user.displayName || 
+onAuthStateChanged(auth, async user=>{
+  if(!user){location.href="index.html";return;}
+
+  uid = user.uid;
+
+  const snap = await getDoc(doc(db,"users",uid));
+
+  if(!snap.exists() || snap.data().role !== "agent"){
+    location.href = "index.html";
+    return;
+  }
+
+  ownerId = snap.data().approvedBy; // 🔥 THIS IS IMPORTANT
+
+  agentName = snap.data().name || 
+              user.displayName || 
               user.email?.split("@")[0] || 
               "Agent";
 
   startRealtime();
 });
+
 
 function startRealtime(){
 
@@ -505,12 +520,13 @@ window.createBorrower = async () => {
   openConfirm(`Add borrower "${name}"?`, async ()=>{
 
     await addDoc(collection(db,"borrowers"),{
-      name,
-      nameLower: name.toLowerCase(),
-      phone,
-      agentId: uid,
-      createdAt: Date.now()
-    });
+  name,
+  nameLower: name.toLowerCase(),
+  phone,
+  agentId: uid,
+  ownerId: ownerId,   // 🔥 ADD THIS
+  createdAt: Date.now()
+});
 
     showToast("Borrower Added Successfully ✅");
 
@@ -738,6 +754,7 @@ docInput.addEventListener("change", function(){
           await addDoc(collection(db,"documents"),{
             borrowerId:id,
             agentId:uid,
+            ownerId:ownerId,
             file:compressedFile,
             createdAt:Date.now()
           });
@@ -1040,6 +1057,7 @@ if (count < 1){
     const ref = await addDoc(collection(db, "loans"), {
       borrowerId: currentProfileId,
       agentId: uid,
+      ownerId: ownerId,
       principal,
       interestPercent: interest,
       interestAmount,
@@ -1057,6 +1075,7 @@ if (count < 1){
         loanId: ref.id,
         borrowerId: currentProfileId,
         agentId: uid,
+        ownerId: ownerId, 
         number: i + 1,
         amount: installmentAmount,
         dueDate: startTime + ((i + 1) * interval * 86400000),
@@ -1095,6 +1114,7 @@ async function processPayment(id, loanId, borrowerId, amt){
     loanId,
     borrowerId,
     agentId:uid,
+    ownerId:ownerId,
     amount:amt,
     type:"installment",
     date:Date.now()
