@@ -172,3 +172,121 @@ body.owner-dark button{
 body.owner-dark .logout{
   background:linear-gradient(135deg,#dc2626,#b91c1c);
 }
+
+/* ==============================
+   INVITE CODE SECTION
+============================== */
+
+.invite-wrapper{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+  margin:18px 0;
+  flex-wrap:wrap;
+}
+
+/* CODE BOX */
+.code-box{
+  font-size:26px;
+  font-weight:700;
+  letter-spacing:4px;
+  padding:16px 22px;
+  border-radius:16px;
+  background:linear-gradient(135deg,#4f46e5,#6366f1);
+  color:white;
+  box-shadow:0 8px 20px rgba(79,70,229,.3);
+  transition:.3s ease;
+}
+
+.code-box:hover{
+  transform:translateY(-2px);
+  box-shadow:0 12px 28px rgba(79,70,229,.5);
+}
+
+/* TIMER */
+.invite-timer{
+  min-width:70px;
+  text-align:center;
+  font-weight:600;
+  font-size:16px;
+  padding:10px 14px;
+  border-radius:50px;
+  background:#eef2ff;
+  color:#4f46e5;
+  transition:.3s ease;
+}
+
+/* SHAKE */
+.shake{
+  animation:shakeAnim .5s infinite;
+  background:#fee2e2;
+  color:#dc2626;
+}
+
+@keyframes shakeAnim{
+  0%{transform:translateX(0);}
+  25%{transform:translateX(-3px);}
+  50%{transform:translateX(3px);}
+  75%{transform:translateX(-3px);}
+  100%{transform:translateX(0);}
+}
+
+/* REGENERATE BUTTON - SPECIAL STYLE */
+.card button{
+  margin-top:10px;
+  background:linear-gradient(135deg,#6366f1,#4f46e5);
+  box-shadow:0 6px 18px rgba(79,70,229,.35);
+}
+
+.card button:hover{
+  transform:translateY(-2px);
+  box-shadow:0 10px 24px rgba(79,70,229,.45);
+}
+
+/* ==============================
+   DARK MODE SUPPORT
+============================== */
+
+.owner-dark .code-box{
+  background:linear-gradient(135deg,#7c3aed,#4c1d95);
+  box-shadow:0 8px 20px rgba(124,58,237,.4);
+}
+
+.owner-dark .invite-timer{
+  background:#1e293b;
+  color:#a78bfa;
+}
+
+.owner-dark .shake{
+  background:#7f1d1d;
+  color:#fecaca;
+}
+
+.owner-dark .card button{
+  background:linear-gradient(135deg,#7c3aed,#6d28d9);
+  box-shadow:0 6px 18px rgba(124,58,237,.4);
+}
+
+/* ==============================
+   MOBILE OPTIMIZATION
+============================== */
+
+@media(max-width:600px){
+
+  .invite-wrapper{
+    flex-direction:column;
+    align-items:stretch;
+  }
+
+  .code-box{
+    text-align:center;
+    font-size:22px;
+    letter-spacing:3px;
+  }
+
+  .invite-timer{
+    width:100%;
+  }
+
+}
