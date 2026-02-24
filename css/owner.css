@@ -22,6 +22,10 @@ body{
   border-bottom:1px solid rgba(0,0,0,0.05);
 }
 
+html, body{
+  touch-action: manipulation;
+}
+
 /* HERO */
 .owner-hero{
   background:linear-gradient(135deg,#7c3aed,#4f46e5,#2563eb);
