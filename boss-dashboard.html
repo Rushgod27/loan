@@ -5,21 +5,29 @@
 <title>Boss Dashboard</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="stylesheet" href="css/styles.css">
-  <link rel="manifest" href="manifest.json">
+<link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#4f46e5">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 </head>
 
 <body>
 
-<div class="header">Boss Panel (Super Admin)</div>
+<div class="header">
+  <span>Boss Panel (Super Admin)</span>
+  <button id="themeToggle" class="theme-btn">🌙</button>
+</div>
 
 <div class="container">
 
 <!-- 🔐 BOSS INVITE CODE -->
 <div class="card">
   <h3>Your Owner Invite Code</h3>
-  <div id="bossCodeBox" class="code-box">Loading...</div>
+
+  <div class="invite-wrapper">
+    <div id="bossCodeBox" class="code-box">Loading...</div>
+    <div id="bossTimer" class="invite-timer">30s</div>
+  </div>
+
   <button class="primary" onclick="regenerateBossCode()">
     Regenerate Code
   </button>
@@ -44,90 +52,142 @@
 <script type="module">
 
 import { auth, db } from "./js/firebase.js";
-import { onAuthStateChanged, signOut } 
+import { onAuthStateChanged, signOut }
 from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
-import { 
-  collection, query, where, onSnapshot,
-  updateDoc, deleteDoc, doc,
-  getDoc, serverTimestamp, deleteField
+import {
+collection, query, where, onSnapshot,
+updateDoc, deleteDoc, doc,
+getDoc, serverTimestamp, deleteField
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-let bossUid=null;
+/* =====================================================
+   GLOBAL STATE
+===================================================== */
 
-/* ================= AUTH ================= */
+let bossUid = null;
+let inviteInterval;
+let inviteExpiry = null;
+
+/* =====================================================
+   AUTH
+===================================================== */
 
 onAuthStateChanged(auth, async(user)=>{
 
   if(!user){
-    location.href="index.html";
+    location.href = "index.html";
     return;
   }
 
-  const userSnap = await getDoc(doc(db,"users",user.uid));
+  const snap = await getDoc(doc(db,"users",user.uid));
 
-  if(!userSnap.exists() || userSnap.data().role!=="boss"){
+  if(!snap.exists() || snap.data().role !== "boss"){
     await signOut(auth);
-    location.href="index.html";
+    location.href = "index.html";
     return;
   }
 
   bossUid = user.uid;
+
+  if(inviteInterval) clearInterval(inviteInterval);
 
   await loadBossCode();
   listenPending();
   listenApproved();
 });
 
-/* ================= LOGOUT ================= */
-
-/* ================= LOGOUT ================= */
+/* =====================================================
+   LOGOUT
+===================================================== */
 
 window.logoutUser = async()=>{
 
   await signOut(auth);
-
-  // 🔥 Mark that logout just happened
-  sessionStorage.setItem("justLoggedOut", "true");
-
-  // 🔥 Prevent back button restoring dashboard
+  sessionStorage.setItem("justLoggedOut","true");
   window.location.replace("index.html");
 };
 
-/* ================= BOSS INVITE CODE SYSTEM ================= */
+/* =====================================================
+   INVITE AUTO ROTATION SYSTEM
+===================================================== */
 
 async function loadBossCode(){
 
   const ref = doc(db,"users",bossUid);
   const snap = await getDoc(ref);
+  const data = snap.data();
 
-  let code = snap.data().inviteCode;
-
-  if(!code){
-    code = generateCode("BOS");
-    await updateDoc(ref,{ inviteCode: code });
+  if(!data.inviteCode || !data.inviteExpiry || data.inviteExpiry < Date.now()){
+    await generateBossCode();
+  }else{
+    document.getElementById("bossCodeBox").innerText = data.inviteCode;
+    inviteExpiry = data.inviteExpiry;
   }
 
+  startBossTimer();
+}
+
+async function generateBossCode(){
+
+  const code = generateCode("BOS");
+  const expiry = Date.now() + 30000; // 30 seconds
+
+  await updateDoc(doc(db,"users",bossUid),{
+    inviteCode: code,
+    inviteExpiry: expiry
+  });
+
   document.getElementById("bossCodeBox").innerText = code;
+
+  const timerEl = document.getElementById("bossTimer");
+  timerEl.classList.remove("shake");
+
+  inviteExpiry = expiry;
 }
 
 window.regenerateBossCode = async()=>{
-
-  const newCode = generateCode("BOS");
-
-  await updateDoc(doc(db,"users",bossUid),{
-    inviteCode:newCode
-  });
-
-  document.getElementById("bossCodeBox").innerText=newCode;
+  clearInterval(inviteInterval);
+  await generateBossCode();
+  startBossTimer();
 };
+
+function startBossTimer(){
+
+  if(inviteInterval) clearInterval(inviteInterval);
+
+  const timerEl = document.getElementById("bossTimer");
+
+  inviteInterval = setInterval(async ()=>{
+
+    const timeLeft = Math.floor((inviteExpiry - Date.now())/1000);
+
+    if(timeLeft <= 0){
+      clearInterval(inviteInterval);
+      await generateBossCode();
+      startBossTimer();
+      return;
+    }
+
+    timerEl.innerText = timeLeft + "s";
+
+    if(timeLeft <= 5){
+      timerEl.classList.add("shake");
+    }else{
+      timerEl.classList.remove("shake");
+    }
+
+  },1000);
+}
 
 function generateCode(prefix){
   const random = Math.floor(100000 + Math.random() * 900000);
   return prefix + random;
 }
 
-/* ================= PENDING ================= */
+/* =====================================================
+   PENDING REQUESTS
+===================================================== */
 
 function listenPending(){
 
@@ -139,18 +199,18 @@ function listenPending(){
 
   onSnapshot(q,(snap)=>{
 
-    const container=document.getElementById("pendingList");
-    container.innerHTML="";
+    const container = document.getElementById("pendingList");
+    container.innerHTML = "";
 
     if(snap.empty){
-      container.innerHTML="<p>No pending requests</p>";
+      container.innerHTML = "<p>No pending requests</p>";
       return;
     }
 
     snap.forEach(d=>{
-      const data=d.data();
+      const data = d.data();
 
-      container.innerHTML+=`
+      container.innerHTML += `
         <div class="card-row">
           <strong>${data.name}</strong>
           <span class="badge">${data.requestedRole}</span>
@@ -170,24 +230,26 @@ function listenPending(){
   });
 }
 
-/* ================= APPROVED USERS ================= */
+/* =====================================================
+   APPROVED USERS
+===================================================== */
 
 function listenApproved(){
 
-  const q=query(
+  const q = query(
     collection(db,"users"),
     where("approvedBy","==",bossUid)
   );
 
   onSnapshot(q,(snap)=>{
 
-    const container=document.getElementById("approvedList");
-    container.innerHTML="";
+    const container = document.getElementById("approvedList");
+    container.innerHTML = "";
 
     snap.forEach(d=>{
-      const data=d.data();
+      const data = d.data();
 
-      container.innerHTML+=`
+      container.innerHTML += `
         <div class="card-row">
           <strong>${data.name}</strong>
           <span class="badge">${data.role}</span>
@@ -198,7 +260,9 @@ function listenApproved(){
   });
 }
 
-/* ================= APPROVE ================= */
+/* =====================================================
+   APPROVE
+===================================================== */
 
 window.approveUser = async(id)=>{
 
@@ -218,20 +282,49 @@ window.approveUser = async(id)=>{
   });
 };
 
-/* ================= REJECT ================= */
+/* =====================================================
+   REJECT
+===================================================== */
 
 window.rejectUser = async(id)=>{
+
   if(!confirm("Reject this request?")) return;
+
   await deleteDoc(doc(db,"users",id));
 };
 
+/* =====================================================
+   SERVICE WORKER (PWA)
+===================================================== */
+
 if("serviceWorker" in navigator){
-  window.addEventListener("load", () => {
+  window.addEventListener("load", ()=>{
     navigator.serviceWorker.register("/sw.js")
-      .then(() => console.log("PWA Ready"))
-      .catch(err => console.log("SW Error", err));
+      .then(()=> console.log("PWA Ready"))
+      .catch(err=> console.log("SW Error",err));
   });
 }
+/* ================= DARK MODE ================= */
+
+document.getElementById("themeToggle").onclick = ()=>{
+
+  document.body.classList.toggle("boss-dark");
+
+  const isDark = document.body.classList.contains("boss-dark");
+  localStorage.setItem("bossTheme", isDark ? "dark" : "light");
+
+  themeToggle.innerText = isDark ? "☀️" : "🌙";
+};
+
+window.addEventListener("DOMContentLoaded", ()=>{
+
+  const saved = localStorage.getItem("bossTheme");
+
+  if(saved === "dark"){
+    document.body.classList.add("boss-dark");
+    themeToggle.innerText = "☀️";
+  }
+});
 </script>
 
 </body>
