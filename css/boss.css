@@ -1,0 +1,285 @@
+/* =====================================================
+   GLOBAL BASE
+===================================================== */
+
+*{
+  box-sizing:border-box;
+}
+
+body{
+  margin:0;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  background:linear-gradient(135deg,#eef2ff,#f8fafc);
+  color:#111827;
+  transition:all .25s ease;
+}
+
+/* =====================================================
+   HEADER
+===================================================== */
+
+.header{
+  background:linear-gradient(135deg,#4f46e5,#6366f1);
+  color:white;
+  padding:18px;
+  font-weight:600;
+  font-size:18px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+
+.theme-btn{
+  border:none;
+  background:rgba(255,255,255,.15);
+  color:white;
+  padding:8px 12px;
+  border-radius:10px;
+  cursor:pointer;
+  font-size:16px;
+  transition:.2s;
+}
+
+.theme-btn:hover{
+  background:rgba(255,255,255,.25);
+}
+
+/* =====================================================
+   LAYOUT
+===================================================== */
+
+.container{
+  max-width:900px;
+  margin:auto;
+  padding:20px;
+}
+
+/* =====================================================
+   CARD
+===================================================== */
+
+.card{
+  background:white;
+  padding:22px;
+  border-radius:18px;
+  box-shadow:0 8px 30px rgba(0,0,0,.05);
+  margin-bottom:20px;
+  transition:.25s ease;
+}
+
+.card h3{
+  margin-top:0;
+  margin-bottom:12px;
+}
+
+/* =====================================================
+   INVITE SECTION
+===================================================== */
+
+.invite-wrapper{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:15px;
+  margin:20px 0;
+  flex-wrap:wrap;
+}
+
+.code-box{
+  font-size:26px;
+  font-weight:700;
+  letter-spacing:4px;
+  padding:16px 24px;
+  border-radius:16px;
+  background:linear-gradient(135deg,#7c3aed,#4f46e5);
+  color:white;
+  box-shadow:0 10px 25px rgba(124,58,237,.3);
+  transition:.3s ease;
+}
+
+.code-box:hover{
+  transform:translateY(-2px);
+  box-shadow:0 14px 30px rgba(124,58,237,.4);
+}
+
+.invite-timer{
+  font-weight:600;
+  padding:8px 14px;
+  border-radius:50px;
+  background:#eef2ff;
+  color:#4f46e5;
+  min-width:70px;
+  text-align:center;
+  transition:.2s ease;
+}
+
+/* Shake Warning */
+
+.shake{
+  animation:shake .5s infinite;
+  background:#fee2e2;
+  color:#dc2626;
+}
+
+@keyframes shake{
+  0%{transform:translateX(0)}
+  25%{transform:translateX(-3px)}
+  50%{transform:translateX(3px)}
+  75%{transform:translateX(-3px)}
+  100%{transform:translateX(0)}
+}
+
+/* =====================================================
+   BUTTONS
+===================================================== */
+
+button{
+  padding:10px 16px;
+  border:none;
+  border-radius:12px;
+  cursor:pointer;
+  font-weight:500;
+  transition:.2s ease;
+}
+
+.primary{
+  background:#4f46e5;
+  color:white;
+}
+
+.primary:hover{
+  transform:translateY(-2px);
+  box-shadow:0 10px 20px rgba(79,70,229,.3);
+}
+
+.approve{
+  background:#10b981;
+  color:white;
+  margin-right:8px;
+}
+
+.approve:hover{
+  box-shadow:0 8px 18px rgba(16,185,129,.35);
+}
+
+.reject{
+  background:#ef4444;
+  color:white;
+}
+
+.reject:hover{
+  box-shadow:0 8px 18px rgba(239,68,68,.35);
+}
+
+.logout{
+  width:100%;
+  background:#111827;
+  color:white;
+  margin-top:20px;
+  padding:12px;
+}
+
+.logout:hover{
+  background:#000;
+}
+
+/* =====================================================
+   CARD ROWS
+===================================================== */
+
+.card-row{
+  padding:14px;
+  border-bottom:1px solid #e5e7eb;
+  margin-bottom:8px;
+  border-radius:10px;
+}
+
+.badge{
+  background:#e0e7ff;
+  color:#4f46e5;
+  padding:4px 8px;
+  border-radius:8px;
+  font-size:12px;
+  margin-left:6px;
+  font-weight:600;
+}
+
+/* =====================================================
+   DARK MODE
+===================================================== */
+
+.boss-dark{
+  background:#0f172a;
+  color:#f1f5f9;
+}
+
+.boss-dark .header{
+  background:#1e293b;
+}
+
+.boss-dark .card{
+  background:#1e293b;
+  box-shadow:none;
+}
+
+.boss-dark .card-row{
+  border-color:#334155;
+}
+
+.boss-dark .badge{
+  background:#334155;
+  color:#a78bfa;
+}
+
+.boss-dark .invite-timer{
+  background:#1e293b;
+  color:#a78bfa;
+}
+
+.boss-dark .shake{
+  background:#7f1d1d;
+  color:#fecaca;
+}
+
+.boss-dark .primary{
+  background:#6366f1;
+}
+
+.boss-dark .approve{
+  background:#059669;
+}
+
+.boss-dark .reject{
+  background:#dc2626;
+}
+
+.boss-dark .logout{
+  background:#7c3aed;
+}
+
+/* =====================================================
+   MOBILE OPTIMIZATION
+===================================================== */
+
+@media(max-width:600px){
+
+  .invite-wrapper{
+    flex-direction:column;
+    align-items:stretch;
+  }
+
+  .code-box{
+    font-size:22px;
+    text-align:center;
+    letter-spacing:3px;
+  }
+
+  .invite-timer{
+    width:100%;
+  }
+
+  .header{
+    font-size:16px;
+  }
+
+}
