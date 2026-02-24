@@ -321,6 +321,36 @@ async function processData(){
  const outstanding = totalLoan - totalCollection;
  const percent = totalLoan ? ((totalCollection/totalLoan)*100).toFixed(1) : 0;
 
+function animateValue(id, value, isPercent = false){
+
+  const el = document.getElementById(id);
+  const target = Number(value) || 0;
+
+  let start = 0;
+  const step = Math.ceil(target / 40);
+
+  const interval = setInterval(()=>{
+
+    start += step;
+
+    if(start >= target){
+      if(isPercent){
+        el.innerText = target + "%";
+      } else{
+        el.innerText = target.toLocaleString("en-IN");
+      }
+      clearInterval(interval);
+    }else{
+      if(isPercent){
+        el.innerText = start + "%";
+      } else{
+        el.innerText = start.toLocaleString("en-IN");
+      }
+    }
+
+  },15);
+}
+
  // ===============================
 // FULL DUE + OVERDUE + TOTAL DUE
 // ===============================
@@ -391,15 +421,14 @@ if(overdue.innerHTML===""){
 }
 
  // UPDATE UI
- kpiTotalLoan.innerText = totalLoan;
- kpiTotalCollection.innerText = totalCollection;
- kpiOutstanding.innerText = outstanding;
- kpiPercent.innerText = percent + "%";
- kpiYear.innerText = yearCollection;
- kpiMonth.innerText = monthCollection;
- kpiToday.innerText = todayCollection;
- kpiDue.innerText = dueCount;
-
+animateValue("kpiTotalLoan", totalLoan);
+animateValue("kpiTotalCollection", totalCollection);
+animateValue("kpiOutstanding", outstanding);
+animateValue("kpiPercent", percent, true);
+animateValue("kpiYear", yearCollection);
+animateValue("kpiMonth", monthCollection);
+animateValue("kpiToday", todayCollection);
+animateValue("kpiDue", dueCount);
  // CHART
  if(chart) chart.destroy();
 
@@ -415,6 +444,25 @@ if(overdue.innerHTML===""){
  });
 
 }
+document.getElementById("themeToggle").onclick = ()=>{
+
+  document.body.classList.toggle("owner-dark");
+
+  const isDark = document.body.classList.contains("owner-dark");
+
+  localStorage.setItem("ownerTheme", isDark ? "dark":"light");
+
+  themeToggle.innerText = isDark ? "☀️" : "🌙";
+};
+
+window.addEventListener("DOMContentLoaded", ()=>{
+  const saved = localStorage.getItem("ownerTheme");
+
+  if(saved==="dark"){
+    document.body.classList.add("owner-dark");
+    themeToggle.innerText = "☀️";
+  }
+});
 
 </script>
 </body>
