@@ -35,8 +35,12 @@
 <!-- 🔐 INVITE CODE -->
 <div class="card">
   <h3>Your Agent Invite Code</h3>
+<div class="invite-wrapper">
   <div id="ownerCodeBox" class="code-box">Loading...</div>
-  <button onclick="regenerateCode()">Regenerate Code</button>
+  <div id="inviteTimer" class="invite-timer">30s</div>
+</div>
+
+<button onclick="regenerateCode()">Regenerate Code</button>
 </div>
 
 <!-- 👤 AGENT REQUESTS -->
@@ -154,7 +158,9 @@ onAuthStateChanged(auth, async(user)=>{
  ownerName = snap.data().name || user.email.split("@")[0] || "Owner";
  document.getElementById("ownerName").innerText = ownerName;
 
- await loadInviteCode();
+if(inviteInterval) clearInterval(inviteInterval);
+
+await loadInviteCode();
  listenAgentRequests();
  await loadAgents();
  setupRealtimeAnalytics();
@@ -168,22 +174,87 @@ window.logoutUser = async()=>{
 };
 
 /* INVITE SYSTEM */
+
+    // ================= INVITE AUTO SYSTEM =================
+
+let inviteInterval;
+let inviteExpiry = null;
+
+/* INITIAL LOAD */
 async function loadInviteCode(){
- const ref=doc(db,"users",ownerId);
- const snap=await getDoc(ref);
- let code=snap.data().inviteCode;
- if(!code){
-   code="OWN"+Math.floor(100000+Math.random()*900000);
-   await updateDoc(ref,{inviteCode:code});
- }
- ownerCodeBox.innerText=code;
+
+  const ref = doc(db,"users",ownerId);
+  const snap = await getDoc(ref);
+
+  const data = snap.data();
+
+  // If no code OR expired → generate new
+  if(!data.inviteCode || !data.inviteExpiry || data.inviteExpiry < Date.now()){
+    await generateNewCode();
+  }else{
+    document.getElementById("ownerCodeBox").innerText = data.inviteCode;
+    inviteExpiry = data.inviteExpiry;
+  }
+
+  startInviteTimer();
 }
 
-window.regenerateCode = async()=>{
- const code="OWN"+Math.floor(100000+Math.random()*900000);
- await updateDoc(doc(db,"users",ownerId),{inviteCode:code});
- ownerCodeBox.innerText=code;
+/* GENERATE NEW CODE */
+async function generateNewCode(){
+
+  const code = "OWN" + Math.floor(100000 + Math.random()*900000);
+  const expiry = Date.now() + 30000; // 30 seconds
+
+  await updateDoc(doc(db,"users",ownerId),{
+    inviteCode: code,
+    inviteExpiry: expiry
+  });
+
+  document.getElementById("ownerCodeBox").innerText = code;
+
+  // 🔥 reset shake effect
+  const timerEl = document.getElementById("inviteTimer");
+  timerEl.classList.remove("shake");
+
+  inviteExpiry = expiry;
+}
+
+/* MANUAL REGENERATE */
+window.regenerateCode = async ()=>{
+
+  clearInterval(inviteInterval);
+  await generateNewCode();
+  startInviteTimer();
 };
+
+/* TIMER BASED ON EXPIRY */
+function startInviteTimer(){
+
+  if(inviteInterval) clearInterval(inviteInterval); // safety
+
+  const timerEl = document.getElementById("inviteTimer");
+
+  inviteInterval = setInterval(async ()=>{
+
+    const timeLeft = Math.floor((inviteExpiry - Date.now())/1000);
+
+    if(timeLeft <= 0){
+      clearInterval(inviteInterval);
+      await generateNewCode();
+      startInviteTimer();
+      return;
+    }
+
+    timerEl.innerText = timeLeft + "s";
+
+    if(timeLeft <= 5){
+      timerEl.classList.add("shake");
+    }else{
+      timerEl.classList.remove("shake");
+    }
+
+  },1000);
+}
 
 /* AGENT REQUESTS REALTIME */
 function listenAgentRequests(){
