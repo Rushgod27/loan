@@ -321,21 +321,74 @@ async function processData(){
  const outstanding = totalLoan - totalCollection;
  const percent = totalLoan ? ((totalCollection/totalLoan)*100).toFixed(1) : 0;
 
- // DUE COUNT
- const instSnap = await getDocs(query(
-   collection(db,"installments"),
-   where("ownerId","==",ownerId),
-   where("status","==","pending")
- ));
+ // ===============================
+// FULL DUE + OVERDUE + TOTAL DUE
+// ===============================
 
- let dueCount = 0;
+const instSnap = await getDocs(query(
+  collection(db,"installments"),
+  where("ownerId","==",ownerId),
+  where("status","==","pending")
+));
 
- instSnap.forEach(d=>{
-   const data = d.data();
-   if(agentId!=="all" && data.agentId!==agentId) return;
+const borrowersSnap = await getDocs(query(
+  collection(db,"borrowers"),
+  where("ownerId","==",ownerId)
+));
 
-   dueCount += data.amount || 0;
- });
+let borrowersMap = {};
+borrowersSnap.forEach(d=>{
+  borrowersMap[d.id] = d.data().name;
+});
+
+let dueCount = 0;
+
+dueToday.innerHTML = "";
+overdue.innerHTML = "";
+
+const todayDate = new Date();
+todayDate.setHours(0,0,0,0);
+
+instSnap.forEach(d=>{
+
+  const data = d.data();
+  if(agentId!=="all" && data.agentId!==agentId) return;
+
+  dueCount += data.amount || 0;
+
+  const dueDate = new Date(data.dueDate);
+  dueDate.setHours(0,0,0,0);
+
+  const borrowerName = borrowersMap[data.borrowerId] || "Unknown";
+  const agentNameDisplay = agentsMap[data.agentId] || "Agent";
+
+  const cardHTML = `
+    <div class="card-row">
+      <strong>${borrowerName}</strong><br>
+      Amount: ₹${data.amount}<br>
+      Due Date: ${new Date(data.dueDate).toLocaleDateString()}<br>
+      Agent: ${agentNameDisplay}
+    </div>
+  `;
+
+  if(dueDate.getTime() === todayDate.getTime()){
+    dueToday.innerHTML += cardHTML;
+  }
+
+  if(dueDate < todayDate){
+    overdue.innerHTML += cardHTML;
+  }
+
+});
+
+// EMPTY STATES
+if(dueToday.innerHTML===""){
+  dueToday.innerHTML = "<p>No dues today</p>";
+}
+
+if(overdue.innerHTML===""){
+  overdue.innerHTML = "<p>No overdue payments</p>";
+}
 
  // UPDATE UI
  kpiTotalLoan.innerText = totalLoan;
