@@ -79,7 +79,9 @@ onAuthStateChanged(auth, async user=>{
               user.email?.split("@")[0] || 
               "Agent";
 
-  startRealtime();
+startRealtime();
+setActive("Dashboard");
+refresh();   // 🚀 force immediate first render// 🔥 ADD THIS LINE
 });
 
 
