@@ -204,10 +204,13 @@ loadBtn.addEventListener("click", loadData);
 
 async function loadData(){
 
-  const from = fromDate.value;
-  const to   = toDate.value;
+  const fromInput = fromDate.value;
+  const toInput   = toDate.value;
 
-  /* ================= STOCK CURRENT ================= */
+  const from = new Date(fromInput + "T00:00:00");
+  const to   = new Date(toInput + "T23:59:59");
+
+  /* ================= STOCK ================= */
 
   const liveSnap = await getDoc(doc(db,"stock_current","live"));
 
@@ -227,12 +230,12 @@ async function loadData(){
     masalaAvail.innerText   = live.masala?.availableAmount ?? 0;
   }
 
-  /* ================= SALES SUMMARY ================= */
+  /* ================= SALES ================= */
 
   const snap = await getDocs(collection(db,"sales"));
 
   let totalSales = 0;
-  let totalCost  = 0;
+  let totalCost = 0;
   let totalProfit = 0;
   let totalBills = 0;
   let totalCash = 0;
@@ -248,9 +251,12 @@ async function loadData(){
   snap.forEach(doc=>{
 
     const s = doc.data();
-    if(!s.date) return;
 
-    if(s.date < from || s.date > to) return;
+    if(!s.createdAt) return; // Must use Firestore Timestamp field
+
+    const saleDate = s.createdAt.toDate();
+
+    if(saleDate < from || saleDate > to) return;
 
     totalSales  += s.total || 0;
     totalCost   += s.totalCost || 0;
@@ -271,7 +277,6 @@ async function loadData(){
 
     if(s.items?.masala)
       productProfit.masala += (s.items.masala.amount - s.items.masala.cost);
-
   });
 
   const profitPercent = totalSales ? (totalProfit/totalSales*100) : 0;
@@ -287,12 +292,8 @@ async function loadData(){
   totalOnline.innerText = totalOnline.toFixed(2);
   totalBills.innerText = totalBills;
   bestProduct.innerText = best.charAt(0).toUpperCase()+best.slice(1);
-
 }
 
 loadData();
 
 </script>
-
-</body>
-</html>
