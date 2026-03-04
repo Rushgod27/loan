@@ -978,68 +978,18 @@ window.toggleInstallments = (loanId) => {
 
 window.confirmMarkPaid = (id, loanId, borrowerId, amt)=>{
 
-  openConfirm("Mark this installment as paid?", async ()=>{
+  openConfirm("Mark this installment as paid?", ()=>{
 
-    const borrower = state.borrowers.find(b=>b.id===borrowerId);
-    const loan = state.loans.find(l=>l.id===loanId);
+    sendPaymentReceipt(id, loanId, borrowerId, amt);
 
-    const loanInstallments = state.installments
-      .filter(i=>i.loanId===loanId)
-      .sort((a,b)=>a.number-b.number);
-
-    const totalInstallments = loanInstallments.length;
-
-    const paidInstallments = loanInstallments.filter(i=>{
-      return i.status==="completed" || i.id===id;
-    }).length;
-
-    const remainingInstallments = totalInstallments - paidInstallments;
-
-    const inst = loanInstallments.find(i=>i.id===id);
-
-    const msg = `Hello ${borrower.name},
-
-Payment Received Successfully ✅
-
-Loan Amount: ₹${loan.principal}
-Installment Paid: ₹${amt}
-Installment Number: ${inst?.number || ""}
-
-Total Installments: ${totalInstallments}
-Completed Installments: ${paidInstallments}
-Remaining Installments: ${remainingInstallments}
-
-Thank you for your payment.
-
------------------------------
-
-ನಮಸ್ಕಾರ ${borrower.name},
-
-ನಿಮ್ಮ ಪಾವತಿ ಯಶಸ್ವಿಯಾಗಿ ಸ್ವೀಕರಿಸಲಾಗಿದೆ ✅
-
-ಸಾಲದ ಮೊತ್ತ: ₹${loan.principal}
-ಪಾವತಿಸಿದ ಕಂತು: ₹${amt}
-ಕಂತು ಸಂಖ್ಯೆ: ${inst?.number || ""}
-
-ಒಟ್ಟು ಕಂತುಗಳು: ${totalInstallments}
-ಪಾವತಿಸಿದ ಕಂತುಗಳು: ${paidInstallments}
-ಬಾಕಿ ಇರುವ ಕಂತುಗಳು: ${remainingInstallments}
-
-ಧನ್ಯವಾದಗಳು.`;
-
-    const link =
-    `https://wa.me/91${borrower.phone}?text=${encodeURIComponent(msg)}`;
-
-    // ✅ Open WhatsApp immediately
-    window.open(link,"_blank");
-
-    // ✅ Then process payment
-    await processPayment(id, loanId, borrowerId, amt);
+    processPayment(id, loanId, borrowerId, amt);
 
     showToast("Payment recorded successfully ✅");
 
   });
+
 };
+
 
 
 /* CREATE LOAN */
@@ -1388,8 +1338,9 @@ Thank you for your payment.
   const link =
   `https://wa.me/91${borrower.phone}?text=${encodeURIComponent(msg)}`;
 
-  // 🔥 Use location.href instead of window.open
+  // 🔥 THIS WORKS EVERYWHERE
   window.location.href = link;
+
 }
 
 /* ========================
