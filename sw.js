@@ -1,9 +1,9 @@
-const CACHE_NAME = "Loan-Management-App-v17.7";
+const CACHE_NAME = "Loan-Management-App-v1.0";
 
 const urlsToCache = [
   "./",
   "./index.html",
-  "./agent.html",          // 🔥 single merged page
+  "./agent.html",
   "./css/styles.css",
   "./js/firebase.js",
   "./manifest.json",
@@ -11,28 +11,55 @@ const urlsToCache = [
   "./icons/icon-512.png"
 ];
 
+/* INSTALL */
 self.addEventListener("install", event => {
+
+  self.skipWaiting(); // activate immediately
+
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then(cache => cache.addAll(urlsToCache))
   );
+
 });
 
+/* ACTIVATE */
 self.addEventListener("activate", event => {
+
   event.waitUntil(
     caches.keys().then(cacheNames => {
       return Promise.all(
-        cacheNames
-          .filter(name => name !== CACHE_NAME)
-          .map(name => caches.delete(name))
+        cacheNames.map(name => {
+          if(name !== CACHE_NAME){
+            return caches.delete(name);
+          }
+        })
       );
     })
   );
+
+  self.clients.claim(); // control pages immediately
+
 });
 
+/* FETCH */
 self.addEventListener("fetch", event => {
+
   event.respondWith(
-    caches.match(event.request)
-      .then(response => response || fetch(event.request))
+
+    fetch(event.request) // try network first
+      .then(response => {
+
+        const clone = response.clone();
+
+        caches.open(CACHE_NAME)
+          .then(cache => cache.put(event.request, clone));
+
+        return response;
+
+      })
+      .catch(() => caches.match(event.request)) // fallback to cache
+
   );
+
 });
