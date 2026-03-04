@@ -468,11 +468,12 @@ box.innerHTML = `
 
     <br><br>
 
-    <input id="newPhone"
-      placeholder="Phone Number"
-      maxlength="10"
-      inputmode="numeric"
-      autocomplete="off" />
+  <input id="newPhone"
+placeholder="Phone Number"
+maxlength="10"
+inputmode="numeric"
+pattern="[0-9]*"
+autocomplete="off" />
 
     <br><br>
 
@@ -498,15 +499,27 @@ window.createBorrower = async () => {
   const name = nameInput.value.trim();
   const phone = phoneInput.value.trim();
 
-const nameRegex = /^[\p{L}\s]+$/u;
   const phoneRegex = /^[0-9]{10}$/;
 
-  // 🔒 Validation using Toast (no alert)
-  if (!nameRegex.test(name)) {
-    showToast("Name should contain letters only ⚠️");
+  // Name required
+  if (!name) {
+    showToast("Name is required ⚠️");
     return;
   }
 
+  // Block numbers
+  if (/[0-9]/.test(name)) {
+    showToast("Name cannot contain numbers ⚠️");
+    return;
+  }
+
+  // Block special characters
+  if (/[!@#$%^&*()_+=\[\]{};:"\\|,.<>/?`~]/.test(name)) {
+    showToast("Name cannot contain symbols ⚠️");
+    return;
+  }
+
+  // Phone validation
   if (!phoneRegex.test(phone)) {
     showToast("Phone number must be exactly 10 digits ⚠️");
     return;
@@ -519,27 +532,24 @@ const nameRegex = /^[\p{L}\s]+$/u;
     return;
   }
 
-  // 🔥 CONFIRM BEFORE SAVING
-  openConfirm(`Add borrower "${name}"?`, async ()=>{
+  openConfirm(`Add borrower "${name}"?`, async () => {
 
     await addDoc(collection(db,"borrowers"),{
-  name,
-  nameLower: name.toLowerCase(),
-  phone,
-  agentId: uid,
-  ownerId: ownerId,   // 🔥 ADD THIS
-  createdAt: Date.now()
-});
+      name,
+      nameLower: name.toLowerCase(),
+      phone,
+      agentId: uid,
+      ownerId: ownerId,
+      createdAt: Date.now()
+    });
 
     showToast("Borrower Added Successfully ✅");
 
     nameInput.value = "";
     phoneInput.value = "";
 
-    // Optional: close form automatically
     document.getElementById("addBorrowerBox").innerHTML = "";
   });
-
 };
 
 function renderBorrowerList(list){
