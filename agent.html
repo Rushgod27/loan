@@ -1764,6 +1764,7 @@ window.closeConfirm = function(){
 
 <div id="toast"></div>
 <script>
+
 if ("serviceWorker" in navigator) {
 
   navigator.serviceWorker.register("./service-worker.js")
@@ -1771,10 +1772,10 @@ if ("serviceWorker" in navigator) {
 
     console.log("Service Worker Registered");
 
-    // check for updates every 20 seconds
+    // check updates every 15 seconds
     setInterval(() => {
       reg.update();
-    }, 20000);
+    }, 15000);
 
   });
 
@@ -1783,6 +1784,7 @@ if ("serviceWorker" in navigator) {
   });
 
 }
+
 </script>
 </body>
 </html>
