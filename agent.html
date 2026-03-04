@@ -456,29 +456,32 @@ window.showAddBorrower = () => {
     return;
   }
 
-  box.innerHTML = `
-    <div class="card" id="borrowerFormCard">
+box.innerHTML = `
+  <div class="card" id="borrowerFormCard">
 
-      <h3>Add New Borrower</h3>
+    <h3>Add New Borrower</h3>
 
-      <input id="newName" placeholder="Full Name"
-        pattern="[A-Za-z ]+"
-        inputmode="text" />
+    <input id="newName"
+      placeholder="Full Name"
+      inputmode="text"
+      autocomplete="off" />
 
-      <br><br>
+    <br><br>
 
-      <input id="newPhone" placeholder="Phone Number"
-        maxlength="10"
-        inputmode="numeric" />
+    <input id="newPhone"
+      placeholder="Phone Number"
+      maxlength="10"
+      inputmode="numeric"
+      autocomplete="off" />
 
-      <br><br>
+    <br><br>
 
-      <button class="btn btn-success"
-              onclick="createBorrower()">
-        Save Borrower
-      </button>
-    </div>
-  `;
+    <button class="btn btn-success"
+            onclick="createBorrower()">
+      Save Borrower
+    </button>
+  </div>
+`;
 
   // Delay to avoid immediate trigger
   setTimeout(()=>{
@@ -495,7 +498,7 @@ window.createBorrower = async () => {
   const name = nameInput.value.trim();
   const phone = phoneInput.value.trim();
 
-  const nameRegex = /^[A-Za-z ]+$/;
+const nameRegex = /^[\p{L}\s]+$/u;
   const phoneRegex = /^[0-9]{10}$/;
 
   // 🔒 Validation using Toast (no alert)
