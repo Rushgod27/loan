@@ -3,30 +3,45 @@
 <head>
 <meta charset="UTF-8">
 <title>Agent App</title>
-<meta name="viewport" 
+
+<meta name="viewport"
 content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
 
-<link rel="stylesheet" href="css/styles.css?v=17.3">
+<link rel="stylesheet" href="css/styles.css?v=18">
+
 <link rel="manifest" href="manifest.json">
+
 <meta name="theme-color" content="#4f46e5">
+
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 
 </head>
 
 <body>
-  <div class="swipe-bar" id="swipeBar"></div>
+
+<div class="swipe-bar"></div>
 
 <div class="header">
-  <span id="pageTitle">Dashboard</span>
 
-  <button id="themeToggle" onclick="toggleTheme()">🌙</button>
+<span id="pageTitle">Dashboard</span>
+
+<div style="display:flex;gap:8px">
+
+<button id="themeToggle" onclick="toggleTheme()">🌙</button>
+
 <button id="langToggle" onclick="toggleLanguage()">EN</button>
+
+</div>
+
 </div>
 
 
 <div id="dashboardSection" class="section-content"></div>
+
 <div id="borrowersSection" class="section-content hidden"></div>
+
 <div id="profileSection" class="section-content hidden"></div>
+
 
 <div class="logout-wrapper">
 <button class="btn btn-danger" onclick="logout()">Logout</button>
@@ -63,43 +78,85 @@ let currentLang = localStorage.getItem("lang") || "en";
 const translations = {
 
 en:{
+
 dashboard:"Dashboard",
 borrowers:"Borrowers",
 profile:"Profile",
+
+performance:"Here's your 7-day performance",
+
+activeBorrowers:"Active Borrowers",
+activeLoans:"Active Loans",
+todayCollection:"Today Collection",
+next7Days:"Next 7 Days",
+
+dueToday:"Due Today",
+overdue:"Overdue",
+pending:"Pending",
+completed:"Completed",
+
 addBorrower:"Add New Borrower",
 saveBorrower:"Save Borrower",
 searchBorrower:"Search borrower",
-dueToday:"Due Today",
-overdue:"Overdue",
+
+documents:"Documents",
+
+createLoan:"Create Loan",
+installments:"Installments",
+
 call:"Call",
 sendReminder:"Send Reminder",
 markPaid:"Mark Paid",
-documents:"Documents",
-createLoan:"Create Loan",
-installments:"Installments",
+
+confirmCall:"Call this borrower?",
+confirmReminder:"Send reminder message?",
+confirmPayment:"Mark this installment as paid?",
+
 loanCreated:"Loan Created Successfully ✅",
 borrowerAdded:"Borrower Added Successfully ✅",
-paymentRecorded:"Payment recorded successfully ✅"
+paymentRecorded:"Payment recorded successfully ✅",
+
 },
 
 kn:{
+
 dashboard:"ಡ್ಯಾಶ್‌ಬೋರ್ಡ್",
 borrowers:"ಸಾಲಗಾರರು",
 profile:"ಪ್ರೊಫೈಲ್",
+
+performance:"ನಿಮ್ಮ 7 ದಿನಗಳ ಕಾರ್ಯಕ್ಷಮತೆ",
+
+activeBorrowers:"ಸಕ್ರಿಯ ಸಾಲಗಾರರು",
+activeLoans:"ಸಕ್ರಿಯ ಸಾಲಗಳು",
+todayCollection:"ಇಂದಿನ ಸಂಗ್ರಹ",
+next7Days:"ಮುಂದಿನ 7 ದಿನಗಳು",
+
+dueToday:"ಇಂದು ಪಾವತಿ",
+overdue:"ಬಾಕಿ ಪಾವತಿ",
+pending:"ಬಾಕಿ",
+completed:"ಪೂರ್ಣಗೊಂಡಿದೆ",
+
 addBorrower:"ಹೊಸ ಸಾಲಗಾರರನ್ನು ಸೇರಿಸಿ",
 saveBorrower:"ಸಾಲಗಾರರನ್ನು ಉಳಿಸಿ",
 searchBorrower:"ಸಾಲಗಾರರನ್ನು ಹುಡುಕಿ",
-dueToday:"ಇಂದು ಪಾವತಿ",
-overdue:"ಬಾಕಿ ಪಾವತಿಗಳು",
+
+documents:"ದಾಖಲೆಗಳು",
+
+createLoan:"ಸಾಲ ರಚಿಸಿ",
+installments:"ಕಂತುಗಳು",
+
 call:"ಕಾಲ್",
 sendReminder:"ಸ್ಮರಣಿಕೆ ಕಳುಹಿಸಿ",
 markPaid:"ಪಾವತಿಸಲಾಗಿದೆ",
-documents:"ದಾಖಲೆಗಳು",
-createLoan:"ಸಾಲ ರಚಿಸಿ",
-installments:"ಕಂತುಗಳು",
+
+confirmCall:"ಈ ಸಾಲಗಾರರಿಗೆ ಕರೆ ಮಾಡಬೇಕೆ?",
+confirmReminder:"ಸ್ಮರಣಿಕೆ ಕಳುಹಿಸಬೇಕೆ?",
+confirmPayment:"ಈ ಕಂತನ್ನು ಪಾವತಿಸಲಾಗಿದೆ ಎಂದು ಗುರುತಿಸಬೇಕೆ?",
+
 loanCreated:"ಸಾಲ ಯಶಸ್ವಿಯಾಗಿ ರಚಿಸಲಾಗಿದೆ ✅",
 borrowerAdded:"ಸಾಲಗಾರರನ್ನು ಯಶಸ್ವಿಯಾಗಿ ಸೇರಿಸಲಾಗಿದೆ ✅",
-paymentRecorded:"ಪಾವತಿ ಯಶಸ್ವಿಯಾಗಿ ದಾಖಲಿಸಲಾಗಿದೆ ✅"
+paymentRecorded:"ಪಾವತಿ ಯಶಸ್ವಿಯಾಗಿ ದಾಖಲಾಗಿದೆ ✅",
+
 }
 
 };
@@ -202,37 +259,49 @@ function refresh(){
 }
 
 /* NAVIGATION */
-window.showDashboard=()=>{currentView="dashboard";setActive(t("dashboard"))}
-window.showBorrowers=()=>{currentView="borrowers";setActive("Borrowers")}
-window.showProfile=(id)=>{currentProfileId=id;currentView="profile";setActive("Profile")}
+window.showDashboard = ()=>{
+currentView = "dashboard";
+setActive("dashboard");
+}
 
-function setActive(title){
+window.showBorrowers = ()=>{
+currentView = "borrowers";
+setActive("borrowers");
+}
 
-  pageTitle.innerText = title;
+window.showProfile = (id)=>{
+currentProfileId = id;
+currentView = "profile";
+setActive("profile");
+}
 
-  dashboardSection.classList.add("hidden");
-  borrowersSection.classList.add("hidden");
-  profileSection.classList.add("hidden");
+function setActive(view){
 
-  document.getElementById("tabDashboard")?.classList.remove("active");
-  document.getElementById("tabBorrowers")?.classList.remove("active");
+pageTitle.innerText = t(view);
 
-  if(title === "Dashboard"){
-    dashboardSection.classList.remove("hidden");
-    document.getElementById("tabDashboard")?.classList.add("active");
-  }
+dashboardSection.classList.add("hidden");
+borrowersSection.classList.add("hidden");
+profileSection.classList.add("hidden");
 
-  if(title === "Borrowers"){
-    borrowersSection.classList.remove("hidden");
-    document.getElementById("tabBorrowers")?.classList.add("active");
-  }
+document.getElementById("tabDashboard")?.classList.remove("active");
+document.getElementById("tabBorrowers")?.classList.remove("active");
 
-  if(title === "Profile"){
-    profileSection.classList.remove("hidden");
-    document.getElementById("tabBorrowers")?.classList.add("active");
-  }
+if(view === "dashboard"){
+dashboardSection.classList.remove("hidden");
+document.getElementById("tabDashboard")?.classList.add("active");
+}
 
-  refresh();
+if(view === "borrowers"){
+borrowersSection.classList.remove("hidden");
+document.getElementById("tabBorrowers")?.classList.add("active");
+}
+
+if(view === "profile"){
+profileSection.classList.remove("hidden");
+}
+
+refresh();
+
 }
 
 /* DASHBOARD */
@@ -449,7 +518,7 @@ setTimeout(()=>{
 }
 window.confirmCall = (phone)=>{
 
-  openConfirm("Call this borrower?", ()=>{
+openConfirm(t("confirmCall"))
     window.location.href = "tel:" + phone;
   });
 
@@ -457,7 +526,7 @@ window.confirmCall = (phone)=>{
 
 window.confirmReminder = (waLink)=>{
 
-  openConfirm("Send reminder message?", ()=>{
+  openConfirm(t("confirmReminder")), ()=>{
     window.open(waLink,"_blank");
     showToast("Reminder Sent ✅");
   });
@@ -1166,7 +1235,7 @@ if (count < 1){
       });
     }
 
-showToast(t("loanCreated"));
+showToast(t("loanCreated"))
   });
 };
 
@@ -1601,13 +1670,15 @@ window.addEventListener("DOMContentLoaded", function(){
   /* LANGUAGE LOAD */
   const langBtn = document.getElementById("langToggle");
 
-  if(langBtn){
-    if(currentLang === "kn"){
-      langBtn.innerText = "ಕನ್ನಡ";
-    }else{
-      langBtn.innerText = "EN";
-    }
-  }
+if(langBtn){
+
+if(currentLang === "kn"){
+langBtn.innerText="ಕನ್ನಡ";
+}else{
+langBtn.innerText="EN";
+}
+
+}
 
 });
 
