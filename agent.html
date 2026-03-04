@@ -82,6 +82,7 @@ en:{
 dashboard:"Dashboard",
 borrowers:"Borrowers",
 profile:"Profile",
+fullName:"Full Name",
 
 performance:"Here's your 7-day performance",
 
@@ -94,15 +95,23 @@ dueToday:"Due Today",
 overdue:"Overdue",
 pending:"Pending",
 completed:"Completed",
+noOverdue:"No overdue payments",
 
 addBorrower:"Add New Borrower",
 saveBorrower:"Save Borrower",
 searchBorrower:"Search borrower",
+phone:"Phone Number"
 
 documents:"Documents",
 
 createLoan:"Create Loan",
 installments:"Installments",
+installment:"Installment",
+amount:"Amount",
+due:"Due",
+status:"Status",
+completedLoans:"Completed Loans"
+noOverdue:"No overdue payments",
 
 call:"Call",
 sendReminder:"Send Reminder",
@@ -123,6 +132,7 @@ kn:{
 dashboard:"ಡ್ಯಾಶ್‌ಬೋರ್ಡ್",
 borrowers:"ಸಾಲಗಾರರು",
 profile:"ಪ್ರೊಫೈಲ್",
+fullName:"ಪೂರ್ಣ ಹೆಸರು",
 
 performance:"ನಿಮ್ಮ 7 ದಿನಗಳ ಕಾರ್ಯಕ್ಷಮತೆ",
 
@@ -135,15 +145,22 @@ dueToday:"ಇಂದು ಪಾವತಿ",
 overdue:"ಬಾಕಿ ಪಾವತಿ",
 pending:"ಬಾಕಿ",
 completed:"ಪೂರ್ಣಗೊಂಡಿದೆ",
+noOverdue:"ಬಾಕಿ ಪಾವತಿಗಳಿಲ್ಲ",
 
 addBorrower:"ಹೊಸ ಸಾಲಗಾರರನ್ನು ಸೇರಿಸಿ",
 saveBorrower:"ಸಾಲಗಾರರನ್ನು ಉಳಿಸಿ",
 searchBorrower:"ಸಾಲಗಾರರನ್ನು ಹುಡುಕಿ",
+phone:"ಫೋನ್ ಸಂಖ್ಯೆ"
 
 documents:"ದಾಖಲೆಗಳು",
 
 createLoan:"ಸಾಲ ರಚಿಸಿ",
 installments:"ಕಂತುಗಳು",
+installment:"ಕಂತು",
+amount:"ಮೊತ್ತ",
+due:"ಪಾವತಿ ದಿನ",
+status:"ಸ್ಥಿತಿ",
+completedLoans:"ಪೂರ್ಣಗೊಂಡ ಸಾಲಗಳು"
 
 call:"ಕಾಲ್",
 sendReminder:"ಸ್ಮರಣಿಕೆ ಕಳುಹಿಸಿ",
@@ -377,7 +394,7 @@ overviewHTML = `
 
     <div class="kpi-card kpi-purple">
       <div class="kpi-number counter" data-count="${activeLoans}">0</div>
-      <div class="kpi-label">Active Loans</div>
+      <div class="kpi-label">t("activeLoans")</div>
     </div>
 
     <div class="kpi-card kpi-green">
@@ -507,8 +524,8 @@ const actionButtons = `
 
   dashboardSection.innerHTML =
   overviewHTML +
-  `<div class="card"><h3>Due Today</h3>${dueHTML || "No dues today"}</div>` +
-  `<div class="card"><h3>Overdue</h3>${overdueHTML || "No overdue payments"}</div>`;
+<div class="card"><h3>${t("overdue")}</h3>
+<div class="card"><h3>${t("dueToday")}</h3>
 
 /* Run animations AFTER render */
 setTimeout(()=>{
@@ -590,17 +607,17 @@ window.showAddBorrower = () => {
 box.innerHTML = `
   <div class="card" id="borrowerFormCard">
 
-    <h3>Add New Borrower</h3>
+<h3>${t("addBorrower")}</h3>
 
     <input id="newName"
-      placeholder="Full Name"
+      placeholder="${t("fullName")}"
       inputmode="text"
       autocomplete="off" />
 
     <br><br>
 
   <input id="newPhone"
-placeholder="Phone Number"
+placeholder="${t("phone")}"
 maxlength="10"
 inputmode="numeric"
 pattern="[0-9]*"
@@ -1071,10 +1088,10 @@ window.toggleInstallments = (loanId) => {
     arr.forEach(i=>{
       h += `
         <div class="inst-card">
-          Installment ${i.number}<br>
-          Amount: ₹${i.amount}<br>
-          Due: ${new Date(i.dueDate).toLocaleDateString()}<br>
-          Status: ${i.status}<br>
+        ${t("installment")} ${i.number}
+${t("amount")}
+${t("due")}
+${t("status")}<br>
           ${i.status==="pending" ? `
 <button class="btn btn-success"
   onclick="confirmMarkPaid('${i.id}','${loanId}','${i.borrowerId}',${i.amount})">
@@ -1087,10 +1104,10 @@ window.toggleInstallments = (loanId) => {
     return h;
   }
   box.innerHTML =
-    renderGroup("Due Today", dueToday, "#f59e0b") +
-    renderGroup("Overdue", overdue, "#ef4444") +
-    renderGroup("Pending", pending, "#2563eb") +
-    renderGroup("Completed", completed, "#16a34a");
+  renderGroup(t("dueToday"), dueToday, "#f59e0b")
+renderGroup(t("overdue"), overdue, "#ef4444")
+renderGroup(t("pending"), pending, "#2563eb")
+renderGroup(t("completed"), completed, "#16a34a")
 };
 
 window.confirmMarkPaid = (id, loanId, borrowerId, amt)=>{
