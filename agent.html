@@ -363,7 +363,7 @@ overviewHTML = `
   <div class="hero-card">
     <div class="hero-text">
       Hi ${agentName} 👋
-      <div class="hero-sub">Here's your 7-day performance</div>
+<div class="hero-sub">${t("performance")}</div>
     </div>
     <svg id="sparklineChart"></svg>
   </div>
@@ -518,7 +518,7 @@ setTimeout(()=>{
 }
 window.confirmCall = (phone)=>{
 
-openConfirm(t("confirmCall"))
+  openConfirm(t("confirmCall"), ()=>{
     window.location.href = "tel:" + phone;
   });
 
@@ -526,7 +526,7 @@ openConfirm(t("confirmCall"))
 
 window.confirmReminder = (waLink)=>{
 
-  openConfirm(t("confirmReminder")), ()=>{
+  openConfirm(t("confirmReminder"), ()=>{
     window.open(waLink,"_blank");
     showToast("Reminder Sent ✅");
   });
@@ -549,7 +549,7 @@ function renderBorrowers(){
     <div class="card">
       <input id="searchInput" placeholder="${t("searchBorrower")}">
       <br><br>
-     <button class="btn btn-primary">
+ <button class="btn btn-primary" onclick="showAddBorrower()">
 + ${t("addBorrower")}
 </button>
     </div>
