@@ -959,10 +959,10 @@ window.toggleInstallments = (loanId) => {
           Due: ${new Date(i.dueDate).toLocaleDateString()}<br>
           Status: ${i.status}<br>
           ${i.status==="pending" ? `
-            <button class="btn btn-success"
-              onclick="markPaid('${i.id}','${loanId}','${i.borrowerId}',${i.amount})">
-              Mark Paid
-            </button>` : ""}
+<button class="btn btn-success"
+  onclick="confirmMarkPaid('${i.id}','${loanId}','${i.borrowerId}',${i.amount})">
+  Mark Paid
+</button>` : ""}
         </div>
       `;
     });
