@@ -1315,7 +1315,7 @@ Remaining Installments: ${remainingInstallments}
 
 Thank you for your payment.
 
----------------------------------
+-----------------------------
 
 ನಮಸ್ಕಾರ ${borrower.name},
 
@@ -1329,12 +1329,13 @@ Thank you for your payment.
 ಪಾವತಿಸಿದ ಕಂತುಗಳು: ${paidInstallments}
 ಬಾಕಿ ಇರುವ ಕಂತುಗಳು: ${remainingInstallments}
 
-ನಿಮ್ಮ ಪಾವತಿಗೆ ಧನ್ಯವಾದಗಳು.`;
+ಧನ್ಯವಾದಗಳು.`;
 
   const link =
   `https://wa.me/91${borrower.phone}?text=${encodeURIComponent(msg)}`;
 
-  window.open(link,"_blank");
+  // 🔥 Use location.href instead of window.open
+  window.location.href = link;
 }
 
 /* ========================
