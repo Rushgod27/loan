@@ -72,6 +72,20 @@ let currentView="dashboard";
 let currentProfileId=null;
 let openedLoanId=null;
 let refreshTimer = null;
+let renderQueued = false;
+
+function scheduleRefresh(){
+
+  if(renderQueued) return;
+
+  renderQueued = true;
+
+  requestAnimationFrame(()=>{
+    renderQueued = false;
+    refresh();
+  });
+
+}
 /* AUTH */
 let agentName = "Agent";
 let currentLang = localStorage.getItem("lang") || "en";
@@ -207,8 +221,7 @@ function startRealtime(){
     s=>{
       state.borrowers=[];
       s.forEach(d=>state.borrowers.push({id:d.id,...d.data()}));
-clearTimeout(refreshTimer);
-refreshTimer = setTimeout(refresh,100);
+scheduleRefresh();
     }
   );
 
@@ -218,8 +231,7 @@ refreshTimer = setTimeout(refresh,100);
     s=>{
       state.loans=[];
       s.forEach(d=>state.loans.push({id:d.id,...d.data()}));
-clearTimeout(refreshTimer);
-refreshTimer = setTimeout(refresh,100);
+scheduleRefresh();
     }
   );
 
@@ -229,8 +241,7 @@ refreshTimer = setTimeout(refresh,100);
     s=>{
       state.installments=[];
       s.forEach(d=>state.installments.push({id:d.id,...d.data()}));
-clearTimeout(refreshTimer);
-refreshTimer = setTimeout(refresh,100);
+scheduleRefresh();
     }
   );
 
@@ -240,8 +251,7 @@ refreshTimer = setTimeout(refresh,100);
     s=>{
       state.collections=[];
       s.forEach(d=>state.collections.push({id:d.id,...d.data()}));
-clearTimeout(refreshTimer);
-refreshTimer = setTimeout(refresh,100);
+scheduleRefresh();
     }
   );
 
@@ -251,8 +261,7 @@ refreshTimer = setTimeout(refresh,100);
     s=>{
       state.documents=[];
       s.forEach(d=>state.documents.push({id:d.id,...d.data()}));
-clearTimeout(refreshTimer);
-refreshTimer = setTimeout(refresh,100);
+scheduleRefresh();
     }
   );
 
@@ -317,8 +326,7 @@ if(view === "profile"){
 profileSection.classList.remove("hidden");
 }
 
-clearTimeout(refreshTimer);
-refreshTimer = setTimeout(refresh,100);
+scheduleRefresh();
 
 }
 
@@ -1682,8 +1690,7 @@ window.toggleLanguage = function(){
   const btn = document.getElementById("langToggle");
   btn.innerText = currentLang === "kn" ? "ಕನ್ನಡ" : "EN";
 
-clearTimeout(refreshTimer);
-refreshTimer = setTimeout(refresh,100);
+scheduleRefresh();
 };
 
 function t(key){
