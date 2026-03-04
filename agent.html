@@ -235,25 +235,15 @@ scheduleRefresh();
     }
   );
 
- const todayStart = new Date();
-todayStart.setHours(0,0,0,0);
-
-const nextWeek = new Date(todayStart.getTime() + 7*86400000);
-
-// INSTALLMENTS
-onSnapshot(
-  query(
-    collection(db,"installments"),
-    where("agentId","==",uid),
-    where("status","==","pending"),
-    where("dueDate","<=",nextWeek.getTime())
-  ),
-  s=>{
-    state.installments=[];
-    s.forEach(d=>state.installments.push({id:d.id,...d.data()}));
-    scheduleRefresh();
-  }
-);
+  // INSTALLMENTS
+  onSnapshot(
+    query(collection(db,"installments"),where("agentId","==",uid)),
+    s=>{
+      state.installments=[];
+      s.forEach(d=>state.installments.push({id:d.id,...d.data()}));
+scheduleRefresh();
+    }
+  );
 
   // COLLECTIONS
   onSnapshot(
@@ -571,7 +561,7 @@ window.confirmReminder = (waLink)=>{
 
   openConfirm(t("confirmReminder"), ()=>{
     window.open(waLink,"_blank");
-showToast(t("reminderSent"))
+    showToast("Reminder Sent ✅");
   });
 
 };
