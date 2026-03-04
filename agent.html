@@ -887,16 +887,21 @@ docInput.addEventListener("change", function(){
   /* DOCUMENT UPLOAD */
   docInput.onchange = async e => {
 
-    const files = [...e.target.files];
+  const files = [...e.target.files];
 
-    for(const f of files){
+  for(const f of files){
 
-      const reader = new FileReader();
+    if(!f.type.startsWith("image/")){
+      showToast("Only image documents allowed");
+      continue;
+    }
 
-      reader.onload = async ev => {
+    const reader = new FileReader();
 
-        const img = new Image();
-        img.src = ev.target.result;
+    reader.onload = async ev => {
+
+      const img = new Image();
+      img.src = ev.target.result;
 
         img.onload = async () => {
 
@@ -1114,15 +1119,15 @@ renderGroup(t("completed"), completed, "#16a34a");
 
 window.confirmMarkPaid = (id, loanId, borrowerId, amt)=>{
 
-openConfirm(t("confirmPayment"), ()=>{
+openConfirm(t("confirmPayment"), async ()=>{
 
-    sendPaymentReceipt(id, loanId, borrowerId, amt);
+  await processPayment(id, loanId, borrowerId, amt);
 
-    processPayment(id, loanId, borrowerId, amt);
+  sendPaymentReceipt(id, loanId, borrowerId, amt);
 
-    showToast("Payment recorded successfully ✅");
+  showToast(t("paymentRecorded"));
 
-  });
+});
 
 };
 
@@ -1611,7 +1616,7 @@ function renderSparkline(){
     points.push(total);
   }
 
-const max = Math.max(1, ...points);
+const max = Math.max(1, ...(points.length ? points : [1]));
 
   const coords = points.map((v,i)=>{
     const x = i*(200/6);
