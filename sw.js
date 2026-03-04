@@ -1,6 +1,6 @@
-const CACHE_NAME = "Loan-Management-App-v1.0";
+const CACHE_NAME = "Loan-Management-App-v18";
 
-const urlsToCache = [
+const APP_FILES = [
   "./",
   "./index.html",
   "./agent.html",
@@ -14,11 +14,11 @@ const urlsToCache = [
 /* INSTALL */
 self.addEventListener("install", event => {
 
-  self.skipWaiting(); // activate immediately
+  self.skipWaiting();
 
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then(cache => cache.addAll(urlsToCache))
+      .then(cache => cache.addAll(APP_FILES))
   );
 
 });
@@ -27,27 +27,40 @@ self.addEventListener("install", event => {
 self.addEventListener("activate", event => {
 
   event.waitUntil(
-    caches.keys().then(cacheNames => {
+    caches.keys().then(keys => {
       return Promise.all(
-        cacheNames.map(name => {
-          if(name !== CACHE_NAME){
-            return caches.delete(name);
+        keys.map(key => {
+          if(key !== CACHE_NAME){
+            return caches.delete(key);
           }
         })
       );
     })
   );
 
-  self.clients.claim(); // control pages immediately
+  self.clients.claim();
 
 });
 
 /* FETCH */
 self.addEventListener("fetch", event => {
 
+  const url = new URL(event.request.url);
+
+  // 🔥 NEVER CACHE FIREBASE OR API REQUESTS
+  if (
+    url.hostname.includes("firebase") ||
+    url.hostname.includes("googleapis") ||
+    url.hostname.includes("gstatic")
+  ) {
+    event.respondWith(fetch(event.request));
+    return;
+  }
+
+  // NETWORK FIRST
   event.respondWith(
 
-    fetch(event.request) // try network first
+    fetch(event.request)
       .then(response => {
 
         const clone = response.clone();
@@ -58,7 +71,7 @@ self.addEventListener("fetch", event => {
         return response;
 
       })
-      .catch(() => caches.match(event.request)) // fallback to cache
+      .catch(() => caches.match(event.request))
 
   );
 
