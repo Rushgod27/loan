@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <title>Agent App</title>
-
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  
 <meta name="viewport"
 content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no">
 
@@ -70,7 +71,7 @@ let state={
 let currentView="dashboard";
 let currentProfileId=null;
 let openedLoanId=null;
-
+let refreshTimer = null;
 /* AUTH */
 let agentName = "Agent";
 let currentLang = localStorage.getItem("lang") || "en";
@@ -206,7 +207,8 @@ function startRealtime(){
     s=>{
       state.borrowers=[];
       s.forEach(d=>state.borrowers.push({id:d.id,...d.data()}));
-      refresh();
+clearTimeout(refreshTimer);
+refreshTimer = setTimeout(refresh,100);
     }
   );
 
@@ -216,7 +218,8 @@ function startRealtime(){
     s=>{
       state.loans=[];
       s.forEach(d=>state.loans.push({id:d.id,...d.data()}));
-      refresh();
+clearTimeout(refreshTimer);
+refreshTimer = setTimeout(refresh,100);
     }
   );
 
@@ -226,7 +229,8 @@ function startRealtime(){
     s=>{
       state.installments=[];
       s.forEach(d=>state.installments.push({id:d.id,...d.data()}));
-      refresh();
+clearTimeout(refreshTimer);
+refreshTimer = setTimeout(refresh,100);
     }
   );
 
@@ -236,7 +240,8 @@ function startRealtime(){
     s=>{
       state.collections=[];
       s.forEach(d=>state.collections.push({id:d.id,...d.data()}));
-      refresh();
+clearTimeout(refreshTimer);
+refreshTimer = setTimeout(refresh,100);
     }
   );
 
@@ -246,7 +251,8 @@ function startRealtime(){
     s=>{
       state.documents=[];
       s.forEach(d=>state.documents.push({id:d.id,...d.data()}));
-      refresh();
+clearTimeout(refreshTimer);
+refreshTimer = setTimeout(refresh,100);
     }
   );
 
@@ -311,7 +317,8 @@ if(view === "profile"){
 profileSection.classList.remove("hidden");
 }
 
-refresh();
+clearTimeout(refreshTimer);
+refreshTimer = setTimeout(refresh,100);
 
 }
 
@@ -683,14 +690,21 @@ window.createBorrower = async () => {
 
   openConfirm(`Add borrower "${name}"?`, async () => {
 
-    await addDoc(collection(db,"borrowers"),{
-      name,
-      nameLower: name.toLowerCase(),
-      phone,
-      agentId: uid,
-      ownerId: ownerId,
-      createdAt: Date.now()
-    });
+    try{
+
+await addDoc(collection(db,"borrowers"),{
+  name,
+  nameLower:name.toLowerCase(),
+  phone,
+  agentId:uid,
+  ownerId:ownerId,
+  createdAt:Date.now()
+});
+
+}catch(err){
+  console.error(err);
+  showToast("Failed to add borrower ❌");
+}
 
 showToast(t("borrowerAdded"));
 
@@ -895,7 +909,10 @@ docInput.addEventListener("change", function(){
       showToast("Only image documents allowed");
       continue;
     }
-
+if(f.size > 5 * 1024 * 1024){
+  showToast("Image too large (max 5MB)");
+  continue;
+}
     const reader = new FileReader();
 
     reader.onload = async ev => {
@@ -919,15 +936,23 @@ docInput.addEventListener("change", function(){
           const compressedFile =
             canvas.toDataURL("image/jpeg",0.5);
 
-          await addDoc(collection(db,"documents"),{
-            borrowerId:id,
-            agentId:uid,
-            ownerId:ownerId,
-            file:compressedFile,
-            createdAt:Date.now()
-          });
+          try{
 
-          alert("Document Uploaded ✅");
+await addDoc(collection(db,"documents"),{
+  borrowerId:id,
+  agentId:uid,
+  ownerId:ownerId,
+  file:compressedFile,
+  createdAt:Date.now()
+});
+
+}catch(err){
+
+console.error(err);
+showToast("Upload failed ❌");
+
+}
+showToast("Document Uploaded ✅");
         };
       };
 
@@ -1121,7 +1146,12 @@ window.confirmMarkPaid = (id, loanId, borrowerId, amt)=>{
 
 openConfirm(t("confirmPayment"), async ()=>{
 
-  await processPayment(id, loanId, borrowerId, amt);
+if(confirmMarkPaid.lock) return;
+confirmMarkPaid.lock = true;
+
+await processPayment(id, loanId, borrowerId, amt);
+
+confirmMarkPaid.lock = false;
 
   sendPaymentReceipt(id, loanId, borrowerId, amt);
 
@@ -1480,7 +1510,7 @@ Thank you for your payment.
   `https://wa.me/91${borrower.phone}?text=${encodeURIComponent(msg)}`;
 
   // 🔥 THIS WORKS EVERYWHERE
-  window.location.href = link;
+window.open(link,"_blank");
 
 }
 
@@ -1616,7 +1646,7 @@ function renderSparkline(){
     points.push(total);
   }
 
-const max = Math.max(1, ...(points.length ? points : [1]));
+const max = Math.max(...points,1);
 
   const coords = points.map((v,i)=>{
     const x = i*(200/6);
@@ -1652,7 +1682,8 @@ window.toggleLanguage = function(){
   const btn = document.getElementById("langToggle");
   btn.innerText = currentLang === "kn" ? "ಕನ್ನಡ" : "EN";
 
-  refresh(); // re-render UI
+clearTimeout(refreshTimer);
+refreshTimer = setTimeout(refresh,100);
 };
 
 function t(key){
@@ -1707,7 +1738,10 @@ langBtn.innerText="EN";
 });
 
 function showToast(message){
+
   const toast = document.getElementById("toast");
+  if(!toast) return;
+
   toast.innerText = message;
   toast.classList.add("show");
 
