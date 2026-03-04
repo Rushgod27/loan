@@ -53,7 +53,6 @@ let state={
 let currentView="dashboard";
 let currentProfileId=null;
 let openedLoanId=null;
-let unsubscribers = [];
 
 /* AUTH */
 let agentName = "Agent";
@@ -79,76 +78,62 @@ onAuthStateChanged(auth, async user=>{
               user.email?.split("@")[0] || 
               "Agent";
 
-startRealtime();
-setActive("Dashboard");
+  startRealtime();
 });
 
 
 function startRealtime(){
 
-  // Clear old listeners if any
-  unsubscribers.forEach(unsub => unsub());
-  unsubscribers = [];
-
   // BORROWERS
-  unsubscribers.push(
-    onSnapshot(
-      query(collection(db,"borrowers"),where("agentId","==",uid)),
-      s=>{
-        state.borrowers=[];
-        s.forEach(d=>state.borrowers.push({id:d.id,...d.data()}));
-        scheduleRefresh();
-      }
-    )
+  onSnapshot(
+    query(collection(db,"borrowers"),where("agentId","==",uid)),
+    s=>{
+      state.borrowers=[];
+      s.forEach(d=>state.borrowers.push({id:d.id,...d.data()}));
+      refresh();
+    }
   );
 
   // LOANS
-  unsubscribers.push(
-    onSnapshot(
-      query(collection(db,"loans"),where("agentId","==",uid)),
-      s=>{
-        state.loans=[];
-        s.forEach(d=>state.loans.push({id:d.id,...d.data()}));
-        scheduleRefresh();
-      }
-    )
+  onSnapshot(
+    query(collection(db,"loans"),where("agentId","==",uid)),
+    s=>{
+      state.loans=[];
+      s.forEach(d=>state.loans.push({id:d.id,...d.data()}));
+      refresh();
+    }
   );
 
   // INSTALLMENTS
-  unsubscribers.push(
-    onSnapshot(
-      query(collection(db,"installments"),where("agentId","==",uid)),
-      s=>{
-        state.installments=[];
-        s.forEach(d=>state.installments.push({id:d.id,...d.data()}));
-        scheduleRefresh();
-      }
-    )
+  onSnapshot(
+    query(collection(db,"installments"),where("agentId","==",uid)),
+    s=>{
+      state.installments=[];
+      s.forEach(d=>state.installments.push({id:d.id,...d.data()}));
+      refresh();
+    }
   );
 
   // COLLECTIONS
-  unsubscribers.push(
-    onSnapshot(
-      query(collection(db,"collections"),where("agentId","==",uid)),
-      s=>{
-        state.collections=[];
-        s.forEach(d=>state.collections.push({id:d.id,...d.data()}));
-        scheduleRefresh();
-      }
-    )
+  onSnapshot(
+    query(collection(db,"collections"),where("agentId","==",uid)),
+    s=>{
+      state.collections=[];
+      s.forEach(d=>state.collections.push({id:d.id,...d.data()}));
+      refresh();
+    }
   );
 
-  // DOCUMENTS
-  unsubscribers.push(
-    onSnapshot(
-      query(collection(db,"documents"),where("agentId","==",uid)),
-      s=>{
-        state.documents=[];
-        s.forEach(d=>state.documents.push({id:d.id,...d.data()}));
-        scheduleRefresh();
-      }
-    )
+  // 🔥 DOCUMENTS (NEW COLLECTION)
+  onSnapshot(
+    query(collection(db,"documents"),where("agentId","==",uid)),
+    s=>{
+      state.documents=[];
+      s.forEach(d=>state.documents.push({id:d.id,...d.data()}));
+      refresh();
+    }
   );
+
 }
 
 function refresh(){
@@ -199,7 +184,7 @@ function setActive(title){
     document.getElementById("tabBorrowers")?.classList.add("active");
   }
 
-scheduleRefresh();
+  refresh();
 }
 
 /* DASHBOARD */
@@ -464,9 +449,10 @@ window.showAddBorrower = () => {
 
   const box = document.getElementById("addBorrowerBox");
 
+  // If open → close properly
   if(box.innerHTML.trim() !== ""){
     box.innerHTML = "";
-    document.removeEventListener("click", handleOutsideClick);
+    document.removeEventListener("click", handleOutsideClick); // ✅ remove listener
     return;
   }
 
@@ -475,14 +461,13 @@ window.showAddBorrower = () => {
 
       <h3>Add New Borrower</h3>
 
-      <input id="newName"
-        placeholder="Full Name"
+      <input id="newName" placeholder="Full Name"
+        pattern="[A-Za-z ]+"
         inputmode="text" />
 
       <br><br>
 
-      <input id="newPhone"
-        placeholder="Phone Number"
+      <input id="newPhone" placeholder="Phone Number"
         maxlength="10"
         inputmode="numeric" />
 
@@ -495,9 +480,7 @@ window.showAddBorrower = () => {
     </div>
   `;
 
-  document.getElementById("borrowerFormCard")
-    .addEventListener("click", e => e.stopPropagation());
-
+  // Delay to avoid immediate trigger
   setTimeout(()=>{
     document.addEventListener("click", handleOutsideClick);
   },50);
@@ -512,13 +495,14 @@ window.createBorrower = async () => {
   const name = nameInput.value.trim();
   const phone = phoneInput.value.trim();
 
-const nameRegex = /^[\p{L}\s]+$/u;
-const phoneRegex = /^[0-9]{10}$/;
+  const nameRegex = /^[A-Za-z ]+$/;
+  const phoneRegex = /^[0-9]{10}$/;
 
-if (!nameRegex.test(name)) {
-  showToast("Name should contain letters only ⚠️");
-  return;
-}
+  // 🔒 Validation using Toast (no alert)
+  if (!nameRegex.test(name)) {
+    showToast("Name should contain letters only ⚠️");
+    return;
+  }
 
   if (!phoneRegex.test(phone)) {
     showToast("Phone number must be exactly 10 digits ⚠️");
@@ -687,63 +671,102 @@ html += `
 
 const fileNameText = document.getElementById("fileName");
 
-
-
-docInput.onchange = async function(e){
-
-  const files = [...e.target.files];
-
-  // 🔹 Update file name preview
-  if(files.length === 0){
+docInput.addEventListener("change", function(){
+  if(this.files.length === 0){
     fileNameText.innerText = "No files selected";
-    return;
-  } else if(files.length === 1){
-    fileNameText.innerText = files[0].name;
+  } else if(this.files.length === 1){
+    fileNameText.innerText = this.files[0].name;
   } else{
-    fileNameText.innerText = files.length + " files selected";
+    fileNameText.innerText = this.files.length + " files selected";
   }
+});
 
-  // 🔹 Upload documents
-  for(const f of files){
 
+  profileImg.onclick = () => photoInput.click();
+
+  /* PHOTO UPDATE */
+  photoInput.onchange = e => {
+
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const img = new Image();
     const reader = new FileReader();
 
-    reader.onload = async ev => {
+    reader.onload = event => img.src = event.target.result;
 
-      const img = new Image();
-      img.src = ev.target.result;
+    img.onload = async () => {
 
-      img.onload = async () => {
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
 
-        const canvas = document.createElement("canvas");
-        const ctx = canvas.getContext("2d");
+      const MAX_WIDTH = 400;
+      const scale = MAX_WIDTH / img.width;
 
-        const MAX_WIDTH = 600;
-        const scale = MAX_WIDTH / img.width;
+      canvas.width = MAX_WIDTH;
+      canvas.height = img.height * scale;
 
-        canvas.width = MAX_WIDTH;
-        canvas.height = img.height * scale;
+      ctx.drawImage(img,0,0,canvas.width,canvas.height);
 
-        ctx.drawImage(img,0,0,canvas.width,canvas.height);
+      const compressed =
+        canvas.toDataURL("image/jpeg",0.6);
 
-        const compressedFile =
-          canvas.toDataURL("image/jpeg",0.5);
+      await updateDoc(doc(db,"borrowers",id),{
+        profileImage: compressed
+      });
 
-        await addDoc(collection(db,"documents"),{
-          borrowerId:id,
-          agentId:uid,
-          ownerId:ownerId,
-          file:compressedFile,
-          createdAt:Date.now()
-        });
-
-        showToast("Document Uploaded ✅");
-      };
+      alert("Photo Updated Successfully ✅");
     };
 
-    reader.readAsDataURL(f);
-  }
-};
+    reader.readAsDataURL(file);
+  };
+
+  /* DOCUMENT UPLOAD */
+  docInput.onchange = async e => {
+
+    const files = [...e.target.files];
+
+    for(const f of files){
+
+      const reader = new FileReader();
+
+      reader.onload = async ev => {
+
+        const img = new Image();
+        img.src = ev.target.result;
+
+        img.onload = async () => {
+
+          const canvas = document.createElement("canvas");
+          const ctx = canvas.getContext("2d");
+
+          const MAX_WIDTH = 600;
+          const scale = MAX_WIDTH / img.width;
+
+          canvas.width = MAX_WIDTH;
+          canvas.height = img.height * scale;
+
+          ctx.drawImage(img,0,0,canvas.width,canvas.height);
+
+          const compressedFile =
+            canvas.toDataURL("image/jpeg",0.5);
+
+          await addDoc(collection(db,"documents"),{
+            borrowerId:id,
+            agentId:uid,
+            ownerId:ownerId,
+            file:compressedFile,
+            createdAt:Date.now()
+          });
+
+          alert("Document Uploaded ✅");
+        };
+      };
+
+      reader.readAsDataURL(f);
+    }
+  };
+}
 
 window.scrollToDocuments = () => {
 
@@ -1246,14 +1269,12 @@ document.addEventListener("touchstart", e => {
   }
 
   // 🚫 Don't swipe when modals are open
-  const confirmModal = document.getElementById("confirmModal");
-
-if(
-  document.querySelector(".preview-modal") ||
-  (confirmModal && !confirmModal.classList.contains("hidden"))
-){
-  return;
-}
+  if(
+    document.querySelector(".preview-modal") ||
+    !document.getElementById("confirmModal").classList.contains("hidden")
+  ){
+    return;
+  }
 
   startX = e.touches[0].clientX;
   startY = e.touches[0].clientY;
@@ -1375,16 +1396,6 @@ const max = Math.max(1, ...points);
   poly.setAttribute("stroke-width","3");
 
   svg.appendChild(poly);
-}
-
-
-let refreshTimeout;
-
-function scheduleRefresh(){
-  clearTimeout(refreshTimeout);
-  refreshTimeout = setTimeout(()=>{
-    refresh();
-  },50);
 }
 
 /* LOGOUT */
