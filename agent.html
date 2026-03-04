@@ -76,14 +76,11 @@ let renderQueued = false;
 
 function scheduleRefresh(){
 
-  if(renderQueued) return;
+  clearTimeout(refreshTimer);
 
-  renderQueued = true;
-
-  requestAnimationFrame(()=>{
-    renderQueued = false;
+  refreshTimer = setTimeout(()=>{
     refresh();
-  });
+  },80);
 
 }
 /* AUTH */
@@ -535,7 +532,7 @@ const actionButtons = `
 overviewHTML +
 `<div class="card">
 <h3>${t("dueToday")}</h3>
-${dueHTML || t("noOverdue")}
+${dueHTML || "No payments due today"}
 </div>
 
 <div class="card">
@@ -1284,18 +1281,26 @@ if (count < 1){
       createdAt: Date.now()
     });
 
-    for (let i = 0; i < count; i++) {
-      await addDoc(collection(db, "installments"), {
-        loanId: ref.id,
-        borrowerId: currentProfileId,
-        agentId: uid,
-        ownerId: ownerId, 
-        number: i + 1,
-        amount: installmentAmount,
-        dueDate: startTime + ((i + 1) * interval * 86400000),
-        status: "pending"
-      });
-    }
+const promises = [];
+
+for (let i = 0; i < count; i++) {
+
+  promises.push(
+    addDoc(collection(db,"installments"),{
+      loanId: ref.id,
+      borrowerId: currentProfileId,
+      agentId: uid,
+      ownerId: ownerId,
+      number: i + 1,
+      amount: installmentAmount,
+      dueDate: startTime + ((i + 1) * interval * 86400000),
+      status: "pending"
+    })
+  );
+
+}
+
+await Promise.all(promises);
 
 showToast(t("loanCreated"))
   });
@@ -1816,7 +1821,7 @@ if ("serviceWorker" in navigator) {
     // check updates every 15 seconds
     setInterval(() => {
       reg.update();
-    }, 15000);
+    }, 300000);
 
   });
 
