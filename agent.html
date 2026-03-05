@@ -606,6 +606,7 @@ window.markPaid = (id, loanId, borrowerId, amt)=>{
   openConfirm("Mark this installment as paid?", async ()=>{
     await processPayment(id, loanId, borrowerId, amt);
 showToast(t("paymentRecorded"));
+scheduleRefresh();
   });
 };
 
@@ -1204,7 +1205,8 @@ window.confirmMarkPaid = (id, loanId, borrowerId, amt)=>{
 
       sendPaymentReceipt(id, loanId, borrowerId, amt, result.loanCompleted);
 
-      showToast(t("paymentRecorded"));
+showToast(t("paymentRecorded"));
+scheduleRefresh();
 
     }catch(err){
 
@@ -1382,7 +1384,13 @@ MARK PAID
   const ref = doc(db,"installments",id);
   const snap = await getDoc(ref);
 
-  if(!snap.exists()) return {loanCompleted:false};
+if(!snap.exists()){
+  console.warn("Installment already processed");
+
+  scheduleRefresh();
+
+  return {loanCompleted:false};
+}
 
   const data = snap.data();
 
@@ -1394,9 +1402,15 @@ MARK PAID
 
   await deleteDoc(ref);
 
-  const remaining = state.installments
-    .filter(i => i.loanId === loanId && i.status === "pending" && i.id !== id);
+  const q = query(
+  collection(db,"installments"),
+  where("loanId","==",loanId),
+  where("status","==","pending")
+);
 
+const remainingSnap = await getDocs(q);
+
+const remaining = remainingSnap.docs.filter(d=>d.id !== id);
   let loanCompleted = false;
 
   if(remaining.length === 0){
