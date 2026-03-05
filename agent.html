@@ -63,6 +63,7 @@ import {
   doc,
   updateDoc,
   getDoc,
+  getDocs,
   deleteDoc
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
@@ -1947,7 +1948,9 @@ window.closeConfirm = function(){
     .classList.add("hidden");
 };
 
-
+window.addEventListener("focus", ()=>{
+  scheduleRefresh();
+});
 </script>
 
 <div class="bottom-nav">
