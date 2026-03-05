@@ -1560,7 +1560,7 @@ function sendPaymentReceipt(instId, loanId, borrowerId, amt, loanCompleted){
 
   const totalInstallments = loanInstallments.length;
 const paidInstallments =
-  loanInstallments.filter(i=>i.status==="completed").length;
+loanInstallments.filter(i=>i.status==="completed").length;
 const remainingInstallments = totalInstallments - paidInstallments;
 
   const inst = loanInstallments.find(i=>i.id===instId);
@@ -1628,9 +1628,9 @@ Thank you for completing your loan.
   }
 
   const link =
-  `https://wa.me/91${borrower.phone}?text=${encodeURIComponent(msg)}`;
+`https://wa.me/91${borrower.phone}?text=${encodeURIComponent(msg)}`;
 
-  window.open(link,"_blank");
+window.location.href = link;
 }
 
 /* ========================
