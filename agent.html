@@ -1586,12 +1586,14 @@ if(tag === "INPUT" || tag === "BUTTON" || tag === "SELECT" || tag === "TEXTAREA"
 }
 
   // 🚫 Don't swipe when modals are open
-  if(
-    document.querySelector(".preview-modal") ||
-    !document.getElementById("confirmModal").classList.contains("hidden")
-  ){
-    return;
-  }
+  const confirmModal = document.getElementById("confirmModal");
+
+if(
+  document.querySelector(".preview-modal") ||
+  (confirmModal && !confirmModal.classList.contains("hidden"))
+){
+  return;
+}
 
   startX = e.touches[0].clientX;
   startY = e.touches[0].clientY;
