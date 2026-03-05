@@ -55,10 +55,16 @@ import { signOut, onAuthStateChanged }
 from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 import {
-  collection, query, where, onSnapshot,
-  addDoc, doc, updateDoc
+  collection,
+  query,
+  where,
+  onSnapshot,
+  addDoc,
+  doc,
+  updateDoc,
+  getDoc,
+  deleteDoc
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-
 
 window.onerror = function(message, source, lineno, colno, error) {
   alert("Error: " + message + "\nLine: " + lineno);
@@ -90,6 +96,10 @@ function scheduleRefresh(){
   },80);
 
 }
+
+const dashboardSection = document.getElementById("dashboardSection");
+const borrowersSection = document.getElementById("borrowersSection");
+const profileSection = document.getElementById("profileSection");
 /* AUTH */
 let agentName = "Agent";
 let currentLang = localStorage.getItem("lang") || "en";
@@ -192,7 +202,6 @@ const translations = {
 
 };
 
-import { getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 onAuthStateChanged(auth, async user=>{
   if(!user){location.href="index.html";return;}
@@ -562,7 +571,7 @@ const actionButtons = `
 overviewHTML +
 `<div class="card">
 <h3>${t("dueToday")}</h3>
-${dueHTML || "No payments due today"}
+${dueHTML || t("noDueToday")}
 </div>
 
 <div class="card">
@@ -1191,15 +1200,15 @@ await processPayment(id, loanId, borrowerId, amt);
 
 confirmMarkPaid.lock = false;
 
-  sendPaymentReceipt(id, loanId, borrowerId, amt);
+sendPaymentReceipt(id, loanId, borrowerId, amt);
 
-  showToast(t("paymentRecorded"));
+showToast(t("paymentRecorded"));
 
 });
 
 };
 
-
+confirmMarkPaid.lock = false;
 
 /* CREATE LOAN */
 window.createLoanUI = () => {
@@ -1356,9 +1365,6 @@ function handleOutsideClick(e){
 /* ========================
 MARK PAID 
 ======================== */
-import { getDoc, deleteDoc } from 
-"https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-
 async function processPayment(id, loanId, borrowerId, amt){
 
   const ref = doc(db,"installments",id);
@@ -1692,6 +1698,7 @@ function renderSparkline(){
   const points = [];
 
   for(let i=6;i>=0;i--){
+
     const day = new Date(Date.now() - i*86400000);
     day.setHours(0,0,0,0);
 
@@ -1699,14 +1706,14 @@ function renderSparkline(){
       .filter(c=>{
         const d = new Date(c.date);
         d.setHours(0,0,0,0);
-        return d.getTime()===day.getTime();
+        return d.getTime() === day.getTime();
       })
-      .reduce((s,c)=>s+c.amount,0);
+      .reduce((s,c)=>s + c.amount,0);
 
     points.push(total);
   }
 
-const max = Math.max(...points,1);
+  const max = Math.max(...points,1);
 
   const coords = points.map((v,i)=>{
     const x = i*(200/6);
@@ -1714,7 +1721,11 @@ const max = Math.max(...points,1);
     return `${x},${y}`;
   }).join(" ");
 
-  const poly = document.createElementNS("http://www.w3.org/2000/svg","polyline");
+  const poly = document.createElementNS(
+    "http://www.w3.org/2000/svg",
+    "polyline"
+  );
+
   poly.setAttribute("points",coords);
   poly.setAttribute("fill","none");
   poly.setAttribute("stroke","#ffffff");
