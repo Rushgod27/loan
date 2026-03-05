@@ -59,6 +59,12 @@ import {
   addDoc, doc, updateDoc
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
+
+window.onerror = function(message, source, lineno, colno, error) {
+  alert("Error: " + message + "\nLine: " + lineno);
+};
+
+
 let uid=null;
 let ownerId=null;
 let state={
@@ -200,7 +206,7 @@ onAuthStateChanged(auth, async user=>{
     return;
   }
 
-  ownerId = snap.data().approvedBy; // 🔥 THIS IS IMPORTANT
+  ownerId = snap.data().approvedBy;
 
   agentName = snap.data().name || 
               user.displayName || 
@@ -208,9 +214,10 @@ onAuthStateChanged(auth, async user=>{
               "Agent";
 
   startRealtime();
+
+  // 🔥 THIS LINE FIXES THE DASHBOARD
+  setActive("dashboard");
 });
-
-
 function startRealtime(){
 
   // BORROWERS
@@ -384,7 +391,7 @@ const loanMap = Object.fromEntries(
 );
 
 state.installments.forEach(i=>{
-  if(i.status!=="pending") return;
+  if(!i.dueDate) return;
 
   const due = new Date(i.dueDate);
   due.setHours(0,0,0,0);
@@ -453,15 +460,14 @@ overviewHTML = `
 
 
   /* ===== INSTALLMENTS LOOP ===== */
-  state.installments.forEach(inst =>{
+state.installments.forEach(inst =>{
+  if(!inst.dueDate) return;
 
-    if(inst.status!=="pending") return;
+  const due = new Date(inst.dueDate);
+  due.setHours(0,0,0,0);
 
-    const due = new Date(inst.dueDate);
-    due.setHours(0,0,0,0);
-
-const borrower = borrowerMap[inst.borrowerId];
-const loan = loanMap[inst.loanId];
+  const borrower = borrowerMap[inst.borrowerId];
+  const loan = loanMap[inst.loanId];
 
     if(!borrower || !loan) return;
 
@@ -1251,11 +1257,11 @@ document.getElementById("loanFormCard")
 
 window.createLoan = async () => {
 
-  const principal = Number(loanAmt.value.replace(/,/g,""));
-  const interest = Number(loanInterest.value) || 0;
-  const count = Number(loanCount.value);
-  const interval = Number(loanInterval.value);
-  const start = loanStart.value;
+  const principal = Number(document.getElementById("loanAmt").value.replace(/,/g,""));
+const interest = Number(document.getElementById("loanInterest").value) || 0;
+const count = Number(document.getElementById("loanCount").value);
+const interval = Number(document.getElementById("loanInterval").value);
+const start = document.getElementById("loanStart").value;
 
   if (!principal || !count || !interval || !start){
   showToast("All fields required ⚠️");
@@ -1859,7 +1865,7 @@ if ("serviceWorker" in navigator) {
 
     console.log("Service Worker Registered");
 
-    // check updates every 5 seconds
+    // check updates every 5 minutes
     setInterval(() => {
       reg.update();
     }, 300000);
