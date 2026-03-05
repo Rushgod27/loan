@@ -235,7 +235,11 @@ scheduleRefresh();
 
   // INSTALLMENTS
   onSnapshot(
-    query(collection(db,"installments"),where("agentId","==",uid)),
+query(
+ collection(db,"installments"),
+ where("agentId","==",uid),
+ where("status","==","pending")
+)
     s=>{
       state.installments=[];
       s.forEach(d=>state.installments.push({id:d.id,...d.data()}));
@@ -346,11 +350,14 @@ function renderDashboard(){
    KPI CALCULATIONS
 ===================== */
 
-const activeBorrowers = state.borrowers.filter(b =>
-  state.loans.some(l => l.borrowerId === b.id && l.status === "active")
-).length;
+const activeLoanBorrowers = new Set(
+  state.loans
+    .filter(l=>l.status==="active")
+    .map(l=>l.borrowerId)
+);
 
-const completedLoans = state.loans.filter(l=>l.status==="completed").length;
+const activeBorrowers = activeLoanBorrowers.size;
+
 const activeLoans = state.loans.filter(l=>l.status==="active").length;
 
 let todayCollection = 0;
@@ -367,6 +374,14 @@ state.collections.forEach(c=>{
     todayCollection += c.amount;
   }
 });
+
+const borrowerMap = Object.fromEntries(
+  state.borrowers.map(b => [b.id, b])
+);
+
+const loanMap = Object.fromEntries(
+  state.loans.map(l => [l.id, l])
+);
 
 state.installments.forEach(i=>{
   if(i.status!=="pending") return;
@@ -445,8 +460,8 @@ overviewHTML = `
     const due = new Date(inst.dueDate);
     due.setHours(0,0,0,0);
 
-    const borrower = state.borrowers.find(b=>b.id===inst.borrowerId);
-    const loan = state.loans.find(l=>l.id===inst.loanId);
+const borrower = borrowerMap[inst.borrowerId];
+const loan = loanMap[inst.loanId];
 
     if(!borrower || !loan) return;
 
@@ -1101,8 +1116,9 @@ window.toggleInstallments = (loanId) => {
   const list = [
   ...state.installments,
   ...state.completedInstallments
-].filter(i => i.loanId === loanId);
-    .sort((a,b)=>a.number-b.number);
+]
+.filter(i => i.loanId === loanId)
+.sort((a,b)=>a.number-b.number);
 
   const dueToday = [];
   const overdue = [];
@@ -1342,18 +1358,26 @@ async function processPayment(id, loanId, borrowerId, amt){
   const ref = doc(db,"installments",id);
   const snap = await getDoc(ref);
 
+  if(!snap.exists()) return;
+
   const data = snap.data();
 
-  // Move to completed collection
   await addDoc(collection(db,"installments_completed"),{
     ...data,
+    status:"completed",
     completedAt: Date.now()
   });
 
-  // Remove from active collection
   await deleteDoc(ref);
 
-  // Save collection record
+  const remaining = state.installments.filter(i => i.loanId === loanId && i.id !== id);
+
+if(remaining.length === 0){
+  await updateDoc(doc(db,"loans",loanId),{
+    status:"completed"
+  });
+}
+
   await addDoc(collection(db,"collections"),{
     loanId,
     borrowerId,
@@ -1497,9 +1521,8 @@ const loanInstallments = [
 
   const totalInstallments = loanInstallments.length;
 
-  const paidInstallments = loanInstallments.filter(i=>{
-    return i.status==="completed" || i.id===instId;
-  }).length;
+  const paidInstallments =
+loanInstallments.filter(i=>i.status==="completed").length + 1;
 
   const remainingInstallments = totalInstallments - paidInstallments;
 
@@ -1556,11 +1579,11 @@ document.addEventListener("touchstart", e => {
 
   // 🚫 Don't swipe when touching inputs, buttons or forms
   const tag = e.target.tagName;
-  if(tag === "INPUT" || tag === "BUTTON" || tag === "SELECT" || tag === "TEXTAREA"){
-    startX = 0;
-    startY = 0;
-    return;
-  }
+if(tag === "INPUT" || tag === "BUTTON" || tag === "SELECT" || tag === "TEXTAREA" || tag === "A"){
+  startX = 0;
+  startY = 0;
+  return;
+}
 
   // 🚫 Don't swipe when modals are open
   if(
