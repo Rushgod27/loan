@@ -63,7 +63,6 @@ import {
   doc,
   updateDoc,
   getDoc,
-  getDocs,
   deleteDoc
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
@@ -607,7 +606,6 @@ window.markPaid = (id, loanId, borrowerId, amt)=>{
   openConfirm("Mark this installment as paid?", async ()=>{
     await processPayment(id, loanId, borrowerId, amt);
 showToast(t("paymentRecorded"));
-scheduleRefresh();
   });
 };
 
@@ -1206,8 +1204,7 @@ window.confirmMarkPaid = (id, loanId, borrowerId, amt)=>{
 
       sendPaymentReceipt(id, loanId, borrowerId, amt, result.loanCompleted);
 
-showToast(t("paymentRecorded"));
-scheduleRefresh();
+      showToast(t("paymentRecorded"));
 
     }catch(err){
 
@@ -1385,13 +1382,7 @@ MARK PAID
   const ref = doc(db,"installments",id);
   const snap = await getDoc(ref);
 
-if(!snap.exists()){
-  console.warn("Installment already processed");
-
-  scheduleRefresh();
-
-  return {loanCompleted:false};
-}
+  if(!snap.exists()) return {loanCompleted:false};
 
   const data = snap.data();
 
@@ -1403,15 +1394,9 @@ if(!snap.exists()){
 
   await deleteDoc(ref);
 
-  const q = query(
-  collection(db,"installments"),
-  where("loanId","==",loanId),
-  where("status","==","pending")
-);
+  const remaining = state.installments
+    .filter(i => i.loanId === loanId && i.status === "pending" && i.id !== id);
 
-const remainingSnap = await getDocs(q);
-
-const remaining = remainingSnap.docs.filter(d=>d.id !== id);
   let loanCompleted = false;
 
   if(remaining.length === 0){
@@ -1575,7 +1560,7 @@ function sendPaymentReceipt(instId, loanId, borrowerId, amt, loanCompleted){
 
   const totalInstallments = loanInstallments.length;
 const paidInstallments =
-loanInstallments.filter(i=>i.status==="completed").length;
+  loanInstallments.filter(i=>i.status==="completed").length;
 const remainingInstallments = totalInstallments - paidInstallments;
 
   const inst = loanInstallments.find(i=>i.id===instId);
@@ -1643,9 +1628,9 @@ Thank you for completing your loan.
   }
 
   const link =
-`https://wa.me/91${borrower.phone}?text=${encodeURIComponent(msg)}`;
+  `https://wa.me/91${borrower.phone}?text=${encodeURIComponent(msg)}`;
 
-window.location.href = link;
+  window.open(link,"_blank");
 }
 
 /* ========================
@@ -1948,9 +1933,7 @@ window.closeConfirm = function(){
     .classList.add("hidden");
 };
 
-window.addEventListener("focus", ()=>{
-  scheduleRefresh();
-});
+
 </script>
 
 <div class="bottom-nav">
