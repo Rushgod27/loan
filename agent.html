@@ -1189,6 +1189,7 @@ renderGroup(t("pending"), pending, "#2563eb") +
 renderGroup(t("completed"), completed, "#16a34a");
 };
 
+
 window.confirmMarkPaid = (id, loanId, borrowerId, amt)=>{
 
   if(confirmMarkPaid.lock) return;
@@ -1199,9 +1200,9 @@ window.confirmMarkPaid = (id, loanId, borrowerId, amt)=>{
 
       confirmMarkPaid.lock = true;
 
-      await processPayment(id, loanId, borrowerId, amt);
+      const result = await processPayment(id, loanId, borrowerId, amt);
 
-      sendPaymentReceipt(id, loanId, borrowerId, amt);
+      sendPaymentReceipt(id, loanId, borrowerId, amt, result.loanCompleted);
 
       showToast(t("paymentRecorded"));
 
@@ -1219,9 +1220,6 @@ window.confirmMarkPaid = (id, loanId, borrowerId, amt)=>{
   });
 
 };
-
-confirmMarkPaid.lock = false;
-
 
 /* CREATE LOAN */
 window.createLoanUI = () => {
@@ -1378,12 +1376,13 @@ function handleOutsideClick(e){
 /* ========================
 MARK PAID 
 ======================== */
-async function processPayment(id, loanId, borrowerId, amt){
+
+  async function processPayment(id, loanId, borrowerId, amt){
 
   const ref = doc(db,"installments",id);
   const snap = await getDoc(ref);
 
-  if(!snap.exists()) return;
+  if(!snap.exists()) return {loanCompleted:false};
 
   const data = snap.data();
 
@@ -1395,14 +1394,27 @@ async function processPayment(id, loanId, borrowerId, amt){
 
   await deleteDoc(ref);
 
-const remaining = state.installments
-  .filter(i => i.loanId === loanId && i.status === "pending" && i.id !== id);
+  const remaining = state.installments
+    .filter(i => i.loanId === loanId && i.status === "pending" && i.id !== id);
 
-if(remaining.length === 0){
-  await updateDoc(doc(db,"loans",loanId),{
-    status:"completed"
-  });
+  let loanCompleted = false;
+
+  if(remaining.length === 0){
+
+    loanCompleted = true;
+    
+    const borrower = state.borrowers.find(b=>b.id===borrowerId);
+const loan = state.loans.find(l=>l.id===loanId);
+
+if(borrower && loan){
+  showLoanCompletedCard(borrower, loan);
 }
+
+    await updateDoc(doc(db,"loans",loanId),{
+      status:"completed"
+    });
+
+  }
 
   await addDoc(collection(db,"collections"),{
     loanId,
@@ -1414,6 +1426,7 @@ if(remaining.length === 0){
     date:Date.now()
   });
 
+  return {loanCompleted};
 }
 /* ========================
 NUMBER FORMATTING 
@@ -1531,30 +1544,32 @@ confirmBtn.onclick = async ()=>{
 };
 }
 
-function sendPaymentReceipt(instId, loanId, borrowerId, amt){
+function sendPaymentReceipt(instId, loanId, borrowerId, amt, loanCompleted){
 
   const borrower = state.borrowers.find(b=>b.id===borrowerId);
   const loan = state.loans.find(l=>l.id===loanId);
 
   if(!borrower || !loan) return;
 
-const loanInstallments = [
-  ...state.installments,
-  ...state.completedInstallments
-]
-    .filter(i=>i.loanId===loanId)
-    .sort((a,b)=>a.number-b.number);
+  const loanInstallments = [
+    ...state.installments,
+    ...state.completedInstallments
+  ]
+  .filter(i=>i.loanId===loanId)
+  .sort((a,b)=>a.number-b.number);
 
   const totalInstallments = loanInstallments.length;
-
-  const paidInstallments =
-loanInstallments.filter(i=>i.status==="completed").length + 1;
-
-  const remainingInstallments = totalInstallments - paidInstallments;
+const paidInstallments =
+  loanInstallments.filter(i=>i.status==="completed").length;
+const remainingInstallments = totalInstallments - paidInstallments;
 
   const inst = loanInstallments.find(i=>i.id===instId);
 
-  const msg = `Hello ${borrower.name},
+  let msg="";
+
+  if(!loanCompleted){
+
+msg = `Hello ${borrower.name},
 
 Payment Received Successfully ✅
 
@@ -1584,12 +1599,38 @@ Thank you for your payment.
 
 ಧನ್ಯವಾದಗಳು.`;
 
+  }else{
+
+msg = `Hello ${borrower.name},
+
+🎉 LOAN COMPLETED SUCCESSFULLY 🎉
+
+Loan Amount: ₹${loan.principal}
+Total Installments: ${totalInstallments}
+
+All installments have been paid.
+
+Thank you for completing your loan.
+
+-----------------------------
+
+ನಮಸ್ಕಾರ ${borrower.name},
+
+🎉 ಸಾಲ ಸಂಪೂರ್ಣವಾಗಿ ಪಾವತಿಸಲಾಗಿದೆ 🎉
+
+ಸಾಲದ ಮೊತ್ತ: ₹${loan.principal}
+ಒಟ್ಟು ಕಂತುಗಳು: ${totalInstallments}
+
+ಎಲ್ಲಾ ಕಂತುಗಳು ಪಾವತಿಸಲಾಗಿದೆ.
+
+ಧನ್ಯವಾದಗಳು.`;
+
+  }
+
   const link =
   `https://wa.me/91${borrower.phone}?text=${encodeURIComponent(msg)}`;
 
-  // 🔥 THIS WORKS EVERYWHERE
-window.open(link,"_blank");
-
+  window.open(link,"_blank");
 }
 
 /* ========================
@@ -1820,6 +1861,44 @@ langBtn.innerText="EN";
 }
 
 });
+
+let loanCelebrationLock=false;
+
+function showLoanCompletedCard(borrower, loan){
+
+  if(loanCelebrationLock) return;
+  loanCelebrationLock=true;
+
+  const card = document.createElement("div");
+
+  card.style.position="fixed";
+  card.style.top="20px";
+  card.style.left="50%";
+  card.style.transform="translateX(-50%)";
+  card.style.background="#16a34a";
+  card.style.color="white";
+  card.style.padding="16px";
+  card.style.borderRadius="10px";
+  card.style.zIndex="9999";
+  card.style.textAlign="center";
+
+  card.innerHTML=`
+    <img src="${borrower.profileImage ||
+      'https://cdn-icons-png.flaticon.com/512/149/149071.png'}"
+      style="width:60px;height:60px;border-radius:50%;margin-bottom:8px">
+
+    <div><b>${borrower.name}</b></div>
+    <div>Loan ₹${loan.principal} Completed</div>
+    <div>🎉 Congratulations 🎉</div>
+  `;
+
+  document.body.appendChild(card);
+
+  setTimeout(()=>{
+    card.remove();
+    loanCelebrationLock=false;
+  },5000);
+}
 
 function showToast(message){
 
