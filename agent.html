@@ -65,8 +65,9 @@ let state={
   borrowers:[],
   loans:[],
   installments:[],
+  completedInstallments:[],
   collections:[],
-  documents:[]   // 🔥 NEW
+  documents:[]
 };
 let currentView="dashboard";
 let currentProfileId=null;
@@ -241,6 +242,14 @@ scheduleRefresh();
 scheduleRefresh();
     }
   );
+  onSnapshot(
+  query(collection(db,"installments_completed"),where("agentId","==",uid)),
+  s=>{
+    state.completedInstallments=[];
+    s.forEach(d=>state.completedInstallments.push({id:d.id,...d.data()}));
+    scheduleRefresh();
+  }
+);
 
   // COLLECTIONS
   onSnapshot(
@@ -1089,8 +1098,10 @@ window.toggleInstallments = (loanId) => {
   const today = new Date();
   today.setHours(0,0,0,0);
 
-  const list = state.installments
-    .filter(i => i.loanId === loanId)
+  const list = [
+  ...state.installments,
+  ...state.completedInstallments
+].filter(i => i.loanId === loanId);
     .sort((a,b)=>a.number-b.number);
 
   const dueToday = [];
@@ -1323,12 +1334,26 @@ function handleOutsideClick(e){
 /* ========================
 MARK PAID 
 ======================== */
+import { getDoc, deleteDoc } from 
+"https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
 async function processPayment(id, loanId, borrowerId, amt){
 
-  await updateDoc(doc(db,"installments",id),{
-    status:"completed"
+  const ref = doc(db,"installments",id);
+  const snap = await getDoc(ref);
+
+  const data = snap.data();
+
+  // Move to completed collection
+  await addDoc(collection(db,"installments_completed"),{
+    ...data,
+    completedAt: Date.now()
   });
 
+  // Remove from active collection
+  await deleteDoc(ref);
+
+  // Save collection record
   await addDoc(collection(db,"collections"),{
     loanId,
     borrowerId,
@@ -1338,18 +1363,6 @@ async function processPayment(id, loanId, borrowerId, amt){
     type:"installment",
     date:Date.now()
   });
-
-  const loanInstallments = state.installments
-  .filter(i => i.loanId === loanId)
-  .map(i => i.id === id ? {...i, status:"completed"} : i);
-
-const allCompleted = loanInstallments.every(i => i.status === "completed");
-
-  if(allCompleted){
-    await updateDoc(doc(db,"loans",loanId),{
-      status:"completed"
-    });
-  }
 
 }
 /* ========================
@@ -1475,7 +1488,10 @@ function sendPaymentReceipt(instId, loanId, borrowerId, amt){
 
   if(!borrower || !loan) return;
 
-  const loanInstallments = state.installments
+const loanInstallments = [
+  ...state.installments,
+  ...state.completedInstallments
+]
     .filter(i=>i.loanId===loanId)
     .sort((a,b)=>a.number-b.number);
 
