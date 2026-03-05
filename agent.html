@@ -235,17 +235,17 @@ scheduleRefresh();
 
   // INSTALLMENTS
   onSnapshot(
-query(
- collection(db,"installments"),
- where("agentId","==",uid),
- where("status","==","pending")
-)
-    s=>{
-      state.installments=[];
-      s.forEach(d=>state.installments.push({id:d.id,...d.data()}));
-scheduleRefresh();
-    }
-  );
+  query(
+    collection(db,"installments"),
+    where("agentId","==",uid),
+    where("status","==","pending")
+  ),
+  s=>{
+    state.installments=[];
+    s.forEach(d=>state.installments.push({id:d.id,...d.data()}));
+    scheduleRefresh();
+  }
+);
   onSnapshot(
   query(collection(db,"installments_completed"),where("agentId","==",uid)),
   s=>{
@@ -1859,7 +1859,7 @@ if ("serviceWorker" in navigator) {
 
     console.log("Service Worker Registered");
 
-    // check updates every 15 seconds
+    // check updates every 5 seconds
     setInterval(() => {
       reg.update();
     }, 300000);
