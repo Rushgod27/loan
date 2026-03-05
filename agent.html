@@ -1191,24 +1191,37 @@ renderGroup(t("completed"), completed, "#16a34a");
 
 window.confirmMarkPaid = (id, loanId, borrowerId, amt)=>{
 
-openConfirm(t("confirmPayment"), async ()=>{
+  if(confirmMarkPaid.lock) return;
 
-if(confirmMarkPaid.lock) return;
-confirmMarkPaid.lock = true;
+  openConfirm(t("confirmPayment"), async ()=>{
 
-await processPayment(id, loanId, borrowerId, amt);
+    try{
 
-confirmMarkPaid.lock = false;
+      confirmMarkPaid.lock = true;
 
-sendPaymentReceipt(id, loanId, borrowerId, amt);
+      await processPayment(id, loanId, borrowerId, amt);
 
-showToast(t("paymentRecorded"));
+      sendPaymentReceipt(id, loanId, borrowerId, amt);
 
-});
+      showToast(t("paymentRecorded"));
+
+    }catch(err){
+
+      console.error(err);
+      showToast("Payment failed ❌");
+
+    }finally{
+
+      confirmMarkPaid.lock = false;
+
+    }
+
+  });
 
 };
 
 confirmMarkPaid.lock = false;
+
 
 /* CREATE LOAN */
 window.createLoanUI = () => {
@@ -1382,7 +1395,8 @@ async function processPayment(id, loanId, borrowerId, amt){
 
   await deleteDoc(ref);
 
-  const remaining = state.installments.filter(i => i.loanId === loanId && i.id !== id);
+const remaining = state.installments
+  .filter(i => i.loanId === loanId && i.status === "pending" && i.id !== id);
 
 if(remaining.length === 0){
   await updateDoc(doc(db,"loans",loanId),{
