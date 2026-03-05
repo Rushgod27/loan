@@ -1,4 +1,4 @@
-const CACHE_NAME = "Loan-Management-App-v1.7";
+const CACHE_NAME = "Loan-Management-App-v1.8";
 
 const APP_FILES = [
   "./",
