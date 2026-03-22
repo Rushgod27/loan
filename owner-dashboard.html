@@ -2,298 +2,546 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Sales Intelligence Dashboard</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Owner Dashboard</title>
+<meta name="viewport"
+      content="width=device-width,
+               initial-scale=1.0,
+               maximum-scale=1.0,
+               user-scalable=no">
+              
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-touch-fullscreen" content="yes">
+<link rel="stylesheet" href="css/owner.css">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#4f46e5">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-<style>
-body{
-  margin:0;
-  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto;
-  background:linear-gradient(135deg,#eef2ff,#f8fafc);
-  color:#1f2937;
-}
-
-.header{
-  background:linear-gradient(135deg,#111827,#1f2937);
-  color:#fff;
-  padding:18px;
-  font-size:22px;
-  font-weight:900;
-  text-align:center;
-}
-
-.container{
-  max-width:1300px;
-  margin:auto;
-  padding:20px;
-}
-
-.card{
-  background:#fff;
-  padding:20px;
-  border-radius:18px;
-  margin-bottom:20px;
-  box-shadow:0 6px 18px rgba(0,0,0,0.06);
-}
-
-input[type="date"]{
-  padding:8px 10px;
-  border-radius:6px;
-  border:1px solid #ddd;
-  margin-right:10px;
-}
-
-button{
-  padding:8px 14px;
-  border:none;
-  border-radius:6px;
-  background:#4f46e5;
-  color:white;
-  font-weight:700;
-  cursor:pointer;
-}
-
-.grid{
-  display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(230px,1fr));
-  gap:15px;
-}
-
-.kpi{
-  background:#f9fafb;
-  padding:16px;
-  border-radius:12px;
-}
-
-.kpi-title{
-  font-size:13px;
-  color:#6b7280;
-  margin-bottom:6px;
-}
-
-.kpi-value{
-  font-size:20px;
-  font-weight:900;
-}
-
-.small{
-  font-size:14px;
-  font-weight:600;
-  color:#6b7280;
-}
-</style>
 </head>
 
 <body>
 
-<div class="header">📊 Anu’s Chicken Shop – Intelligence Dashboard</div>
+<div class="owner-header">
+  <span>Owner Dashboard 👑</span>
+  <button id="themeToggle">🌙</button>
+</div>
 
 <div class="container">
 
-<div class="card">
-  <h3>Date Range Filter</h3>
-  <input type="date" id="fromDate">
-  <input type="date" id="toDate">
-  <button id="loadBtn">Load</button>
-</div>
-
-<!-- ================= STOCK CURRENT ================= -->
-
-<div class="card">
-  <h3>📦 Stocks Available (Live)</h3>
-  <div class="grid">
-
-    <div class="kpi">
-      <div class="kpi-title">🐔 Broiler</div>
-      <div class="kpi-value">
-        <span id="broilerSold">0</span> /
-        <span id="broilerAvail">0</span> kg
-      </div>
-      <div class="small">Sold / Sellable</div>
+<!-- WELCOME HERO -->
+<div class="owner-hero">
+  <div>
+    <div class="owner-hero-title">
+      Hi <span id="ownerName">Owner</span> 👋
     </div>
-
-    <div class="kpi">
-      <div class="kpi-title">🐓 Country</div>
-      <div class="kpi-value">
-        <span id="countrySold">0</span> /
-        <span id="countryAvail">0</span> kg
-      </div>
-      <div class="small">Sold / Sellable</div>
+    <div class="owner-hero-sub">
+      Here's your business performance overview
     </div>
-
-    <div class="kpi">
-      <div class="kpi-title">🥚 Eggs</div>
-      <div class="kpi-value">
-        <span id="eggSold">0</span> /
-        <span id="eggAvail">0</span>
-      </div>
-      <div class="small">Sold / Available</div>
-    </div>
-
-    <div class="kpi">
-      <div class="kpi-title">🌶 Masala</div>
-      <div class="kpi-value">
-        <span id="masalaSold">0</span> /
-        <span id="masalaAvail">0</span>
-      </div>
-      <div class="small">Sold / Available</div>
-    </div>
-
   </div>
 </div>
 
-<!-- ================= EXECUTIVE SUMMARY ================= -->
-
+<!-- 🔐 INVITE CODE -->
 <div class="card">
-  <h3>Executive Summary</h3>
-  <div class="grid">
+  <h3>Your Agent Invite Code</h3>
+<div class="invite-wrapper">
+  <div id="ownerCodeBox" class="code-box">Loading...</div>
+  <div id="inviteTimer" class="invite-timer">30s</div>
+</div>
 
-    <div class="kpi">
-      <div class="kpi-title">Sales & Cost</div>
-      <div class="kpi-value">₹ <span id="totalSales">0</span></div>
-      <div class="small">Cost ₹ <span id="totalCost">0</span></div>
-    </div>
+<button onclick="regenerateCode()">Regenerate Code</button>
+</div>
 
-    <div class="kpi">
-      <div class="kpi-title">Collection Split</div>
-      <div class="kpi-value">Cash ₹ <span id="totalCash">0</span></div>
-      <div class="small">Online ₹ <span id="totalOnline">0</span></div>
-    </div>
+<!-- 👤 AGENT REQUESTS -->
+<div class="card">
+  <h3>Agent Requests</h3>
+  <div id="agentRequests"></div>
+</div>
 
-    <div class="kpi">
-      <div class="kpi-title">Profit</div>
-      <div class="kpi-value">₹ <span id="totalProfit">0</span></div>
-      <div class="small"><span id="profitPercent">0</span>% Margin</div>
-    </div>
-
-    <div class="kpi">
-      <div class="kpi-title">Business Activity</div>
-      <div class="kpi-value"><span id="totalBills">0</span> Bills</div>
-      <div class="small">Best: <span id="bestProduct">-</span></div>
-    </div>
-
+<!-- FILTER -->
+<div class="card">
+  <h3>Filters</h3>
+  <div class="filter-grid">
+    <input type="date" id="startDate">
+    <input type="date" id="endDate">
+    <select id="agentFilter"></select>
+    <button onclick="applyFilter()">Apply</button>
+    <button onclick="clearFilter()">Reset</button>
   </div>
 </div>
+
+<!-- KPI -->
+<div class="owner-kpi-grid">
+  <div class="owner-kpi blue">
+    <div class="kpi-number" id="kpiTotalLoan">0</div>
+    <div class="kpi-label">Total Loan</div>
+  </div>
+
+  <div class="owner-kpi purple">
+    <div class="kpi-number" id="kpiTotalCollection">0</div>
+    <div class="kpi-label">Total Collection</div>
+  </div>
+
+  <div class="owner-kpi green">
+    <div class="kpi-number" id="kpiOutstanding">0</div>
+    <div class="kpi-label">Outstanding</div>
+  </div>
+
+  <div class="owner-kpi orange">
+    <div class="kpi-number" id="kpiPercent">0%</div>
+    <div class="kpi-label">Collection %</div>
+  </div>
+
+  <div class="owner-kpi teal">
+    <div class="kpi-number" id="kpiYear">0</div>
+    <div class="kpi-label">This Year</div>
+  </div>
+
+  <div class="owner-kpi indigo">
+    <div class="kpi-number" id="kpiMonth">0</div>
+    <div class="kpi-label">This Month</div>
+  </div>
+
+  <div class="owner-kpi yellow">
+    <div class="kpi-number" id="kpiToday">0</div>
+    <div class="kpi-label">Today</div>
+  </div>
+
+  <div class="owner-kpi red">
+    <div class="kpi-number" id="kpiDue">0</div>
+    <div class="kpi-label">Total Due</div>
+  </div>
+</div>
+
+<!-- CHART -->
+<div class="card">
+  <h3>Agent Performance</h3>
+  <canvas id="agentChart"></canvas>
+</div>
+
+<!-- DUE -->
+<div class="card">
+  <h3>Due Today</h3>
+  <div id="dueToday"></div>
+</div>
+
+<!-- OVERDUE -->
+<div class="card">
+  <h3>Overdue</h3>
+  <div id="overdue"></div>
+</div>
+
+<button class="logout" onclick="logoutUser()">Logout</button>
 
 </div>
 
 <script type="module">
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
-import { getFirestore, collection, getDocs, doc, getDoc } 
-from "https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore.js";
+import { auth, db } from "./js/firebase.js";
+import { onAuthStateChanged, signOut }
+from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
-initializeApp({
-  apiKey:"AIzaSyComVLxo36wvogoBFEoWyea-_yESW9BIPU",
-  authDomain:"anus-chicken-shop.firebaseapp.com",
-  projectId:"anus-chicken-shop"
+import {
+collection, query, where, getDocs,
+onSnapshot, updateDoc, deleteDoc,
+doc, getDoc, serverTimestamp, deleteField
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+let ownerId=null;
+let ownerName="";
+let agentsMap={};
+let chart;
+
+/* AUTH */
+onAuthStateChanged(auth, async(user)=>{
+ if(!user){ location.href="index.html"; return; }
+
+ const snap = await getDoc(doc(db,"users",user.uid));
+ if(!snap.exists() || snap.data().role!=="owner"){
+   await signOut(auth);
+   location.href="index.html";
+   return;
+ }
+
+ ownerId = user.uid;
+ ownerName = snap.data().name || user.email.split("@")[0] || "Owner";
+ document.getElementById("ownerName").innerText = ownerName;
+
+if(inviteInterval) clearInterval(inviteInterval);
+
+await loadInviteCode();
+ listenAgentRequests();
+ await loadAgents();
+ setupRealtimeAnalytics();
 });
 
-const db = getFirestore();
+/* LOGOUT */
+window.logoutUser = async()=>{
+ await signOut(auth);
+ sessionStorage.setItem("justLoggedOut", "true");
+ window.location.replace("index.html");
+};
 
-function todayLocal(){
-  const d = new Date();
-  return d.toISOString().slice(0,10);
-}
+/* INVITE SYSTEM */
 
-fromDate.value = todayLocal();
-toDate.value = todayLocal();
+    // ================= INVITE AUTO SYSTEM =================
 
-loadBtn.addEventListener("click", loadData);
+let inviteInterval;
+let inviteExpiry = null;
 
-async function loadData(){
+/* INITIAL LOAD */
+async function loadInviteCode(){
 
-  const fromInput = fromDate.value;
-  const toInput   = toDate.value;
+  const ref = doc(db,"users",ownerId);
+  const snap = await getDoc(ref);
 
-  const from = new Date(fromInput + "T00:00:00");
-  const to   = new Date(toInput + "T23:59:59");
+  const data = snap.data();
 
-  /* ================= STOCK ================= */
-
-  const liveSnap = await getDoc(doc(db,"stock_current","live"));
-
-  if(liveSnap.exists()){
-    const live = liveSnap.data();
-
-    broilerSold.innerText   = live.broiler?.soldKg ?? 0;
-    broilerAvail.innerText  = live.broiler?.availableKg ?? 0;
-
-    countrySold.innerText   = live.country?.soldKg ?? 0;
-    countryAvail.innerText  = live.country?.availableKg ?? 0;
-
-    eggSold.innerText       = live.eggs?.sold ?? 0;
-    eggAvail.innerText      = live.eggs?.available ?? 0;
-
-    masalaSold.innerText    = live.masala?.soldAmount ?? 0;
-    masalaAvail.innerText   = live.masala?.availableAmount ?? 0;
+  // If no code OR expired → generate new
+  if(!data.inviteCode || !data.inviteExpiry || data.inviteExpiry < Date.now()){
+    await generateNewCode();
+  }else{
+    document.getElementById("ownerCodeBox").innerText = data.inviteCode;
+    inviteExpiry = data.inviteExpiry;
   }
 
-  /* ================= SALES ================= */
-
-  const snap = await getDocs(collection(db,"sales"));
-
-  let totalSales = 0;
-  let totalCost = 0;
-  let totalProfit = 0;
-  let totalBills = 0;
-  let totalCash = 0;
-  let totalOnline = 0;
-
-  let productProfit = {
-    broiler:0,
-    country:0,
-    eggs:0,
-    masala:0
-  };
-
-  snap.forEach(doc=>{
-
-    const s = doc.data();
-
-    if(!s.createdAt) return; // Must use Firestore Timestamp field
-
-    const saleDate = s.createdAt.toDate();
-
-    if(saleDate < from || saleDate > to) return;
-
-    totalSales  += s.total || 0;
-    totalCost   += s.totalCost || 0;
-    totalProfit += s.profit || 0;
-    totalBills++;
-
-    if(s.payment === "cash") totalCash += s.total || 0;
-    if(s.payment === "online") totalOnline += s.total || 0;
-
-    if(s.items?.broiler)
-      productProfit.broiler += (s.items.broiler.amount - s.items.broiler.cost);
-
-    if(s.items?.country)
-      productProfit.country += (s.items.country.amount - s.items.country.cost);
-
-    if(s.items?.eggs)
-      productProfit.eggs += (s.items.eggs.amount - s.items.eggs.cost);
-
-    if(s.items?.masala)
-      productProfit.masala += (s.items.masala.amount - s.items.masala.cost);
-  });
-
-  const profitPercent = totalSales ? (totalProfit/totalSales*100) : 0;
-
-  const best = Object.keys(productProfit)
-    .reduce((a,b)=>productProfit[a]>productProfit[b]?a:b,"broiler");
-
-  totalSales.innerText = totalSales.toFixed(2);
-  totalCost.innerText = totalCost.toFixed(2);
-  totalProfit.innerText = totalProfit.toFixed(2);
-  profitPercent.innerText = profitPercent.toFixed(2);
-  totalCash.innerText = totalCash.toFixed(2);
-  totalOnline.innerText = totalOnline.toFixed(2);
-  totalBills.innerText = totalBills;
-  bestProduct.innerText = best.charAt(0).toUpperCase()+best.slice(1);
+  startInviteTimer();
 }
 
-loadData();
+/* GENERATE NEW CODE */
+async function generateNewCode(){
+
+  const code = "OWN" + Math.floor(100000 + Math.random()*900000);
+  const expiry = Date.now() + 30000; // 30 seconds
+
+  await updateDoc(doc(db,"users",ownerId),{
+    inviteCode: code,
+    inviteExpiry: expiry
+  });
+
+  document.getElementById("ownerCodeBox").innerText = code;
+
+  // 🔥 reset shake effect
+  const timerEl = document.getElementById("inviteTimer");
+  timerEl.classList.remove("shake");
+
+  inviteExpiry = expiry;
+}
+
+/* MANUAL REGENERATE */
+window.regenerateCode = async ()=>{
+
+  clearInterval(inviteInterval);
+  await generateNewCode();
+  startInviteTimer();
+};
+
+/* TIMER BASED ON EXPIRY */
+function startInviteTimer(){
+
+  if(inviteInterval) clearInterval(inviteInterval); // safety
+
+  const timerEl = document.getElementById("inviteTimer");
+
+  inviteInterval = setInterval(async ()=>{
+
+    const timeLeft = Math.floor((inviteExpiry - Date.now())/1000);
+
+    if(timeLeft <= 0){
+      clearInterval(inviteInterval);
+      await generateNewCode();
+      startInviteTimer();
+      return;
+    }
+
+    timerEl.innerText = timeLeft + "s";
+
+    if(timeLeft <= 5){
+      timerEl.classList.add("shake");
+    }else{
+      timerEl.classList.remove("shake");
+    }
+
+  },1000);
+}
+
+/* AGENT REQUESTS REALTIME */
+function listenAgentRequests(){
+ const q=query(collection(db,"users"),
+  where("role","==","pending"),
+  where("requestedRole","==","agent"),
+  where("requestedTo","==",ownerId)
+ );
+
+ onSnapshot(q,snap=>{
+   agentRequests.innerHTML="";
+   if(snap.empty){
+     agentRequests.innerHTML="<p>No agent requests</p>";
+     return;
+   }
+
+   snap.forEach(d=>{
+     const data=d.data();
+     agentRequests.innerHTML+=`
+     <div class="card-row">
+       <strong>${data.name}</strong><br>
+       ${data.email}<br><br>
+       <button onclick="approveAgent('${d.id}')">Approve</button>
+       <button onclick="rejectAgent('${d.id}')">Reject</button>
+     </div>`;
+   });
+ });
+}
+
+window.approveAgent=async(id)=>{
+ await updateDoc(doc(db,"users",id),{
+   role:"agent",
+   approvedBy:ownerId,
+   approvedAt:serverTimestamp(),
+   requestedRole:deleteField(),
+   requestedTo:deleteField()
+ });
+};
+
+window.rejectAgent=async(id)=>{
+ await deleteDoc(doc(db,"users",id));
+};
+
+/* LOAD AGENTS */
+async function loadAgents(){
+ const snap=await getDocs(query(collection(db,"users"),
+   where("role","==","agent"),
+   where("approvedBy","==",ownerId)
+ ));
+ agentFilter.innerHTML=`<option value="all">All Agents</option>`;
+ snap.forEach(d=>{
+   agentsMap[d.id]=d.data().name;
+   agentFilter.innerHTML+=`<option value="${d.id}">${d.data().name}</option>`;
+ });
+}
+
+/* REALTIME DATA */
+function setupRealtimeAnalytics(){
+ onSnapshot(query(collection(db,"loans"),
+   where("ownerId","==",ownerId)),()=>processData());
+ onSnapshot(query(collection(db,"collections"),
+   where("ownerId","==",ownerId)),()=>processData());
+ onSnapshot(query(collection(db,"installments"),
+   where("ownerId","==",ownerId)),()=>processData());
+}
+
+window.applyFilter=()=>processData();
+window.clearFilter=()=>{
+ startDate.value="";
+ endDate.value="";
+ agentFilter.value="all";
+ processData();
+};
+
+/* PROCESS */
+async function processData(){
+
+ const start = startDate.value;
+ const end = endDate.value;
+ const agentId = agentFilter.value || "all";
+
+ const startTime = start ? new Date(start).getTime() : null;
+ const endTime = end ? new Date(end).setHours(23,59,59,999) : null;
+
+ const loanSnap = await getDocs(query(
+   collection(db,"loans"),
+   where("ownerId","==",ownerId)
+ ));
+
+ let totalLoan = 0;
+
+ loanSnap.forEach(d=>{
+   const data = d.data();
+   if(agentId!=="all" && data.agentId!==agentId) return;
+   if(startTime && data.createdAt < startTime) return;
+   if(endTime && data.createdAt > endTime) return;
+   totalLoan += data.principal || 0;
+ });
+
+ const colSnap = await getDocs(query(
+   collection(db,"collections"),
+   where("ownerId","==",ownerId)
+ ));
+
+ let totalCollection = 0;
+ let yearCollection = 0;
+ let monthCollection = 0;
+ let todayCollection = 0;
+ let agentPerf = {};
+
+ const now = new Date();
+ const year = now.getFullYear();
+ const month = now.getMonth();
+ const today = new Date().setHours(0,0,0,0);
+
+ colSnap.forEach(d=>{
+   const data=d.data();
+   if(agentId!=="all" && data.agentId!==agentId) return;
+   if(startTime && data.date<startTime) return;
+   if(endTime && data.date>endTime) return;
+
+   totalCollection += data.amount || 0;
+
+   const dateObj = new Date(data.date);
+
+   if(dateObj.getFullYear()===year) yearCollection+=data.amount;
+   if(dateObj.getMonth()===month) monthCollection+=data.amount;
+   if(new Date(data.date).setHours(0,0,0,0)===today)
+      todayCollection+=data.amount;
+
+   if(!agentPerf[data.agentId]) agentPerf[data.agentId]=0;
+   agentPerf[data.agentId]+=data.amount;
+ });
+
+ const outstanding = totalLoan - totalCollection;
+ const percent = totalLoan ? ((totalCollection/totalLoan)*100).toFixed(1) : 0;
+
+function animateValue(id, value, isPercent = false){
+
+  const el = document.getElementById(id);
+  const target = Number(value) || 0;
+
+  let start = 0;
+  const step = Math.ceil(target / 40);
+
+  const interval = setInterval(()=>{
+
+    start += step;
+
+    if(start >= target){
+      if(isPercent){
+        el.innerText = target + "%";
+      } else{
+        el.innerText = target.toLocaleString("en-IN");
+      }
+      clearInterval(interval);
+    }else{
+      if(isPercent){
+        el.innerText = start + "%";
+      } else{
+        el.innerText = start.toLocaleString("en-IN");
+      }
+    }
+
+  },15);
+}
+
+ // ===============================
+// FULL DUE + OVERDUE + TOTAL DUE
+// ===============================
+
+const instSnap = await getDocs(query(
+  collection(db,"installments"),
+  where("ownerId","==",ownerId),
+  where("status","==","pending")
+));
+
+const borrowersSnap = await getDocs(query(
+  collection(db,"borrowers"),
+  where("ownerId","==",ownerId)
+));
+
+let borrowersMap = {};
+borrowersSnap.forEach(d=>{
+  borrowersMap[d.id] = d.data().name;
+});
+
+let dueCount = 0;
+
+dueToday.innerHTML = "";
+overdue.innerHTML = "";
+
+const todayDate = new Date();
+todayDate.setHours(0,0,0,0);
+
+instSnap.forEach(d=>{
+
+  const data = d.data();
+  if(agentId!=="all" && data.agentId!==agentId) return;
+
+  dueCount += data.amount || 0;
+
+  const dueDate = new Date(data.dueDate);
+  dueDate.setHours(0,0,0,0);
+
+  const borrowerName = borrowersMap[data.borrowerId] || "Unknown";
+  const agentNameDisplay = agentsMap[data.agentId] || "Agent";
+
+  const cardHTML = `
+    <div class="card-row">
+      <strong>${borrowerName}</strong><br>
+      Amount: ₹${data.amount}<br>
+      Due Date: ${new Date(data.dueDate).toLocaleDateString()}<br>
+      Agent: ${agentNameDisplay}
+    </div>
+  `;
+
+  if(dueDate.getTime() === todayDate.getTime()){
+    dueToday.innerHTML += cardHTML;
+  }
+
+  if(dueDate < todayDate){
+    overdue.innerHTML += cardHTML;
+  }
+
+});
+
+// EMPTY STATES
+if(dueToday.innerHTML===""){
+  dueToday.innerHTML = "<p>No dues today</p>";
+}
+
+if(overdue.innerHTML===""){
+  overdue.innerHTML = "<p>No overdue payments</p>";
+}
+
+ // UPDATE UI
+animateValue("kpiTotalLoan", totalLoan);
+animateValue("kpiTotalCollection", totalCollection);
+animateValue("kpiOutstanding", outstanding);
+animateValue("kpiPercent", percent, true);
+animateValue("kpiYear", yearCollection);
+animateValue("kpiMonth", monthCollection);
+animateValue("kpiToday", todayCollection);
+animateValue("kpiDue", dueCount);
+ // CHART
+ if(chart) chart.destroy();
+
+ chart=new Chart(agentChart,{
+   type:"bar",
+   data:{
+     labels:Object.keys(agentPerf).map(a=>agentsMap[a]||"Agent"),
+     datasets:[{
+       label:"Collection",
+       data:Object.values(agentPerf)
+     }]
+   }
+ });
+
+}
+document.getElementById("themeToggle").onclick = ()=>{
+
+  document.body.classList.toggle("owner-dark");
+
+  const isDark = document.body.classList.contains("owner-dark");
+
+  localStorage.setItem("ownerTheme", isDark ? "dark":"light");
+
+  themeToggle.innerText = isDark ? "☀️" : "🌙";
+};
+
+window.addEventListener("DOMContentLoaded", ()=>{
+  const saved = localStorage.getItem("ownerTheme");
+
+  if(saved==="dark"){
+    document.body.classList.add("owner-dark");
+    themeToggle.innerText = "☀️";
+  }
+});
 
 </script>
+</body>
+</html>
