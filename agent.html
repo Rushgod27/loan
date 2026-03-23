@@ -1559,8 +1559,11 @@ function sendPaymentReceipt(instId, loanId, borrowerId, amt, loanCompleted){
   .sort((a,b)=>a.number-b.number);
 
   const totalInstallments = loanInstallments.length;
-const paidInstallments =
+let paidInstallments =
   loanInstallments.filter(i=>i.status==="completed").length;
+
+// 🔥 FORCE ADD CURRENT PAYMENT
+paidInstallments += 1;
 const remainingInstallments = totalInstallments - paidInstallments;
 
   const inst = loanInstallments.find(i=>i.id===instId);
