@@ -1200,9 +1200,14 @@ window.confirmMarkPaid = (id, loanId, borrowerId, amt)=>{
 
       confirmMarkPaid.lock = true;
 
+      // 🔥 GET INSTALLMENT BEFORE DELETE
+      const inst = [...state.installments, ...state.completedInstallments]
+        .find(i => i.id === id);
+
       const result = await processPayment(id, loanId, borrowerId, amt);
 
-      sendPaymentReceipt(id, loanId, borrowerId, amt, result.loanCompleted);
+      // 🔥 SEND WHATSAPP WITH SAFE DATA
+      sendPaymentReceipt(inst, loanId, borrowerId, amt, result.loanCompleted);
 
       showToast(t("paymentRecorded"));
 
@@ -1220,6 +1225,7 @@ window.confirmMarkPaid = (id, loanId, borrowerId, amt)=>{
   });
 
 };
+
 
 /* CREATE LOAN */
 window.createLoanUI = () => {
@@ -1544,7 +1550,7 @@ confirmBtn.onclick = async ()=>{
 };
 }
 
-function sendPaymentReceipt(instId, loanId, borrowerId, amt, loanCompleted){
+function sendPaymentReceipt(inst, loanId, borrowerId, amt, loanCompleted){
 
   const borrower = state.borrowers.find(b=>b.id===borrowerId);
   const loan = state.loans.find(l=>l.id===loanId);
@@ -1559,20 +1565,20 @@ function sendPaymentReceipt(instId, loanId, borrowerId, amt, loanCompleted){
   .sort((a,b)=>a.number-b.number);
 
   const totalInstallments = loanInstallments.length;
-let paidInstallments =
-  loanInstallments.filter(i=>i.status==="completed").length;
 
-// 🔥 FORCE ADD CURRENT PAYMENT
-paidInstallments += 1;
-const remainingInstallments = totalInstallments - paidInstallments;
+  let paidInstallments =
+    loanInstallments.filter(i=>i.status==="completed").length;
 
-  const inst = loanInstallments.find(i=>i.id===instId);
+  // 🔥 INCLUDE CURRENT PAYMENT
+  paidInstallments += 1;
 
-  let msg="";
+  const remainingInstallments = totalInstallments - paidInstallments;
+
+  let msg = "";
 
   if(!loanCompleted){
 
-msg = `Hello ${borrower.name},
+    msg = `Hello ${borrower.name},
 
 Payment Received Successfully ✅
 
@@ -1602,9 +1608,9 @@ Thank you for your payment.
 
 ಧನ್ಯವಾದಗಳು.`;
 
-  }else{
+  } else {
 
-msg = `Hello ${borrower.name},
+    msg = `Hello ${borrower.name},
 
 🎉 LOAN COMPLETED SUCCESSFULLY 🎉
 
@@ -1631,9 +1637,10 @@ Thank you for completing your loan.
   }
 
   const link =
-  `https://wa.me/91${borrower.phone}?text=${encodeURIComponent(msg)}`;
+    `https://wa.me/91${borrower.phone}?text=${encodeURIComponent(msg)}`;
 
-  window.open(link,"_blank");
+  // 🔥 FIX: works on all devices (no popup block)
+  window.location.href = link;
 }
 
 /* ========================
